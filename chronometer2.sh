@@ -41,13 +41,13 @@ CalcblockedToday() {
 CalcPercentBlockedToday() {
   if [ "${queriesToday}" != "Err." ] && [ "${blockedToday}" != "Err." ]; then
     if [ "${queriesToday}" != 0 ]; then #Fixes divide by zero error :)
-    #scale 2 rounds the number down, so we'll do scale 4 and then trim the last 2 zeros
-    percentBlockedToday=$(echo "scale=4; ${blockedToday}/${queriesToday}*100" | bc)
-    percentBlockedToday=$(sed 's/.\{2\}$//' <<< "${percentBlockedToday}")
-  else
-    percentBlockedToday=0
+      #scale 2 rounds the number down, so we'll do scale 4 and then trim the last 2 zeros
+      percentBlockedToday=$(echo "scale=4; ${blockedToday}/${queriesToday}*100" | bc)
+      percentBlockedToday=$(sed 's/.\{2\}$//' <<< "${percentBlockedToday}")
+    else
+      percentBlockedToday=0
+    fi
   fi
-fi
 }
 
 GetSystemInformation() {
@@ -56,29 +56,26 @@ GetSystemInformation() {
 
   # CPU temperature
   cpu=$(</sys/class/thermal/thermal_zone0/temp)
-  temperatureC=$((cpu/1000))
 
+  # Convert CPU temperature to correct unit
   if [ "${TEMPERATUREUNIT}" == "F" ]; then
-    #temperature=$((cpu*9/5000+32))°F
     temperature=$(printf %.1f $(echo "scale=4; ${cpu}*9/5000+32" | bc))°F
   elif [ "${TEMPERATUREUNIT}" == "C" ]; then
     temperature=$(printf %.1f $(echo "scale=4; ${cpu}/1000" | bc))°C
-    #temperature=$((cpu/1000))°C
   elif [ "${TEMPERATUREUNIT}" == "K" ]; then
     temperature=$(printf %.1f $(echo "scale=4; (${cpu}/1000+273.15)" | bc))°K
-    #temperature=$((temperatureC+27315/100))°K
   fi
 
-  # CPU load
-  #cpuLoad=$(uptime | cut -d' ' -f13-)
-  cpuLoad1=$(cat /proc/loadavg | awk '{print $1}')
-  cpuLoad5=$(cat /proc/loadavg | awk '{print $2}')
-  cpuLoad15=$(cat /proc/loadavg | awk '{print $3}')
-
+  # CPU load and heatmap calculations
   numProc=$(grep 'model name' /proc/cpuinfo | wc -l)
 
+  cpuLoad1=$(cat /proc/loadavg | awk '{print $1}')
   cpuLoad1Heatmap=$(CPUHeatmapGenerator ${cpuLoad1} ${numProc})
+
+  cpuLoad5=$(cat /proc/loadavg | awk '{print $2}')
   cpuLoad5Heatmap=$(CPUHeatmapGenerator ${cpuLoad5} ${numProc})
+
+  cpuLoad15=$(cat /proc/loadavg | awk '{print $3}')
   cpuLoad15Heatmap=$(CPUHeatmapGenerator ${cpuLoad15} ${numProc})
 
   cpuPercent=$(printf %.1f $(echo "scale=4; (${cpuLoad1}/${numProc})*100" | bc))
@@ -87,7 +84,7 @@ GetSystemInformation() {
   memoryUsedPercent=$(free | grep Mem | awk '{printf "%.1f",($2-$4-$6-$7)/$2 * 100}')
 
   # CPU temperature heatmap
-  if [ ${temperatureC} -gt 60 ]; then
+  if [ ${cpu} -gt 60000 ]; then
     tempHeatMap=$(tput setaf 1)
   else
     tempHeatMap=$(tput setaf 6)
@@ -96,7 +93,6 @@ GetSystemInformation() {
 
 CPUHeatmapGenerator ()
 {
-  #load=$(echo "scale=0; ($1/$2)*100" | bc)
   x=$(echo "scale=2; ($1/$2)*100" | bc)
   load=$(printf "%.0f" "${x}")
 
@@ -135,22 +131,22 @@ GetPiholeInformation() {
   #webVersionLatest=$(pihole -v -p -l)
 
   #if [ "${piholeVersion}" != "${piholeVersionLatest}" ] && [ "${webVersion}" != "${webVersionLatest}" ]; then
-  #versionStatus="Pi-hole is out-of-date!"
-  #versionStatus="${piholeVersion} ${piholeVersionLatest}"
-  #versionHeatmap="\e[31m"
+    #versionStatus="Pi-hole is out-of-date!"
+    #versionStatus="${piholeVersion} ${piholeVersionLatest}"
+    #versionHeatmap="\e[31m"
   #else
-  #versionStatus="Pi-hole is up-to-date!"
-  #versionHeatmap="\e[32m"
+    #versionStatus="Pi-hole is up-to-date!"
+    #versionHeatmap="\e[32m"
   #fi
 
   #Pi-hole DHCP heatmap
   if [[ "${DHCP_ACTIVE}" == "true" ]]; then
     dhcpStatus="Enabled"
-    dhcpInfo=${DHCP_START}" - "${DHCP_END}
+    dhcpInfo="("${DHCP_START}" - "${DHCP_END}")"
     dhcpHeatmap=$(tput setaf 2) #green
   else
     dhcpStatus="Disabled"
-    dhcpInfo="DHCP Router: "${DHCP_ROUTER}
+    dhcpInfo=" (Router: "${DHCP_ROUTER}")"
     dhcpHeatmap=$(tput setaf 1) #red
   fi
 }
@@ -183,10 +179,10 @@ normalChrono() {
     GetPiholeInformation
 
     # Displays a colorful Pi-hole logo
-    echo " ___ _     _        _"
-    echo -e "| _ (_)___| |_  ___| |___"
-    echo "|  _/ |___| ' \/ _ \ / -_)    Pi-hole ${piholeVersion}"
-    echo "|_| |_|   |_||_\___/_\___|    Pi-hole Web-Admin ${webVersion}"
+    echo " [0;1;35;95m_[0;1;31;91m__[0m [0;1;33;93m_[0m     [0;1;34;94m_[0m        [0;1;36;96m_[0m"
+    echo -e "[0;1;31;91m|[0m [0;1;33;93m_[0m [0;1;32;92m(_[0;1;36;96m)_[0;1;34;94m__[0;1;35;95m|[0m [0;1;31;91m|_[0m  [0;1;32;92m__[0;1;36;96m_|[0m [0;1;34;94m|[0;1;35;95m__[0;1;31;91m_[0m"
+    echo "[0;1;33;93m|[0m  [0;1;32;92m_[0;1;36;96m/[0m [0;1;34;94m|_[0;1;35;95m__[0;1;31;91m|[0m [0;1;33;93m'[0m [0;1;32;92m\/[0m [0;1;36;96m_[0m [0;1;34;94m\[0m [0;1;35;95m/[0m [0;1;31;91m-[0;1;33;93m_)[0m    Pi-hole ${piholeVersion}"
+    echo "[0;1;32;92m|_[0;1;36;96m|[0m [0;1;34;94m|_[0;1;35;95m|[0m   [0;1;33;93m|_[0;1;32;92m||[0;1;36;96m_\[0;1;34;94m__[0;1;35;95m_/[0;1;31;91m_\[0;1;33;93m__[0;1;32;92m_|[0m    Pi-hole Web-Admin ${webVersion}"
     echo ""
 
     # System Information
@@ -202,7 +198,7 @@ normalChrono() {
     printf " %-10s%-19s\n" "Gateway:" "$(ip route show default | awk '/default/ {print $3}')"
     printf " %-10s%-19s\n" "IPv4:" "${IPV4_ADDRESS}"
     printf " %-10s%-19s\n" "IPv6:" "${IPV6_ADDRESS}"
-    printf " %-10s${dhcpHeatmap}%-19s${resetColor}%-30s\n" "DHCP:" "${dhcpStatus}" "${dhcpInfo}"
+    printf " %-10s${dhcpHeatmap}%-8s${resetColor}%-30s\n" "DHCP:" "${dhcpStatus}" "${dhcpInfo}"
 
     # Pi-Hole Information
     echo "PI-HOLE ===================================================="
@@ -211,9 +207,7 @@ normalChrono() {
     printf " %-10s%-19s%-10s%-19s\n" "DNS 1:" "${PIHOLE_DNS_1}" "DNS 2:" "${PIHOLE_DNS_2}"
 
     echo ""
-    #printf " %-7s[%-20s] %-7s[%-20s]\n" "CPU" "$(tput setab 2)   $(tput sgr0)" "Mem" "########"
-    #printf " %-7s%-13s %-7s%-13s" " " "15.3%" " " "1.8%"
-    echo -e "              \e[2mPress ^C to quit Chronometer2\e[0m"
+    printf "              \e[2mPress ^C to quit chronometer\e[0m"
 
     sleep 5
   done
@@ -221,16 +215,16 @@ normalChrono() {
 
 displayHelp() {
   cat << EOM
-  ::: Displays stats about your piHole!
-  :::
-  ::: Usage: sudo pihole -c [optional:-j]
-  ::: Note: If no option is passed, then stats are displayed on screen, updated every 5 seconds
-  :::
-  ::: Options:
-  :::  -j, --json         output stats as JSON formatted string
-  :::  -h, --help         display this help text
-  EOM
-  exit 0
+::: Displays stats about your piHole!
+:::
+::: Usage: sudo pihole -c [optional:-j]
+::: Note: If no option is passed, then stats are displayed on screen, updated every 5 seconds
+:::
+::: Options:
+:::  -j, --json    output stats as JSON formatted string
+:::  -h, --help    display this help text
+EOM
+    exit 0
 }
 
 if [[ $# = 0 ]]; then
