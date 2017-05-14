@@ -60,10 +60,11 @@ GetSystemInformation() {
   # Convert CPU temperature to correct unit
   if [ "${TEMPERATUREUNIT}" == "F" ]; then
     temperature=$(printf %.1f $(echo "scale=4; ${cpu}*9/5000+32" | bc))°F
-  elif [ "${TEMPERATUREUNIT}" == "C" ]; then
-    temperature=$(printf %.1f $(echo "scale=4; ${cpu}/1000" | bc))°C
   elif [ "${TEMPERATUREUNIT}" == "K" ]; then
     temperature=$(printf %.1f $(echo "scale=4; (${cpu}/1000+273.15)" | bc))°K
+  # Addresses Issue 1: https://github.com/jpmck/chronometer2/issues/1
+  else
+    temperature=$(printf %.1f $(echo "scale=4; ${cpu}/1000" | bc))°C
   fi
 
   # CPU load and heatmap calculations
