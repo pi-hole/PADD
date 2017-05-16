@@ -107,6 +107,47 @@ CPUHeatmapGenerator () {
   echo $out
 }
 
+GetNetworkInformation() {
+  # Is Pi-Hole acting as the DHCP server?
+  if [[ "${DHCP_ACTIVE}" == "true" ]]; then
+    dhcpStatus="Enabled"
+    dhcpInfo="("${DHCP_START}" - "${DHCP_END}")"
+    dhcpHeatmap=$(tput setaf 2) #green
+
+    # Is DHCP handling IPv6?
+    if [[ "${DHCP_IPv6}" == "true" ]]; then
+      dhcpIPv6Status="Enabled"
+      dhcpIPv6Heatmap=$(tput setaf 2) #green
+    else
+      dhcpIPv6Status="Disabled"
+      dhcpIPv6Heatmap=$(tput setaf 1) #red
+    fi
+  else
+    dhcpStatus="Disabled"
+
+    # if the DHCP Router variable isn't set
+    # Addresses Issue 3: https://github.com/jpmck/chronometer2/issues/3
+    if [ -z ${DHCP_ROUTER+x} ]; then
+      DHCP_ROUTER=$(/sbin/ip route | awk '/default/ { print $3 }')
+    fi
+
+    dhcpInfo=" (Router: "${DHCP_ROUTER}")"
+    dhcpHeatmap=$(tput setaf 1) #red
+
+    dhcpIPv6Status="N/A"
+    dhcpIPv6Heatmap=$(tput setaf 3) #yellow
+  fi
+
+  # DNSSEC
+  if [[ "${DNSSEC}" == "true" ]]; then
+    dnssecStatus="Enabled"
+    dnssecHeatmap=$(tput setaf 2) #green
+  else
+    dnssecStatus="Disabled"
+    dnssecHeatmap=$(tput setaf 1) #red
+  fi
+}
+
 GetPiholeInformation() {
   # Get Pi-hole status
   if [[ $(pihole status web) == 1 ]]; then
@@ -121,17 +162,6 @@ GetPiholeInformation() {
   else
     piHoleStatus="Unknown"
     piHoleHeatmap=$(tput setaf 3)
-  fi
-
-  # Pi-hole DHCP heatmap
-  if [[ "${DHCP_ACTIVE}" == "true" ]]; then
-    dhcpStatus="Enabled"
-    dhcpInfo="("${DHCP_START}" - "${DHCP_END}")"
-    dhcpHeatmap=$(tput setaf 2) #green
-  else
-    dhcpStatus="Disabled"
-    dhcpInfo=" (Router: "${DHCP_ROUTER}")"
-    dhcpHeatmap=$(tput setaf 1) #red
   fi
 }
 
@@ -266,6 +296,7 @@ normalChrono() {
     # Get our information
     GetSystemInformation
     GetPiholeInformation
+    GetNetworkInformation
     GetPiholeVersionInformation
 
     outputLogo
