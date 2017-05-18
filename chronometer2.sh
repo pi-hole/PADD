@@ -166,34 +166,54 @@ GetPiholeInformation() {
 }
 
 GetPiholeVersionInformation() {
-  # Today is...
-  today=$(date +%Y%m%d)
-
   # Check if version status has been saved
   if [ -e "piHoleVersion" ]; then
     # the file exits, use it
     source piHoleVersion
 
-    # Check if last check on version wasn't today...
-    if [[ $today != $lastCheck ]]; then
-      piholeVersion=$(pihole -v -p -c)
-      webVersion=$(pihole -v -a -c)
-      ftlVersion=$(/usr/bin/pihole-FTL version)
+    # was the last check today?
+    if [ "${today}" != "${lastCheck}" ]; then
+    # no, it wasn't today
 
+      # Today is...
+      today=$(date +%Y%m%d)
+
+      # what are the latest available versions?
+      # TODO: update if necessary if added to pihole
       piholeVersionLatest=$(pihole -v -p -l)
       webVersionLatest=$(pihole -v -a -l)
+      ftlVersionLatest=$(curl -sI https://github.com/pi-hole/FTL/releases/latest | grep 'Location' | awk -F '/' '{print $NF}' | tr -d '\r\n')
 
-      # check if everything is up-to-date
-      # if it's not up-to-date (i.e. out-of-date)
-      if [ "${piholeVersion}" != "${piholeVersionLatest}" ] || [ "${webVersion}" != "${webVersionLatest}" ]; then
-        # then write to the file that it's not
-        echo "lastCheck="$(date +%Y%m%d) > ./piHoleVersion
-        echo "piholeVersion="$piholeVersion >> ./piHoleVersion
-        echo "webVersion="$webVersion >> ./piHoleVersion
-        echo "ftlVersion="$(/usr/bin/pihole-FTL version) >> ./piHoleVersion
-        echo -e "versionStatus=\"Pi-hole is out-of-date!\"" >> ./piHoleVersion
-        echo -e "versionHeatmap="$(tput setaf 1) >> ./piHoleVersion
+      # check if everything is up-to-date...
+      # is core up-to-date?
+      if [[ "${piholeVersion}" != "${piholeVersionLatest}" ]]; then
+        outOfDateFlag=true
+        piholeVersionHeatmap=${redColor}
+      else
+        outOfDateFlag=false
+        piholeVersionHeatmap=${greenColor}
+      fi
 
+      # is web up-to-date?
+      if [ "${webVersion}" != "${webVersionLatest}" ]; then
+        outOfDateFlag=true
+        webVersionHeatmap=${redColor}
+      else
+        outOfDateFlag=false
+        webVersionHeatmap=${greenColor}
+      fi
+
+      # is ftl up-to-date?
+      if [ "${ftlVersion}" != "${ftlVersionLatest}" ]; then
+        outOfDateFlag=true
+        ftlVersionHeatmap=${redColor}
+      else
+        outOfDateFlag=false
+        ftlVersionHeatmap=${greenColor}
+      fi
+
+      # was anything out-of-date?
+      if $outOfDateFlag; then
         versionStatus="Pi-hole is out-of-date!"
         versionHeatmap=$(tput setaf 1)
       else
@@ -201,37 +221,38 @@ GetPiholeVersionInformation() {
         versionHeatmap=$(tput setaf 2)
       fi
 
+      # write it all to the file
+      echo "lastCheck="${today} > ./piHoleVersion
+
+      echo "piholeVersion="$piholeVersion >> ./piHoleVersion
+      echo "piHoleVersionHeatmap="$piholeVersionHeatmap >> ./piHoleVersion
+
+      echo "webVersion="$webVersion >> ./piHoleVersion
+      echo "webVersionHeatmap="$webVersionHeatmap >> ./piHoleVersion
+
+      echo "ftlVersion="$ftlVersion >> ./piHoleVersion
+      echo "ftlVersionHeatmap="$ftlVersionHeatmap >> ./piHoleVersion
+
+      echo "versionStatus="\"$versionStatus\" >> ./piHoleVersion
+      echo "versionHeatmap="$versionHeatmap >> ./piHoleVersion
+
     fi
 
-  # else it dosn't exist
+  # else the file dosn't exist
   else
     # We're using...
     piholeVersion=$(pihole -v -p -c)
     webVersion=$(pihole -v -a -c)
     ftlVersion=$(/usr/bin/pihole-FTL version)
 
-    piholeVersionLatest=$(pihole -v -p -l)
-    webVersionLatest=$(pihole -v -a -l)
-
-    echo "lastCheck="$(date +%Y%m%d) > ./piHoleVersion
+    echo "lastCheck=0" > ./piHoleVersion
     echo "piholeVersion="$piholeVersion >> ./piHoleVersion
     echo "webVersion="$webVersion >> ./piHoleVersion
-    echo "ftlVersion="$(/usr/bin/pihole-FTL version) >> ./piHoleVersion
+    echo "ftlVersion="$ftlVersion >> ./piHoleVersion
 
-    # Check if either isn't up-to-date
-    if [ "${piholeVersion}" != "${piholeVersionLatest}" ] || [ "${webVersion}" != "${webVersionLatest}" ]; then
-      echo -e "versionStatus=\"Pi-hole is out-of-date!\"" >> ./piHoleVersion
-      echo -e "versionHeatmap="$(tput setaf 1) >> ./piHoleVersion
-      versionStatus="Pi-hole is out-of-date!"
-      versionHeatmap=$(tput setaf 1)
-    else
-      echo -e "versionStatus=\"Pi-hole is up-to-date!\"" >> ./piHoleVersion
-      echo -e "versionHeatmap="$(tput setaf 2) >> ./piHoleVersion
-      versionStatus="Pi-hole is up-to-date!"
-      versionHeatmap=$(tput setaf 2)
-    fi
+    # there's a file now
+    #will check on next display
   fi
-
 }
 
 outputJSON() {
