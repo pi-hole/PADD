@@ -2,11 +2,28 @@
 # Chronometer2
 # A more advanced version of the chronometer provided with Pihole
 
-#Functions#########################################################################################
+# SETS LOCALE
+# Addresses Issue 5: https://github.com/jpmck/chronometer2/issues/5 ... I think...
+export LC_ALL=C.UTF-8
+
+chronometer2Version="v1.0.0"
+
+# SOURCES
 piLog="/var/log/pihole.log"
 gravity="/etc/pihole/gravity.list"
 
+# COLORS
+blueColor=$(tput setaf 6)
+greenColor=$(tput setaf 2)
+redColor=$(tput setaf 1)
 resetColor=$(tput setaf 7)
+yellowColor=$(tput setaf 3)
+
+# DATE
+today=$(date +%Y%m%d)
+
+# CORES
+numProc=$(grep 'model name' /proc/cpuinfo | wc -l)
 
 CalcBlockedDomains() {
   if [ -e "${gravity}" ]; then
@@ -68,8 +85,6 @@ GetSystemInformation() {
   fi
 
   # CPU load and heatmap calculations
-  numProc=$(grep 'model name' /proc/cpuinfo | wc -l)
-
   cpuLoad1=$(cat /proc/loadavg | awk '{print $1}')
   cpuLoad1Heatmap=$(CPUHeatmapGenerator ${cpuLoad1} ${numProc})
 
@@ -86,9 +101,9 @@ GetSystemInformation() {
 
   # CPU temperature heatmap
   if [ ${cpu} -gt 60000 ]; then
-    tempHeatMap=$(tput setaf 1)
+    tempHeatMap=${redColor}
   else
-    tempHeatMap=$(tput setaf 6)
+    tempHeatMap=${blueColor}
   fi
 }
 
@@ -97,11 +112,11 @@ CPUHeatmapGenerator () {
   load=$(printf "%.0f" "${x}")
 
   if [ ${load} -lt 75 ]; then
-    out=$(tput setaf 2)
+    out=${greenColor}
   elif [ ${load} -lt 90 ]; then
-    out=$(tput setaf 3)
+    out=${yellowColor}
   else
-    out=$(tput setaf 1)
+    out=${redColor}
   fi
 
   echo $out
@@ -111,16 +126,16 @@ GetNetworkInformation() {
   # Is Pi-Hole acting as the DHCP server?
   if [[ "${DHCP_ACTIVE}" == "true" ]]; then
     dhcpStatus="Enabled"
-    dhcpInfo="("${DHCP_START}" - "${DHCP_END}")"
-    dhcpHeatmap=$(tput setaf 2) #green
+    dhcpInfo=" Range:    "${DHCP_START}" - "${DHCP_END}
+    dhcpHeatmap=${greenColor}
 
     # Is DHCP handling IPv6?
     if [[ "${DHCP_IPv6}" == "true" ]]; then
       dhcpIPv6Status="Enabled"
-      dhcpIPv6Heatmap=$(tput setaf 2) #green
+      dhcpIPv6Heatmap=${greenColor}
     else
       dhcpIPv6Status="Disabled"
-      dhcpIPv6Heatmap=$(tput setaf 1) #red
+      dhcpIPv6Heatmap=${redColor}
     fi
   else
     dhcpStatus="Disabled"
@@ -131,20 +146,20 @@ GetNetworkInformation() {
       DHCP_ROUTER=$(/sbin/ip route | awk '/default/ { print $3 }')
     fi
 
-    dhcpInfo=" (Router: "${DHCP_ROUTER}")"
-    dhcpHeatmap=$(tput setaf 1) #red
+    dhcpInfo=" Router:   "${DHCP_ROUTER}
+    dhcpHeatmap=${redColor}
 
     dhcpIPv6Status="N/A"
-    dhcpIPv6Heatmap=$(tput setaf 3) #yellow
+    dhcpIPv6Heatmap=${yellowColor}
   fi
 
   # DNSSEC
   if [[ "${DNSSEC}" == "true" ]]; then
     dnssecStatus="Enabled"
-    dnssecHeatmap=$(tput setaf 2) #green
+    dnssecHeatmap=${greenColor}
   else
     dnssecStatus="Disabled"
-    dnssecHeatmap=$(tput setaf 1) #red
+    dnssecHeatmap=${redColor}
   fi
 }
 
@@ -152,16 +167,27 @@ GetPiholeInformation() {
   # Get Pi-hole status
   if [[ $(pihole status web) == 1 ]]; then
     piHoleStatus="Active"
-    piHoleHeatmap=$(tput setaf 2)
+    piHoleHeatmap=${greenColor}
   elif [[ $(pihole status web) == 0 ]]; then
     piHoleStatus="Offline"
-    piHoleHeatmap=$(tput setaf 1)
+    piHoleHeatmap=${redColor}
   elif [[ $(pihole status web) == -1 ]]; then
     piHoleStatus="DNS Offline"
-    piHoleHeatmap=$(tput setaf 1)
+    piHoleHeatmap=${redColor}
   else
     piHoleStatus="Unknown"
-    piHoleHeatmap=$(tput setaf 3)
+    piHoleHeatmap=${yellowColor}
+  fi
+
+  # Get FTL status
+  ftlPID=$(pidof pihole-FTL)
+
+  if [[ ${ftlPID} != 0 ]]; then
+    ftlStatus="Running"
+    ftlHeatmap=${greenColor}
+  else
+    ftlStatus="Not running"
+    ftlHeatmap=${redColor}
   fi
 }
 
@@ -187,45 +213,42 @@ GetPiholeVersionInformation() {
       # check if everything is up-to-date...
       # is core up-to-date?
       if [[ "${piholeVersion}" != "${piholeVersionLatest}" ]]; then
-        outOfDateFlag=true
+        outOfDateFlag="true"
         piholeVersionHeatmap=${redColor}
       else
-        outOfDateFlag=false
-        piholeVersionHeatmap=${greenColor}
+        piholeVersionHeatmap=${resetColor}
       fi
 
       # is web up-to-date?
-      if [ "${webVersion}" != "${webVersionLatest}" ]; then
-        outOfDateFlag=true
+      if [[ "${webVersion}" != "${webVersionLatest}" ]]; then
+        outOfDateFlag="true"
         webVersionHeatmap=${redColor}
       else
-        outOfDateFlag=false
-        webVersionHeatmap=${greenColor}
+        webVersionHeatmap=${resetColor}
       fi
 
       # is ftl up-to-date?
-      if [ "${ftlVersion}" != "${ftlVersionLatest}" ]; then
-        outOfDateFlag=true
+      if [[ "${ftlVersion}" != "${ftlVersionLatest}" ]]; then
+        outOfDateFlag="true"
         ftlVersionHeatmap=${redColor}
       else
-        outOfDateFlag=false
-        ftlVersionHeatmap=${greenColor}
+        ftlVersionHeatmap=${resetColor}
       fi
 
       # was anything out-of-date?
-      if $outOfDateFlag; then
+      if [[ "${outOfDateFlag}" == "true" ]]; then
         versionStatus="Pi-hole is out-of-date!"
-        versionHeatmap=$(tput setaf 1)
+        versionHeatmap=${redColor}
       else
         versionStatus="Pi-hole is up-to-date!"
-        versionHeatmap=$(tput setaf 2)
+        versionHeatmap=${greenColor}
       fi
 
       # write it all to the file
       echo "lastCheck="${today} > ./piHoleVersion
 
       echo "piholeVersion="$piholeVersion >> ./piHoleVersion
-      echo "piHoleVersionHeatmap="$piholeVersionHeatmap >> ./piHoleVersion
+      echo "piholeVersionHeatmap="$piholeVersionHeatmap >> ./piHoleVersion
 
       echo "webVersion="$webVersion >> ./piHoleVersion
       echo "webVersionHeatmap="$webVersionHeatmap >> ./piHoleVersion
@@ -251,50 +274,56 @@ GetPiholeVersionInformation() {
     echo "ftlVersion="$ftlVersion >> ./piHoleVersion
 
     # there's a file now
-    #will check on next display
+    # will check on next display
   fi
+}
+
+outputDHCPInformation() {
+  echo "DHCP SERVER ================================================"
+  printf " %-10s${dhcpHeatmap}%-19s${resetColor}%-10s${dhcpIPv6Heatmap}%-19s${resetColor}\n" "Status:" "${dhcpStatus}" "IPv6:" ${dhcpIPv6Status}
+  printf "${dhcpInfo}\n"
 }
 
 outputJSON() {
   CalcQueriesToday
   CalcblockedToday
   CalcPercentBlockedToday
-
   CalcBlockedDomains
 
   printf '{"domains_being_blocked":"%s","dns_queries_today":"%s","ads_blocked_today":"%s","ads_percentage_today":"%s"}\n' "$blockedDomainsTotal" "$queriesToday" "$blockedToday" "$percentBlockedToday"
 }
 
 outputLogo() {
-  # Displays a colorful Pi-hole logo
-  echo " [0;1;35;95m_[0;1;31;91m__[0m [0;1;33;93m_[0m     [0;1;34;94m_[0m        [0;1;36;96m_[0m         ${versionHeatmap}${versionStatus}"
-  echo -e "[0;1;31;91m|[0m [0;1;33;93m_[0m [0;1;32;92m(_[0;1;36;96m)_[0;1;34;94m__[0;1;35;95m|[0m [0;1;31;91m|_[0m  [0;1;32;92m__[0;1;36;96m_|[0m [0;1;34;94m|[0;1;35;95m__[0;1;31;91m_[0m     Pi-hole ${piholeVersion}"
-  echo "[0;1;33;93m|[0m  [0;1;32;92m_[0;1;36;96m/[0m [0;1;34;94m|_[0;1;35;95m__[0;1;31;91m|[0m [0;1;33;93m'[0m [0;1;32;92m\/[0m [0;1;36;96m_[0m [0;1;34;94m\[0m [0;1;35;95m/[0m [0;1;31;91m-[0;1;33;93m_)[0m    Pi-hole Web-Admin ${webVersion}"
-  echo "[0;1;32;92m|_[0;1;36;96m|[0m [0;1;34;94m|_[0;1;35;95m|[0m   [0;1;33;93m|_[0;1;32;92m||[0;1;36;96m_\[0;1;34;94m__[0;1;35;95m_/[0;1;31;91m_\[0;1;33;93m__[0;1;32;92m_|[0m    FTL ${ftlVersion}"
+  echo " [0;1;35;95m_[0;1;31;91m__[0m [0;1;33;93m_[0m     [0;1;34;94m_[0m        [0;1;36;96m_[0m"
+  echo -e "[0;1;31;91m|[0m [0;1;33;93m_[0m [0;1;32;92m(_[0;1;36;96m)_[0;1;34;94m__[0;1;35;95m|[0m [0;1;31;91m|_[0m  [0;1;32;92m__[0;1;36;96m_|[0m [0;1;34;94m|[0;1;35;95m__[0;1;31;91m_[0m     ${versionHeatmap}${versionStatus}"
+  echo "[0;1;33;93m|[0m  [0;1;32;92m_[0;1;36;96m/[0m [0;1;34;94m|_[0;1;35;95m__[0;1;31;91m|[0m [0;1;33;93m'[0m [0;1;32;92m\/[0m [0;1;36;96m_[0m [0;1;34;94m\[0m [0;1;35;95m/[0m [0;1;31;91m-[0;1;33;93m_)[0m${resetColor}    Pi-hole Core ${piholeVersionHeatmap}${piholeVersion}${resetColor}"
+  echo "[0;1;32;92m|_[0;1;36;96m|[0m [0;1;34;94m|_[0;1;35;95m|[0m   [0;1;33;93m|_[0;1;32;92m||[0;1;36;96m_\[0;1;34;94m__[0;1;35;95m_/[0;1;31;91m_\[0;1;33;93m__[0;1;32;92m_|[0m${resetColor}    (Web ${webVersionHeatmap}${webVersion}${resetColor}, FTL ${ftlVersionHeatmap}${ftlVersion}${resetColor})"
   echo ""
 }
 
 outputNetworkInformation() {
-  # Network Information
   echo "NETWORK ===================================================="
-  printf " %-10s%-19s\n" "Gateway:" "$(ip route show default | awk '/default/ {print $3}')"
+  printf " %-10s%-19s%-10s%-19s\n" "Hostname:" "$(hostname)" "Domain:" ${PIHOLE_DOMAIN}
   printf " %-10s%-19s\n" "IPv4:" "${IPV4_ADDRESS}"
   printf " %-10s%-19s\n" "IPv6:" "${IPV6_ADDRESS}"
-  printf " %-10s${dhcpHeatmap}%-8s${resetColor}%-30s\n" "DHCP:" "${dhcpStatus}" "${dhcpInfo}"
 }
 
 outputPiholeInformation() {
-  # Pi-Hole Information
   echo "PI-HOLE ===================================================="
-  printf " %-10s${piHoleHeatmap}%-19s${resetColor}%-10s%-19s\n" "Status:" "${piHoleStatus}" "Blocking:" "${blockedDomainsTotal}"
+  printf " %-10s${piHoleHeatmap}%-19s${resetColor}%-10s${ftlHeatmap}%-19s${resetColor}\n" "Status:" "${piHoleStatus}" "FTL:" "${ftlStatus}"
+}
+
+outputPiholeStats() {
+  # Pi-Hole Information
+  echo "STATS ======================================================"
+  printf " %-10s%0.0f\n" "Blocking:" "${blockedDomainsTotal}"
   printf " %-10s%-19s%-10s%-19s\n" "Queries:" "${queriesToday}" "Pi-holed:" "${blockedToday} (${percentBlockedToday}%)"
-  printf " %-10s%-19s%-10s%-19s\n" "DNS 1:" "${PIHOLE_DNS_1}" "DNS 2:" "${PIHOLE_DNS_2}"
+  # printf " %-10s%-19s%-10s%-19s\n" "DNS 1:" "${PIHOLE_DNS_1}" "DNS 2:" "${PIHOLE_DNS_2}"
 }
 
 outputSystemInformation() {
   # System Information
   echo "SYSTEM ====================================================="
-  printf " %-10s%-19s\n" "Hostname:" "$(hostname)"
   printf " %-10s%-19s\n" "Uptime:" "${systemUptime}"
   printf " %-10s${tempHeatMap}%-19s${resetColor}" "CPU Temp:" "${temperature}"
   printf " %-10s${cpuLoad1Heatmap}%-4s${resetColor}, ${cpuLoad5Heatmap}%-4s${resetColor}, ${cpuLoad15Heatmap}%-4s${resetColor}\n" "CPU Load:" "${cpuLoad1}" "${cpuLoad5}" "${cpuLoad15}"
@@ -322,13 +351,12 @@ normalChrono() {
 
     outputLogo
     outputPiholeInformation
+    outputPiholeStats
     outputNetworkInformation
+    outputDHCPInformation
     outputSystemInformation
 
-    echo ""
-    printf "              \e[2mPress ^C to quit chronometer\e[0m"
-
-    sleep 5
+    sleep 6
   done
 }
 

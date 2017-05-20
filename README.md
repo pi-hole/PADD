@@ -22,7 +22,7 @@ To setup Chronometer2 with an PiTFT+ screen:
 - Reboot your Pi-Hole by running `sudo reboot`. Chronometer2 should now run when your Pi-Hole has completed booting.
 
 #### (Optional) Put the Display to Sleep at Night
-If you don't want your PiTFT on all night when you are asleep, you can put it to sleep as well!
+If you don't want your PiTFT on all night when you are asleep, you can put it to sleep as well! (Note that other screens may not work with this.)
 
 To do so, edit cron as root (`sudo crontab -e`) and add the following:
 
