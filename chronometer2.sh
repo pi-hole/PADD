@@ -6,7 +6,7 @@
 # Addresses Issue 5: https://github.com/jpmck/chronometer2/issues/5 ... I think...
 export LC_ALL=C.UTF-8
 
-chronometer2Version="v1.0.0"
+chronometer2Version="v1.0.1"
 
 # SOURCES
 piLog="/var/log/pihole.log"
@@ -23,7 +23,7 @@ yellowColor=$(tput setaf 3)
 today=$(date +%Y%m%d)
 
 # CORES
-numProc=$(grep 'model name' /proc/cpuinfo | wc -l)
+numProc=$(grep -c 'model name' /proc/cpuinfo)
 
 CalcBlockedDomains() {
   if [ -e "${gravity}" ]; then
@@ -97,7 +97,7 @@ GetSystemInformation() {
   cpuPercent=$(printf %.1f $(echo "scale=4; (${cpuLoad1}/${numProc})*100" | bc))
 
   # Memory use
-  memoryUsedPercent=$(free | grep Mem | awk '{printf "%.1f",($2-$4-$6-$7)/$2 * 100}')
+  memoryUsedPercent=$(free | awk '/Mem/ {printf "%.1f",($2-$4-$6-$7)/$2 * 100}')
 
   # CPU temperature heatmap
   if [ ${cpu} -gt 60000 ]; then
@@ -182,12 +182,12 @@ GetPiholeInformation() {
   # Get FTL status
   ftlPID=$(pidof pihole-FTL)
 
-  if [[ ${ftlPID} != 0 ]]; then
-    ftlStatus="Running"
-    ftlHeatmap=${greenColor}
-  else
+  if [ -z ${ftlPID+x} ]; then
     ftlStatus="Not running"
     ftlHeatmap=${redColor}
+  else
+    ftlStatus="Running"
+    ftlHeatmap=${greenColor}
   fi
 }
 
@@ -334,8 +334,16 @@ normalChrono() {
   for (( ; ; )); do
     clear
 
-    # Get Our Config Values
+    # Get Config variables
     . /etc/pihole/setupVars.conf
+
+    # Output everything to the screen
+    outputLogo
+    outputPiholeInformation
+    outputPiholeStats
+    outputNetworkInformation
+    outputDHCPInformation
+    outputSystemInformation
 
     #Do Our Calculations
     CalcQueriesToday
@@ -349,14 +357,7 @@ normalChrono() {
     GetNetworkInformation
     GetPiholeVersionInformation
 
-    outputLogo
-    outputPiholeInformation
-    outputPiholeStats
-    outputNetworkInformation
-    outputDHCPInformation
-    outputSystemInformation
-
-    sleep 6
+    sleep 5
   done
 }
 
@@ -375,6 +376,23 @@ EOM
 }
 
 if [[ $# = 0 ]]; then
+
+  # Get Our Config Values
+  . /etc/pihole/setupVars.conf
+
+  # Do Our Calculations for the first time
+  CalcQueriesToday
+  CalcblockedToday
+  CalcPercentBlockedToday
+  CalcBlockedDomains
+
+  # Get our information for the first time
+  GetSystemInformation
+  GetPiholeInformation
+  GetNetworkInformation
+  GetPiholeVersionInformation
+
+  # Run Chronometer2
   normalChrono
 fi
 
