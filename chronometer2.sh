@@ -6,7 +6,7 @@
 # Addresses Issue 5: https://github.com/jpmck/chronometer2/issues/5 ... I think...
 export LC_ALL=C.UTF-8
 
-chronometer2Version="v1.0.1"
+chronometer2Version="v1.1.0"
 
 # SOURCES
 piLog="/var/log/pihole.log"
@@ -25,46 +25,38 @@ today=$(date +%Y%m%d)
 # CORES
 numProc=$(grep -c 'model name' /proc/cpuinfo)
 
-CalcBlockedDomains() {
-  if [ -e "${gravity}" ]; then
-    # if BOTH IPV4 and IPV6 are in use, then we need to divide total domains by 2.
-    if [[ -n "${IPV4_ADDRESS}" && -n "${IPV6_ADDRESS}" ]]; then
-      blockedDomainsTotal=$(wc -l /etc/pihole/gravity.list | awk '{print $1/2}')
-    else
-      # only one is set.
-      blockedDomainsTotal=$(wc -l /etc/pihole/gravity.list | awk '{print $1}')
-    fi
-  else
-    blockedDomainsTotal="Err."
+GetFTLData() {
+  # Open connection to FTL
+  exec 3<>/dev/tcp/localhost/"$(cat /var/run/pihole-FTL.port)"
+
+  # Test if connection is open
+  if { >&3; } 2> /dev/null; then
+    # Send command to FTL
+    echo -e ">$1" >&3
+
+    # Read input
+    read -r -t 1 LINE <&3
+    until [ ! $? ] || [[ "$LINE" == *"EOM"* ]]; do
+      echo "$LINE" >&1
+      read -r -t 1 LINE <&3
+    done
+
+    # Close connection
+    exec 3>&-
+    exec 3<&-
   fi
 }
 
-CalcQueriesToday() {
-  if [ -e "${piLog}" ]; then
-    queriesToday=$(awk '/query\[/ {print $6}' < "${piLog}" | wc -l)
-  else
-    queriesToday="Err."
-  fi
-}
-
-CalcblockedToday() {
-  if [ -e "${piLog}" ] && [ -e "${gravity}" ];then
-    blockedToday=$(awk '/\/etc\/pihole\/gravity.list/ && !/address/ {print $6}' < "${piLog}" | wc -l)
-  else
-    blockedToday="Err."
-  fi
-}
-
-CalcPercentBlockedToday() {
-  if [ "${queriesToday}" != "Err." ] && [ "${blockedToday}" != "Err." ]; then
-    if [ "${queriesToday}" != 0 ]; then #Fixes divide by zero error :)
-      #scale 2 rounds the number down, so we'll do scale 4 and then trim the last 2 zeros
-      percentBlockedToday=$(echo "scale=4; ${blockedToday}/${queriesToday}*100" | bc)
-      percentBlockedToday=$(sed 's/.\{2\}$//' <<< "${percentBlockedToday}")
-    else
-      percentBlockedToday=0
-    fi
-  fi
+GetSummaryInformation() {
+  local summary=$(GetFTLData "stats")
+  domains_being_blocked_raw=$(grep "domains_being_blocked" <<< "${summary}" | grep -Eo "[0-9]+$")
+  domains_being_blocked=$(printf "%'.f" ${domains_being_blocked_raw})
+  dns_queries_today_raw=$(grep "dns_queries_today" <<< "$summary" | grep -Eo "[0-9]+$")
+  dns_queries_today=$(printf "%'.f" ${dns_queries_today_raw})
+  ads_blocked_today_raw=$(grep "ads_blocked_today" <<< "$summary" | grep -Eo "[0-9]+$")
+  ads_blocked_today=$(printf "%'.f" ${ads_blocked_today_raw})
+  ads_percentage_today_raw=$(grep "ads_percentage_today" <<< "$summary" | grep -Eo "[0-9.]+$")
+  LC_NUMERIC=C ads_percentage_today=$(printf "%'.f" ${ads_percentage_today_raw})
 }
 
 GetSystemInformation() {
@@ -285,12 +277,15 @@ outputDHCPInformation() {
 }
 
 outputJSON() {
-  CalcQueriesToday
-  CalcblockedToday
-  CalcPercentBlockedToday
-  CalcBlockedDomains
+  # CalcQueriesToday
+  # CalcblockedToday
+  # CalcPercentBlockedToday
+  # CalcBlockedDomains
+  #
+  # printf '{"domains_being_blocked":"%s","dns_queries_today":"%s","ads_blocked_today":"%s","ads_percentage_today":"%s"}\n' "$blockedDomainsTotal" "$queriesToday" "$blockedToday" "$percentBlockedToday"
 
-  printf '{"domains_being_blocked":"%s","dns_queries_today":"%s","ads_blocked_today":"%s","ads_percentage_today":"%s"}\n' "$blockedDomainsTotal" "$queriesToday" "$blockedToday" "$percentBlockedToday"
+  GetSummaryInformatioon
+  echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw}}"
 }
 
 outputLogo() {
@@ -316,8 +311,8 @@ outputPiholeInformation() {
 outputPiholeStats() {
   # Pi-Hole Information
   echo "STATS ======================================================"
-  printf " %-10s%0.0f\n" "Blocking:" "${blockedDomainsTotal}"
-  printf " %-10s%-19s%-10s%-19s\n" "Queries:" "${queriesToday}" "Pi-holed:" "${blockedToday} (${percentBlockedToday}%)"
+  printf " %-10s%0.0f\n" "Blocking:" "${domains_being_blocked}"
+  printf " %-10s%-19s%-10s%-19s\n" "Queries:" "${dns_queries_today}" "Pi-holed:" "${ads_blocked_today} (${ads_percentage_today}%)"
   # printf " %-10s%-19s%-10s%-19s\n" "DNS 1:" "${PIHOLE_DNS_1}" "DNS 2:" "${PIHOLE_DNS_2}"
 }
 
@@ -332,6 +327,8 @@ outputSystemInformation() {
 
 normalChrono() {
   for (( ; ; )); do
+    GetSummaryInformation
+		domain=$(GetFTLData recentBlocked)
     clear
 
     # Get Config variables
@@ -346,10 +343,10 @@ normalChrono() {
     outputSystemInformation
 
     #Do Our Calculations
-    CalcQueriesToday
-    CalcblockedToday
-    CalcPercentBlockedToday
-    CalcBlockedDomains
+    # CalcQueriesToday
+    # CalcblockedToday
+    # CalcPercentBlockedToday
+    # CalcBlockedDomains
 
     # Get our information
     GetSystemInformation
@@ -379,12 +376,6 @@ if [[ $# = 0 ]]; then
 
   # Get Our Config Values
   . /etc/pihole/setupVars.conf
-
-  # Do Our Calculations for the first time
-  CalcQueriesToday
-  CalcblockedToday
-  CalcPercentBlockedToday
-  CalcBlockedDomains
 
   # Get our information for the first time
   GetSystemInformation
