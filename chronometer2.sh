@@ -45,7 +45,8 @@ GetFTLData() {
 }
 
 GetSummaryInformation() {
-  local summary=$(GetFTLData "stats")
+  local summary
+  summary=$(GetFTLData "stats")
   domains_being_blocked_raw=$(grep "domains_being_blocked" <<< "${summary}" | grep -Eo "[0-9]+$")
   domains_being_blocked=$(printf "%'.f" ${domains_being_blocked_raw})
   dns_queries_today_raw=$(grep "dns_queries_today" <<< "$summary" | grep -Eo "[0-9]+$")
@@ -187,17 +188,15 @@ GetVersionInformation() {
     source piHoleVersion
 
     # was the last check today?
-    if [ "${today}" != "${lastCheck}" ]; then
-    # no, it wasn't today
-
+    if [ "${today}" != "${lastCheck}" ]; then # no, it wasn't today
       # Today is...
       today=$(date +%Y%m%d)
 
       # what are the latest available versions?
       # TODO: update if necessary if added to pihole
-      piholeVersionLatest=$(pihole -v -p -l | tr -d "[:alpha:]")
-      webVersionLatest=$(pihole -v -a -l | tr -d "[:alpha:]")
-      ftlVersionLatest=$(curl -sI https://github.com/pi-hole/FTL/releases/latest | grep 'Location' | awk -F '/' '{print $NF}' | tr -d '\r\n[:alpha:]')
+      piholeVersionLatest=$(pihole -v -p -l | awk '{print $5}' | tr -d "[:alpha:]")
+         webVersionLatest=$(pihole -v -a -l | awk '{print $5}' | tr -d "[:alpha:]")
+         ftlVersionLatest=$(pihole -v -f -l | awk '{print $5}' | tr -d "[:alpha:]")
       chronometer2VersionLatest=$(curl -sI https://github.com/jpmck/chronometer2/releases/latest | grep 'Location' | awk -F '/' '{print $NF}' | tr -d '\r\n[:alpha:]')
 
       # check if everything is up-to-date...
@@ -250,8 +249,6 @@ GetVersionInformation() {
         fi
       fi
 
-
-
       # write it all to the file
       echo "lastCheck="${today} > ./piHoleVersion
 
@@ -275,9 +272,9 @@ GetVersionInformation() {
   # else the file dosn't exist
   else
     # We're using...
-    piholeVersion=$(pihole -v -p -c | tr -d "[:alpha:]")
-    webVersion=$(pihole -v -a -c | tr -d "[:alpha:]")
-    ftlVersion=$(/usr/bin/pihole-FTL version | tr -d "[:alpha:]")
+    piholeVersion=$(pihole -v -p | awk '{print $4}' | tr -d "[:alpha:]")
+       webVersion=$(pihole -v -a | awk '{print $4}' | tr -d "[:alpha:]")
+       ftlVersion=$(pihole -v -f | awk '{print $4}' | tr -d "[:alpha:]")
 
     echo "lastCheck=0" > ./piHoleVersion
     echo "piholeVersion="$piholeVersion >> ./piHoleVersion
@@ -297,7 +294,7 @@ outputDHCPInformation() {
 }
 
 outputJSON() {
-  GetSummaryInformatioon
+  GetSummaryInformation
   echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw}}"
 }
 
@@ -424,7 +421,7 @@ if [[ $# = 0 ]]; then
   GetVersionInformation
   echo "  - $versionStatus"
   echo ""
-  printf "Chronometer2 will start in "
+  printf "Chronometer2 will start in"
 
   for i in 5 4 3 2 1
   do

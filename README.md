@@ -16,7 +16,7 @@ To setup Chronometer2 with an PiTFT+ screen:
 - Install Pi-hole by running `curl -sSL https://install.pi-hole.net | bash`.
 
 ### Setup Chronometer2
-- Get a copy of Chronometer2 by running `wget https://raw.githubusercontent.com/jpmck/chronometer2/master/chronometer2.sh` from pi's home directory
+- Get a copy of Chronometer2 by running `wget -N https://raw.githubusercontent.com/jpmck/chronometer2/master/chronometer2.sh` from pi's home directory
 - Make Chronometer2 executable by running `sudo chmod +x chronometer2.sh`.
 - Set Chronometer2 to auto run by adding `./chronometer2.sh` to the last line of `~/.bashrc`.
 - Reboot your Pi-Hole by running `sudo reboot`. Chronometer2 should now run when your Pi-Hole has completed booting.
@@ -31,3 +31,6 @@ To do so, edit cron as root (`sudo crontab -e`) and add the following:
 00 00 * * * sh -c 'echo "0" > /sys/class/backlight/soc\:backlight/brightness'
 # Turn on the PiTFT+ at 8:00 am
 00 08 * * * sh -c 'echo "1" > /sys/class/backlight/soc\:backlight/brightness'</pre>
+
+## Updating Chronometer2
+- Just run `wget -N https://raw.githubusercontent.com/jpmck/chronometer2/master/chronometer2.sh` again from pi's home directory.
