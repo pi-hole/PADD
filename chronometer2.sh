@@ -6,7 +6,7 @@
 # Addresses Issue 5: https://github.com/jpmck/chronometer2/issues/5 ... I think...
 export LC_ALL=C.UTF-8
 
-chronometer2Version="1.2.0"
+chronometer2Version="1.2.1"
 
 # COLORS
 blueColor=$(tput setaf 6)
