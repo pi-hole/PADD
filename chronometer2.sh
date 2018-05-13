@@ -6,7 +6,7 @@
 # Addresses Issue 5: https://github.com/jpmck/chronometer2/issues/5 ... I think...
 export LC_ALL=C.UTF-8
 
-chronometer2Version="1.2.1"
+chronometer2Version="1.2.2"
 
 # COLORS
 blueColor=$(tput setaf 6)
@@ -87,7 +87,9 @@ GetSystemInformation() {
   cpuPercent=$(printf %.1f "$(echo "scale=4; (${cpuLoad1}/${numProc})*100" | bc)")
 
   # Memory use
-  memoryUsedPercent=$(free | awk '/Mem/ {printf "%.1f",($2-$4-$6-$7)/$2 * 100}')
+  # Corrects Issue #9 https://github.com/jpmck/chronometer2/issues/9
+  # Thanks, Twiggy159 and WaLLy3K!
+  memoryUsedPercent=$(awk '/MemTotal:/{total=$2} /MemFree:/{free=$2} /Buffers:/{buffers=$2} /^Cached:/{cached=$2} END {printf "%.1f", (total-free-buffers-cached)*100/total}' '/proc/meminfo')
 
   # CPU temperature heatmap
   if [ ${cpu} -gt 60000 ]; then
@@ -365,6 +367,7 @@ normalChrono() {
     GetNetworkInformation
     GetVersionInformation
 
+
     sleep 5
   done
 }
@@ -384,6 +387,12 @@ EOM
 }
 
 if [[ $# = 0 ]]; then
+
+  # Turns off the cursor
+  # (From Pull request #8 https://github.com/jpmck/chronometer2/pull/8)
+  setterm -cursor off
+  trap "{ setterm -cursor on ; echo "" ; exit 0 ; }" SIGINT SIGTERM EXIT
+
   clear
 
   # Nice logo
@@ -395,7 +404,14 @@ if [[ $# = 0 ]]; then
   # Get Our Config Values
   . /etc/pihole/setupVars.conf
 
-  echo "START UP===================================================="
+  echo "START UP ==================================================="
+
+  # Get PID of Chronometer2
+  pid=$(echo $$)
+  echo "- Writing PID (${pid}) to file..."
+  echo ${pid} > ./chronometer2.pid
+
+  # Check for updates
   echo "- Checking for Chronometer2 version file..."
   if [ -e "piHoleVersion" ]; then
     echo "  - Chronometer2 version file found... deleting."
