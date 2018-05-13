@@ -87,7 +87,7 @@ GetSystemInformation() {
   cpuPercent=$(printf %.1f "$(echo "scale=4; (${cpuLoad1}/${numProc})*100" | bc)")
 
   # Memory use
-  memoryUsedPercent=$(free | awk '/Mem/ {printf "%.1f",($2-$4-$6-$7)/$2 * 100}')
+  memoryUsedPercent=$(awk '/MemTotal:/{total=$2} /MemFree:/{free=$2} /Buffers:/{buffers=$2} /^Cached:/{cached=$2} END {printf "%.0f", (total-free-buffers-cached)*100/total}' '/proc/meminfo')
 
   # CPU temperature heatmap
   if [ ${cpu} -gt 60000 ]; then
@@ -328,9 +328,15 @@ outputPiholeInformation() {
 outputPiholeStats() {
   # Pi-Hole Information
   echo "STATS ======================================================"
-  printf " %-10s%0.0f\n" "Blocking:" "${domains_being_blocked}"
-  printf " %-10s%-19s%-10s%-19s\n" "Queries:" "${dns_queries_today}" "Pi-holed:" "${ads_blocked_today} (${ads_percentage_today}%)"
-  printf " %-10s%-39s\n" "Latest:" "${domain}"
+  printf " %-12s%0.0f\n" "Blocking:" "${domains_being_blocked}"
+  printf " %-12s%-18s%-10s%-18s\n" "Queries:" "${dns_queries_today}" "Pi-holed:" "${ads_blocked_today} (${ads_percentage_today}%)"
+  printf " %-12s%-37s\n" "Latest:" "${domain}"
+
+  if [ "$TOP_STATS" == "1" ] ; then
+    printf " %-12s%-37s\n" "Top Ad:" "${topAd}"
+    printf " %-12s%-37s\n" "Top Domain:" "${topDomain}"
+    printf " %-12s%-37s\n" "Top Client:" "${topClient}"
+  fi
 }
 
 outputSystemInformation() {
@@ -343,21 +349,37 @@ outputSystemInformation() {
 }
 
 normalChrono() {
+  # Turn the cursor off for the display
+  # Trap any signals to turn it on before exiting
+  setterm -cursor off
+  trap "{ setterm -cursor on ; echo "" ; exit 0 ; }" SIGINT SIGTERM EXIT
+
   for (( ; ; )); do
     GetSummaryInformation
-		domain=$(GetFTLData recentBlocked)
+    domain=$(GetFTLData recentBlocked)
+
+    if [ "$TOP_STATS" == "1" ] ; then
+      topAd=$(GetFTLData "top-ads (1)" | awk '{print $3}')
+      topDomain=$(GetFTLData "top-domains (1)" | awk '{print $3}')
+      topClient=$(GetFTLData "top-clients (1)" | awk '{print $3}')
+    fi
+
     clear
 
     # Get Config variables
     . /etc/pihole/setupVars.conf
 
     # Output everything to the screen
-    outputLogo
-    outputPiholeInformation
-    outputPiholeStats
-    outputNetworkInformation
-    outputDHCPInformation
-    outputSystemInformation
+    for (( i=0 ; i<${#OUTPUT_FORMAT} ; i++ )); do
+      c=${OUTPUT_FORMAT:$i:1}
+
+      [ "$c" == "a" ] && outputLogo
+      [ "$c" == "b" ] && outputPiholeInformation
+      [ "$c" == "c" ] && outputPiholeStats
+      [ "$c" == "d" ] && outputNetworkInformation
+      [ "$c" == "e" ] && outputDHCPInformation
+      [ "$c" == "f" ] && outputSystemInformation
+    done
 
     # Get our information
     GetSystemInformation
@@ -373,17 +395,64 @@ displayHelp() {
   cat << EOM
 ::: Displays stats about your piHole!
 :::
-::: Usage: sudo pihole -c [optional:-j]
+::: Usage: $0 [-jh] [-f xxxxxx] [-p file]
 ::: Note: If no option is passed, then stats are displayed on screen, updated every 5 seconds
 :::
 ::: Options:
 :::  -j, --json    output stats as JSON formatted string
+:::  -f, --format  Customize the output format. Specify a string based on the following:
+:::                a: Logo
+:::                b: Pihole Inforamtion
+:::                c: Pihole Statistics
+:::                d: Network Details
+:::                e: DHCP Information
+:::                f: System Information
+:::
+:::                Default Format: "$OUTPUT_FORMAT"
+:::
+:::  -t, --top     Include top client/domain/advertiser in Statistics
+:::  -p, --pid     Write the chronometer2 PID to a file
+:::
 :::  -h, --help    display this help text
 EOM
     exit 0
 }
 
-if [[ $# = 0 ]]; then
+OUTPUT_FORMAT="abcdef"
+
+while [[ $1 =~ ^- ]]; do
+  case "$1" in
+    "-j" | "--json" ) 
+      outputJSON 
+      exit 0 
+      ;;
+    "-t" | "--top" ) 
+      TOP_STATS=1 
+      shift
+      ;;
+    "-f" | "--format" )
+      shift
+      OUTPUT_FORMAT=$1
+      shift
+      ;;
+   "-p" | "--pid" )
+      shift
+      echo $$ > $1
+      shift
+      ;;
+    "-h" | "--help" ) 
+      displayHelp
+      exit 0 
+      ;;
+    * ) 
+      echo "Unknown option $1"
+      echo ""
+      displayHelp
+      exit 1
+      ;;
+  esac
+done
+
   clear
 
   # Nice logo
@@ -432,12 +501,4 @@ if [[ $# = 0 ]]; then
   printf " now!"
   # Run Chronometer2
   normalChrono
-fi
 
-for var in "$@"; do
-  case "$var" in
-    "-j" | "--json"  ) outputJSON;;
-    "-h" | "--help"  ) displayHelp;;
-    *                ) exit 1;;
-  esac
-done
