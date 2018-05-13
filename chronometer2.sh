@@ -87,7 +87,7 @@ GetSystemInformation() {
   cpuPercent=$(printf %.1f "$(echo "scale=4; (${cpuLoad1}/${numProc})*100" | bc)")
 
   # Memory use
-  memoryUsedPercent=$(free | awk '/Mem/ {printf "%.1f",($2-$4-$6-$7)/$2 * 100}')
+  memoryUsedPercent=$(awk '/MemTotal:/{total=$2} /MemFree:/{free=$2} /Buffers:/{buffers=$2} /^Cached:/{cached=$2} END {printf "%.0f", (total-free-buffers-cached)*100/total}' '/proc/meminfo')
 
   # CPU temperature heatmap
   if [ ${cpu} -gt 60000 ]; then
