@@ -22,6 +22,12 @@ today=$(date +%Y%m%d)
 # CORES
 numProc=$(grep -c 'model name' /proc/cpuinfo)
 
+# Default output format
+OUTPUT_FORMAT="abcdef"
+
+# PID file
+PID_FILE=./chronometer2.pid
+
 GetFTLData() {
   # Open connection to FTL
   exec 3<>/dev/tcp/localhost/"$(cat /var/run/pihole-FTL.port)"
@@ -333,6 +339,12 @@ outputPiholeStats() {
   printf " %-10s%0.0f\n" "Blocking:" "${domains_being_blocked}"
   printf " %-10s%-19s%-10s%-19s\n" "Queries:" "${dns_queries_today}" "Pi-holed:" "${ads_blocked_today} (${ads_percentage_today}%)"
   printf " %-10s%-39s\n" "Latest:" "${domain}"
+
+  if [ "$TOP_STATS" == "1" ] ; then
+    printf " %-12s%-37s\n" "Top Ad:" "${topAd}"
+    printf " %-12s%-37s\n" "Top Domain:" "${topDomain}"
+    printf " %-12s%-37s\n" "Top Client:" "${topClient}"
+  fi
 }
 
 outputSystemInformation() {
@@ -347,19 +359,30 @@ outputSystemInformation() {
 normalChrono() {
   for (( ; ; )); do
     GetSummaryInformation
-		domain=$(GetFTLData recentBlocked)
+    domain=$(GetFTLData recentBlocked)
+
+    if [ "$TOP_STATS" == "1" ] ; then
+      topAd=$(GetFTLData "top-ads (1)" | awk '{print $3}')
+      topDomain=$(GetFTLData "top-domains (1)" | awk '{print $3}')
+      topClient=$(GetFTLData "top-clients (1)" | awk '{print $3}')
+    fi
+
     clear
 
     # Get Config variables
     . /etc/pihole/setupVars.conf
 
     # Output everything to the screen
-    outputLogo
-    outputPiholeInformation
-    outputPiholeStats
-    outputNetworkInformation
-    outputDHCPInformation
-    outputSystemInformation
+    for (( i=0 ; i<${#OUTPUT_FORMAT} ; i++ )); do
+      c=${OUTPUT_FORMAT:$i:1}
+
+      [ "$c" == "a" ] && outputLogo
+      [ "$c" == "b" ] && outputPiholeInformation
+      [ "$c" == "c" ] && outputPiholeStats
+      [ "$c" == "d" ] && outputNetworkInformation
+      [ "$c" == "e" ] && outputDHCPInformation
+      [ "$c" == "f" ] && outputSystemInformation
+    done
 
     # Get our information
     GetSystemInformation
@@ -381,12 +404,52 @@ displayHelp() {
 :::
 ::: Options:
 :::  -j, --json    output stats as JSON formatted string
+:::  -f, --format  Customize the output format. Specify a string based on the following:
+:::                a: Logo
+:::                b: Pihole Inforamtion
+:::                c: Pihole Statistics
+:::                d: Network Details
+:::                e: DHCP Information
+:::                f: System Information
+:::
+:::                Default Format: "$OUTPUT_FORMAT"
+:::
+:::  -t, --top     Include top client/domain/advertiser in Statistics
+:::  -p, --pid     Write the chronometer2 PID to the specified file (defaults to $PID_FILE)
+:::
 :::  -h, --help    display this help text
 EOM
     exit 0
 }
 
-if [[ $# = 0 ]]; then
+while [[ $1 =~ ^- ]]; do
+  case "$1" in
+    "-j" | "--json"  )
+      outputJSON
+      exit 0
+      ;;
+    "-t" | "--top" )
+      TOP_STATS=1
+      shift
+      ;;
+    "-f" | "--format" )
+      shift
+      OUTPUT_FORMAT=$1
+      shift
+      ;;
+   "-p" | "--pid" )
+      shift
+      PID_FILE=$1
+      shift
+      ;;
+    * )
+      echo "Unknown option $1"
+      echo ""
+      displayHelp
+      exit 1
+      ;;
+  esac
+done
 
   # Turns off the cursor
   # (From Pull request #8 https://github.com/jpmck/chronometer2/pull/8)
@@ -409,7 +472,7 @@ if [[ $# = 0 ]]; then
   # Get PID of Chronometer2
   pid=$(echo $$)
   echo "- Writing PID (${pid}) to file..."
-  echo ${pid} > ./chronometer2.pid
+  echo ${pid} > $PID_FILE
 
   # Check for updates
   echo "- Checking for Chronometer2 version file..."
@@ -448,12 +511,4 @@ if [[ $# = 0 ]]; then
   printf " now!"
   # Run Chronometer2
   normalChrono
-fi
 
-for var in "$@"; do
-  case "$var" in
-    "-j" | "--json"  ) outputJSON;;
-    "-h" | "--help"  ) displayHelp;;
-    *                ) exit 1;;
-  esac
-done
