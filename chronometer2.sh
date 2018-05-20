@@ -5,9 +5,9 @@
 # SETS LOCALE
 # Issue 5: https://github.com/jpmck/chronometer2/issues/5
 # Updated to en_US to support
-export LC_ALL=en_US.UTF-8
+export LC_ALL=en_US.UTF-8 > /dev/null 2>&1 || export LC_ALL=C.UTF-8 > /dev/null 2>&1
 
-chronometer2Version="1.3"
+chronometer2Version="1.3.1"
 
 # COLORS
 blueColor=$(tput setaf 6)
