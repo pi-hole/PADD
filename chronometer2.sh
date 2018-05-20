@@ -475,7 +475,7 @@ if [[ $# = 0 ]]; then
   echo "- Checking for Chronometer2 version file..."
   if [ -e "piHoleVersion" ]; then
     echo "  - Chronometer2 version file found... deleting."
-    rm piHoleVersion
+    rm -f piHoleVersion
   else
     echo "  - Chronometer2 version file not found."
   fi
