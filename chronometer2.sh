@@ -3,10 +3,11 @@
 # A more advanced version of the chronometer provided with Pihole
 
 # SETS LOCALE
-# Addresses Issue 5: https://github.com/jpmck/chronometer2/issues/5 ... I think...
-export LC_ALL=C.UTF-8
+# Issue 5: https://github.com/jpmck/chronometer2/issues/5
+# Updated to en_US to support
+export LC_ALL=en_US.UTF-8
 
-chronometer2Version="1.2.1"
+chronometer2Version="1.3"
 
 # COLORS
 blueColor=$(tput setaf 6)
@@ -45,16 +46,23 @@ GetFTLData() {
 }
 
 GetSummaryInformation() {
+  # From pihole -c
   local summary
   summary=$(GetFTLData "stats")
+
   domains_being_blocked_raw=$(grep "domains_being_blocked" <<< "${summary}" | grep -Eo "[0-9]+$")
   domains_being_blocked=$(printf "%'.f" ${domains_being_blocked_raw})
+
   dns_queries_today_raw=$(grep "dns_queries_today" <<< "$summary" | grep -Eo "[0-9]+$")
   dns_queries_today=$(printf "%'.f" ${dns_queries_today_raw})
+
   ads_blocked_today_raw=$(grep "ads_blocked_today" <<< "$summary" | grep -Eo "[0-9]+$")
   ads_blocked_today=$(printf "%'.f" ${ads_blocked_today_raw})
+
   ads_percentage_today_raw=$(grep "ads_percentage_today" <<< "$summary" | grep -Eo "[0-9.]+$")
-  LC_NUMERIC=C ads_percentage_today=$(printf "%'.f" ${ads_percentage_today_raw})
+  LC_NUMERIC=C ads_percentage_today=$(printf "%'.1f" ${ads_percentage_today_raw})
+
+  adsBlockedBar=$(BarGenerator $ads_percentage_today 40 "color")
 }
 
 GetSystemInformation() {
@@ -74,20 +82,15 @@ GetSystemInformation() {
     temperature=$(printf %.1f "$(echo "scale=4; ${cpu}/1000" | bc)")°C
   fi
 
-  # CPU load and heatmap calculations
+  # CPU load, heatmap and bar
   cpuLoad1=$(cat /proc/loadavg | awk '{print $1}')
-  cpuLoad1Heatmap=$(CPUHeatmapGenerator ${cpuLoad1} ${numProc})
-
+  cpuLoad1Heatmap=$(HeatmapGenerator ${cpuLoad1} ${numProc})
   cpuLoad5=$(cat /proc/loadavg | awk '{print $2}')
-  cpuLoad5Heatmap=$(CPUHeatmapGenerator ${cpuLoad5} ${numProc})
-
+  cpuLoad5Heatmap=$(HeatmapGenerator ${cpuLoad5} ${numProc})
   cpuLoad15=$(cat /proc/loadavg | awk '{print $3}')
-  cpuLoad15Heatmap=$(CPUHeatmapGenerator ${cpuLoad15} ${numProc})
-
+  cpuLoad15Heatmap=$(HeatmapGenerator ${cpuLoad15} ${numProc})
   cpuPercent=$(printf %.1f "$(echo "scale=4; (${cpuLoad1}/${numProc})*100" | bc)")
-
-  # Memory use
-  memoryUsedPercent=$(free | awk '/Mem/ {printf "%.1f",($2-$4-$6-$7)/$2 * 100}')
+  cpuBar=$(BarGenerator ${cpuPercent} 10)
 
   # CPU temperature heatmap
   if [ ${cpu} -gt 60000 ]; then
@@ -95,18 +98,67 @@ GetSystemInformation() {
   else
     tempHeatMap=${blueColor}
   fi
+
+  # Memory use, heatmap and bar
+  memoryUsedPercent=$(awk '/MemTotal:/{total=$2} /MemFree:/{free=$2} /Buffers:/{buffers=$2} /^Cached:/{cached=$2} END {printf "%.1f", (total-free-buffers-cached)*100/total}' '/proc/meminfo')
+  memoryHeatmap=$(HeatmapGenerator ${memoryUsedPercent})
+  memoryBar=$(BarGenerator ${memoryUsedPercent} 10)
 }
 
-CPUHeatmapGenerator () {
-  x=$(echo "scale=2; ($1/$2)*100" | bc)
-  load=$(printf "%.0f" "${x}")
+# Provides a color based on a provided percentage
+# takes in one or two parameters
+HeatmapGenerator () {
+  # if one number is provided, just use that percentage to figure out the colors
+  if [ -z "$2" ]; then
+    load=$(printf "%.0f" "$1")
+  # if two numbers are provided, do some math to make a percentage to figure out the colors
+  else
+    load=$(printf "%.0f" "$(echo "scale=2; ($1/$2)*100" | bc)")
+  fi
 
+  # Color logic
+  #  |                   green                    | yellow |  red ->
+  #  0  5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100
   if [ ${load} -lt 75 ]; then
     out=${greenColor}
   elif [ ${load} -lt 90 ]; then
     out=${yellowColor}
   else
     out=${redColor}
+  fi
+
+  echo $out
+}
+
+# Provides a "bar graph"
+# takes in two or three parameters
+# $1: percentage filled
+# $2: max length of the bar
+# $3: colored flag, if "color" backfill with color
+BarGenerator() {
+  # number of filled in cells in the bar
+  barNumber=$(printf %.f "$(echo "scale=1; (($1/100)*$2)" | bc)")
+  frontFill=$(for i in $(seq $barNumber); do echo -n '■'; done)
+
+  # remaining "unfilled" cells in the bar
+  backfillNumber=$(($2-${barNumber}))
+
+  # if the filled in cells is less than the max length of the bar, fill it
+  if [ "$barNumber" -lt "$2" ]; then
+    # if the bar should be colored
+    if [ "$3" = "color" ]; then
+      # fill the rest in color
+      backFill=$(for i in $(seq $backfillNumber); do echo -n '■'; done)
+      out="${redColor}${frontFill}${greenColor}${backFill}${resetColor}"
+    # else, it shouldn't be colored in
+    else
+      # fill the rest with "space"
+      backFill=$(for i in $(seq $backfillNumber); do echo -n '·'; done)
+      out="${frontFill}${backFill}"
+    fi
+  # else, fill it all the way
+  else
+    out=$(for i in $(seq $2); do echo -n '■'; done)
   fi
 
   echo $out
@@ -131,7 +183,7 @@ GetNetworkInformation() {
     dhcpStatus="Disabled"
 
     # if the DHCP Router variable isn't set
-    # Addresses Issue 3: https://github.com/jpmck/chronometer2/issues/3
+    # Issue 3: https://github.com/jpmck/chronometer2/issues/3
     if [ -z ${DHCP_ROUTER+x} ]; then
       DHCP_ROUTER=$(/sbin/ip route | awk '/default/ { print $3 }')
     fi
@@ -287,12 +339,6 @@ GetVersionInformation() {
   fi
 }
 
-outputDHCPInformation() {
-  echo "DHCP SERVER ================================================"
-  printf " %-10s${dhcpHeatmap}%-19s${resetColor}%-10s${dhcpIPv6Heatmap}%-19s${resetColor}\n" "Status:" "${dhcpStatus}" "IPv6:" ${dhcpIPv6Status}
-  printf "${dhcpInfo}\n"
-}
-
 outputJSON() {
   GetSummaryInformation
   echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw}}"
@@ -305,47 +351,64 @@ outputLogo() {
 
   echo -e "${greenColor}'  ${redColor}'   ${magentaColor}' ${yellowColor}'${greenColor}-${blueColor}\`${magentaColor}-${redColor}'${yellowColor}'${greenColor}-${blueColor}\`${magentaColor}'${redColor}-  ${resetColor}Chronometer2 ${chronometer2VersionHeatmap}v${chronometer2Version}${resetColor}"
 
-
-  # echo " [0;1;35;95m_[0;1;31;91m__[0m [0;1;33;93m_[0m     [0;1;34;94m_[0m        [0;1;36;96m_[0m"
-  # echo -e "[0;1;31;91m|[0m [0;1;33;93m_[0m [0;1;32;92m(_[0;1;36;96m)_[0;1;34;94m__[0;1;35;95m|[0m [0;1;31;91m|_[0m  [0;1;32;92m__[0;1;36;96m_|[0m [0;1;34;94m|[0;1;35;95m__[0;1;31;91m_[0m     ${versionHeatmap}${versionStatus}"
-  # echo "[0;1;33;93m|[0m  [0;1;32;92m_[0;1;36;96m/[0m [0;1;34;94m|_[0;1;35;95m__[0;1;31;91m|[0m [0;1;33;93m'[0m [0;1;32;92m\/[0m [0;1;36;96m_[0m [0;1;34;94m\[0m [0;1;35;95m/[0m [0;1;31;91m-[0;1;33;93m_)[0m${resetColor}    Pi-hole Core ${piholeVersionHeatmap}v${piholeVersion}${resetColor}"
-  # echo "[0;1;32;92m|_[0;1;36;96m|[0m [0;1;34;94m|_[0;1;35;95m|[0m   [0;1;33;93m|_[0;1;32;92m||[0;1;36;96m_\[0;1;34;94m__[0;1;35;95m_/[0;1;31;91m_\[0;1;33;93m__[0;1;32;92m_|[0m${resetColor}    (Web ${webVersionHeatmap}v${webVersion}${resetColor}, FTL ${ftlVersionHeatmap}v${ftlVersion}${resetColor})"
   echo ""
 }
 
 outputNetworkInformation() {
   echo "NETWORK ===================================================="
-  printf " %-10s%-19s%-10s%-19s\n" "Hostname:" "$(hostname)" "Domain:" ${PIHOLE_DOMAIN}
+  printf " %-10s%-19s %-10s%-19s\n" "Hostname:" "$(hostname)" "Domain:" ${PIHOLE_DOMAIN}
   printf " %-10s%-19s\n" "IPv4:" "${IPV4_ADDRESS}"
   printf " %-10s%-19s\n" "IPv6:" "${IPV6_ADDRESS}"
+
+  if [[ "${DHCP_ACTIVE}" == "true" ]]; then
+    printf " %-10s${dhcpHeatmap}%-19s${resetColor} %-10s${dhcpIPv6Heatmap}%-19s${resetColor}\n" "DHCP:" "${dhcpStatus}" "IPv6:" ${dhcpIPv6Status}
+    printf "${dhcpInfo}\n"
+  fi
 }
 
 outputPiholeInformation() {
   echo "PI-HOLE ===================================================="
-  printf " %-10s${piHoleHeatmap}%-19s${resetColor}%-10s${ftlHeatmap}%-19s${resetColor}\n" "Status:" "${piHoleStatus}" "FTL:" "${ftlStatus}"
+  printf " %-10s${piHoleHeatmap}%-19s${resetColor} %-10s${ftlHeatmap}%-19s${resetColor}\n" "Status:" "${piHoleStatus}" "FTL:" "${ftlStatus}"
 }
 
 outputPiholeStats() {
   # Pi-Hole Information
   echo "STATS ======================================================"
-  printf " %-10s%0.0f\n" "Blocking:" "${domains_being_blocked}"
-  printf " %-10s%-19s%-10s%-19s\n" "Queries:" "${dns_queries_today}" "Pi-holed:" "${ads_blocked_today} (${ads_percentage_today}%)"
-  printf " %-10s%-39s\n" "Latest:" "${domain}"
+  printf " %-10s%-49s\n" "Blocking:" "${domains_being_blocked} domains"
+  printf " %-10s[%-40s] %-5s\n" "Pi-holed:" "${adsBlockedBar}" "${ads_percentage_today}%"
+  printf " %-10s%-49s\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today} queries"
+  printf " %-10s%-39s\n" "Latest:" "${latestBlocked}"
+  printf " %-10s%-39s\n" "Top Ad:" "${topBlocked}"
+  if [[ "${DHCP_ACTIVE}" != "true" ]]; then
+    printf " %-10s%-39s\n" "Top Dmn:" "${topDomain}"
+    printf " %-10s%-39s\n" "Top Clnt:" "${topClient}"
+  fi
 }
 
 outputSystemInformation() {
   # System Information
   echo "SYSTEM ====================================================="
-  printf " %-10s%-19s\n" "Uptime:" "${systemUptime}"
+  # Uptime
+  printf " %-10s%-39s\n" "Uptime:" "${systemUptime}"
+
+  # Temp and Loads
   printf " %-10s${tempHeatMap}%-19s${resetColor}" "CPU Temp:" "${temperature}"
   printf " %-10s${cpuLoad1Heatmap}%-4s${resetColor}, ${cpuLoad5Heatmap}%-4s${resetColor}, ${cpuLoad15Heatmap}%-4s${resetColor}\n" "CPU Load:" "${cpuLoad1}" "${cpuLoad5}" "${cpuLoad15}"
-  printf " %-10s%-19s%-10s${cpuLoad1Heatmap}%-19s${resetColor}" "Memory:" "${memoryUsedPercent}%" "CPU Load:" "${cpuPercent}%"
+
+  # Memory and CPU bar
+  printf " %-10s[${memoryHeatmap}%-10s${resetColor}] %-5s %-10s[${cpuLoad1Heatmap}%-10s${resetColor}] %-5s" "Memory:" "${memoryBar}" "${memoryUsedPercent}%" "CPU Load:" "${cpuBar}" "${cpuPercent}%"
 }
 
 normalChrono() {
   for (( ; ; )); do
     GetSummaryInformation
-		domain=$(GetFTLData recentBlocked)
+
+		latestBlocked=$(GetFTLData recentBlocked)
+    topBlocked=$(GetFTLData "top-ads (1)" | awk '{print $3}')
+
+    topDomain=$(GetFTLData "top-domains (1)" | awk '{print $3}')
+    topClient=$(GetFTLData "top-clients (1)" | awk '{print $3}')
+
     clear
 
     # Get Config variables
@@ -356,7 +419,6 @@ normalChrono() {
     outputPiholeInformation
     outputPiholeStats
     outputNetworkInformation
-    outputDHCPInformation
     outputSystemInformation
 
     # Get our information
@@ -364,6 +426,7 @@ normalChrono() {
     GetPiholeInformation
     GetNetworkInformation
     GetVersionInformation
+
 
     sleep 5
   done
@@ -384,6 +447,12 @@ EOM
 }
 
 if [[ $# = 0 ]]; then
+
+  # Turns off the cursor
+  # (From Pull request #8 https://github.com/jpmck/chronometer2/pull/8)
+  setterm -cursor off
+  trap "{ setterm -cursor on ; echo "" ; exit 0 ; }" SIGINT SIGTERM EXIT
+
   clear
 
   # Nice logo
@@ -395,7 +464,14 @@ if [[ $# = 0 ]]; then
   # Get Our Config Values
   . /etc/pihole/setupVars.conf
 
-  echo "START UP===================================================="
+  echo "START UP ==================================================="
+
+  # Get PID of Chronometer2
+  pid=$(echo $$)
+  echo "- Writing PID (${pid}) to file..."
+  echo ${pid} > ./chronometer2.pid
+
+  # Check for updates
   echo "- Checking for Chronometer2 version file..."
   if [ -e "piHoleVersion" ]; then
     echo "  - Chronometer2 version file found... deleting."
@@ -423,7 +499,7 @@ if [[ $# = 0 ]]; then
   echo ""
   printf "Chronometer2 will start in"
 
-  for i in 5 4 3 2 1
+  for i in 3 2 1
   do
     printf " $i..."
     sleep 1
