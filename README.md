@@ -19,7 +19,7 @@ sudo chmod +x padd.sh
 - Set PADD to auto run by adding the following to the end of `~/.bashrc`:
 ```bash
 # Run PADD
-# If we're on the PiTFT screen (ssh is xterm)
+# If we’re on the PiTFT screen (ssh is xterm)
 if [ "$TERM" == "linux" ] ; then
   while :
   do
@@ -36,6 +36,8 @@ fi
 cd ~
 wget -N https://raw.githubusercontent.com/jpmck/PADD/master/padd.sh
 ```
+
+**Note: if you are already running Chronometer2 v1.3.1 or below, you’ll need to follow [these instructions](https://github.com/jpmck/PADD/wiki/Updating-from-Chronometer2)!**
 
 ## FAQ
 *Answers to frequently asked questions can be found in this repo’s [wiki](https://github.com/jpmck/PADD/wiki/FAQ).*
