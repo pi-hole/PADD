@@ -4,6 +4,8 @@ about: Create a report to help us improve
 
 ---
 
+*Before submitting a bug report, are you using a test version of Pi-hole? If so, PADD doesn‘t support beta versions of Pi-hole!*
+
 **Describe the bug**
 A clear and concise description of what the bug is.
 
