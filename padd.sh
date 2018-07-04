@@ -43,6 +43,15 @@ checkBoxBad="[${redText}✗${resetText}]"          # Bad
 checkBoxQuestion="[${yellowText}?${resetText}]"  # Question / ?
 checkBoxInfo="[${yellowText}i${resetText}]"      # Info / i
 
+# PICO STATUSES
+picoStatusOk="${checkBoxGood} Sys. OK"
+picoStatusUpdate="${checkBoxInfo} Update"
+picoStatusHot="${checkBoxBad} Sys. Hot!"
+picoStatusOff="${checkBoxBad} Offline"
+picoStatusFTLDown="${checkBoxInfo} FTL"
+picoStatusDNSDown="${checkBoxBad} DNS"
+picoStatusUnknown="${checkBoxQuestion} Stat. Unk."
+
 # MINI STATUS
 miniStatusOk="${checkBoxGood} System OK"
 miniStatusUpdate="${checkBoxInfo} Update avail."
@@ -52,9 +61,10 @@ miniStatusFTLDown="${checkBoxInfo} FTL down!"
 miniStatusDNSDown="${checkBoxBad} DNS off!"
 miniStatusUnknown="${checkBoxQuestion} Status unknown!"
 
-# Mini PADD logos - regular and retro
-miniPADDLogo="${greenText}${boldText}PADD${resetText}${dimText}mini${resetText}"
-miniPADDLogoRetro="${boldText}${redText}P${yellowText}A${greenText}D${blueText}D${resetText}${dimText}${cyanText}m${magentaText}i${redText}n${yellowText}i${resetText}"
+# Text only "logos"
+PADDText="${greenText}${boldText}PADD${resetText}"
+PADDTextRetro="${boldText}${redText}P${yellowText}A${greenText}D${blueText}D${resetText}${resetText}"
+miniTextRetro="${dimText}${cyanText}m${magentaText}i${redText}n${yellowText}i${resetText}"
 
 # PADD logos - regular and retro
 PADDLogo1="${boldText}${greenText} __      __  __   ${resetText}"
@@ -155,6 +165,7 @@ GetSystemInformation() {
   # If we're getting close to 85°C... (https://www.raspberrypi.org/blog/introducing-turbo-mode-up-to-50-more-performance-for-free/)
   if [ ${cpu} -gt 80000 ]; then
     tempHeatMap=${blinkingText}${redText}
+    picoStatus="${miniStatusHot}"
     miniStatus="${miniStatusHot} ${blinkingText}${redText}${temperature}${resetText}"
   elif [ ${cpu} -gt 70000 ]; then
     tempHeatMap=${magentaText}
@@ -171,6 +182,8 @@ GetSystemInformation() {
 }
 
 GetNetworkInformation() {
+  # Get pi IP address
+  piIPAddress=$(ip addr | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/')
   # Get hostname information
   piHostname=$(hostname)
   # does the Pi-hole have a domain set?
@@ -258,16 +271,19 @@ GetPiholeInformation() {
     piHoleStatus="Offline"
     piHoleHeatmap=${redText}
     piHoleCheckBox=${checkBoxBad}
+    picoStatus=${picoStatusOff}
     miniStatus=${miniStatusOff}
   elif [[ $(pihole status web) == -1 ]]; then
     piHoleStatus="DNS Offline"
     piHoleHeatmap=${redText}
     piHoleCheckBox=${checkBoxBad}
+    picoStatus=${picoStatusDNSDown}
     miniStatus=${miniStatusDNSDown}
   else
     piHoleStatus="Unknown"
     piHoleHeatmap=${yellowText}
     piHoleCheckBox=${checkBoxQuestion}
+    picoStatus${picoStatusUnknown}
     miniStatus${miniStatusUnknown}
   fi
 
@@ -278,6 +294,7 @@ GetPiholeInformation() {
     ftlStatus="Not running"
     ftlHeatmap=${yellowText}
     ftlCheckBox=${informationCheckBox}
+    picoStatus=${picoStatusFTLDown}
     miniStatus=${miniStatusFTLDown}
   else
     ftlStatus="Running"
@@ -343,6 +360,7 @@ GetVersionInformation() {
         versionStatus="Pi-hole is out-of-date!"
         versionHeatmap=${redText}
         versionCheckBox=${checkBoxBad}
+        picoStatus=${picoStatusUpdate}
         miniStatus=${miniStatusUpdate}
       else
         # but is PADD out-of-date?
@@ -350,6 +368,7 @@ GetVersionInformation() {
           versionStatus="PADD is out-of-date!"
           versionHeatmap=${redText}
           versionCheckBox=${checkBoxBad}
+          picoStatus=${picoStatusUpdate}
           miniStatus=${miniStatusUpdate}
         # else, everything is good!
         else
@@ -379,6 +398,7 @@ GetVersionInformation() {
       echo "versionHeatmap="$versionHeatmap >> ./piHoleVersion
       echo "versionCheckBox="\"$versionCheckBox\" >> ./piHoleVersion
 
+      echo "picoStatus="\"$picoStatus\" >> ./piHoleVersion
       echo "miniStatus="\"$miniStatus\" >> ./piHoleVersion
 
     fi
@@ -404,15 +424,21 @@ GetVersionInformation() {
 ############################################# PRINTERS #############################################
 
 PrintLogo() {
-  # are we on a tiny screen?
-  if [ "$1" = "mini" ]; then
-    echo -e "${miniPADDLogo}  ${miniStatus}\n"
-  # else we're not
+  # Screen size checks
+  if [ "$1" = "pico" ]; then
+    echo -e "p${PADDText} ${picoStatus}"
+  elif [ "$1" = "nano" ]; then
+    echo -e "n${PADDText} ${miniStatus}"
+  elif [ "$1" = "micro" ]; then
+    echo -e "µ${PADDText}     ${miniStatus}"
+  elif [ "$1" = "mini" ]; then
+    echo -e "${PADDText}${dimText}mini${resetText}  ${miniStatus}\n"
+  elif [ "$1" = "slim" ]; then
+    echo -e "${PADDText}${dimText}slim${resetText}  ${miniStatus}\n"
+  # normal or not defined
   else
     echo -e "${PADDLogo1}"
-
     echo -e "${PADDLogo2}Pi-hole® ${piholeVersionHeatmap}v${piholeVersion}${resetText}, Web ${webVersionHeatmap}v${webVersion}${resetText}, FTL ${ftlVersionHeatmap}v${ftlVersion}${resetText}"
-
     echo -e "${PADDLogo3}PADD ${PADDVersionHeatmap}v${PADDVersion}${resetText} ${versionHeatmap}${versionStatus}${resetText}"
 
     echo ""
@@ -420,7 +446,12 @@ PrintLogo() {
 }
 
 PrintNetworkInformation() {
-  if [ "$1" = "mini" ]; then
+  if [ "$1" = "pico" ]; then
+    echo "${boldText}NETWORK ============${resetText}"
+    echo -e " Hst: ${piHostname}"
+    echo -e " IP:  ${piIPAddress}"
+    echo -e " DHCP ${dhcpCheckBox} IPv6 ${dhcpIPv6CheckBox}"
+  elif [ "$1" = "mini" ]; then
     echo "${boldText}NETWORK ======================${resetText}"
     echo -e " Host:    ${fullHostname}"
     echo -e " IPv4:    ${IPV4_ADDRESS}"
@@ -440,8 +471,10 @@ PrintNetworkInformation() {
 }
 
 PrintPiholeInformation() {
-  # are we on a tiny screen?
-  if [ "$1" = "mini" ]; then
+  # size checks
+  if [ "$1" = "pico" ]; then
+    :
+  elif [ "$1" = "mini" ]; then
     echo "${boldText}PI-HOLE ======================${resetText}"
     echo -e " Status:  ${piHoleCheckBox}      FTL:  ${ftlCheckBox}"
   # else we're not
@@ -453,7 +486,11 @@ PrintPiholeInformation() {
 
 PrintPiholeStats() {
   # are we on a tiny screen?
-  if [ "$1" = "mini" ]; then
+  if [ "$1" = "pico" ]; then
+    echo "${boldText}PI-HOLE ============${resetText}"
+    echo -e " [${adsBlockedBar}] ${ads_percentage_today}%"
+    echo -e " ${ads_blocked_today} / ${dns_queries_today}"
+  elif [ "$1" = "mini" ]; then
     echo "${boldText}STATS ========================${resetText}"
     echo -e " Blckng:  ${domains_being_blocked} domains"
     echo -e " Piholed: [${adsBlockedBar}] ${ads_percentage_today}%"
@@ -474,7 +511,10 @@ PrintPiholeStats() {
 }
 
 PrintSystemInformation() {
-  if [ "$1" = "mini" ]; then
+  if [ "$1" = "pico" ]; then
+    echo "${boldText}CPU ==============${resetText}"
+    echo -e " [${cpuLoad1Heatmap}${cpuBar}${resetText}] ${cpuPercent}%"
+  elif [ "$1" = "mini" ]; then
     echo "${boldText}SYSTEM =======================${resetText}"
     echo -e  " Uptime:  ${systemUptime}"
     echo -e  " Load:    [${cpuLoad1Heatmap}${cpuBar}${resetText}] ${cpuPercent}%"
@@ -560,29 +600,63 @@ OutputJSON() {
   echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw}}"
 }
 
+StartupRoutine(){
+  :
+}
+
 NormalPADD() {
   for (( ; ; )); do
 
     consoleWidth=$(tput cols)
     consoleHeight=$(tput lines)
 
-    if [[ "$consoleWidth" -lt "30" || "$consoleHeight" -lt "16" ]]; then
+    # Sizing Checks
+
+    # Below Pico. Gives you nothing...
+    if [[ "$consoleWidth" -lt "20" || "$consoleHeight" -lt "10" ]]; then
+      # Nothing is this small, sorry
       clear
-      echo -e "${checkBoxBad} Error!\nPADD doesn't run on a screen that small!"
+      echo -e "${checkBoxBad} Error!\n    PADD isn't\n    for ants!"
       exit 0
+    # Below Nano. Gives you Pico.
+    elif [[ "$consoleWidth" -lt "24" || "$consoleHeight" -lt "12" ]]; then
+      PADDsize="pico"
+    # Below Micro, Gives you Nano.
+    elif [[ "$consoleWidth" -lt "30" || "$consoleHeight" -lt "16" ]]; then
+      PADDsize="nano"
+    # Below Mini. Gives you Micro.
+    elif [[ "$consoleWidth" -lt "40" || "$consoleHeight" -lt "18" ]]; then
+      PADDsize="micro"
+    # Below Slim. Gives you Mini.
+    elif [[ "$consoleWidth" -lt "60" || "$consoleHeight" -lt "20" ]]; then
+      PADDsize="mini"
+    # Below Regular. Gives you Slim.
+    elif [[ "$consoleWidth" -lt "60" || "$consoleHeight" -lt "22" ]]; then
+      PADDsize="slim"
+    # Regular
+    else
+      PADDsize="regular"
     fi
+
+    echo ${PADDsize} ${consoleWidth}"x"${consoleHeight}
+
+    # if [[ "$consoleWidth" -lt "30" || "$consoleHeight" -lt "16" ]]; then
+    #   clear
+    #   echo -e "${checkBoxBad} Error!\nPADD doesn't run on a screen that small!"
+    #   exit 0
+    # fi
 
     # Get Config variables
     . /etc/pihole/setupVars.conf
 
     # Output everything to the screen
-    if [[ "$consoleWidth" -lt "60" || "$consoleHeight" -lt "22" ]]; then
-      PrintLogo "mini"
-      PrintPiholeInformation "mini"
-      PrintPiholeStats "mini"
-      PrintNetworkInformation "mini"
-      PrintSystemInformation "mini"
+      PrintLogo ${PADDsize}
+      PrintPiholeInformation ${PADDsize}
+      PrintPiholeStats ${PADDsize}
+      PrintNetworkInformation ${PADDsize}
+      PrintSystemInformation ${PADDsize}
 
+      picoStatus="test"
       miniStatus=${miniStatusOk}
 
       # Start getting our information
@@ -591,22 +665,6 @@ NormalPADD() {
       GetNetworkInformation
       GetSummaryInformation "mini"
       GetSystemInformation "mini"
-    else
-      PrintLogo
-      PrintPiholeInformation
-      PrintPiholeStats
-      PrintNetworkInformation
-      PrintSystemInformation
-
-      miniStatus=${miniStatusOk}
-
-      # Start getting our information
-      GetVersionInformation
-      GetPiholeInformation
-      GetNetworkInformation
-      GetSummaryInformation
-      GetSystemInformation
-    fi
 
 		latestBlocked=$(GetFTLData recentBlocked)
     topBlocked=$(GetFTLData "top-ads (1)" | awk '{print $3}')
