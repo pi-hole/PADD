@@ -375,6 +375,7 @@ GetVersionInformation() {
           versionStatus="Pi-hole is up-to-date!"
           versionHeatmap=${greenText}
           versionCheckBox=${checkBoxGood}
+          picoStatus=${picoStatusOk}
           miniStatus=${miniStatusOk}
         fi
       fi
@@ -451,6 +452,11 @@ PrintNetworkInformation() {
     echo -e " Hst: ${piHostname}"
     echo -e " IP:  ${piIPAddress}"
     echo -e " DHCP ${dhcpCheckBox} IPv6 ${dhcpIPv6CheckBox}"
+  elif [ "$1" = "nano" ]; then
+    echo "${boldText}NETWORK ================${resetText}"
+    echo -e " Host: ${piHostname}"
+    echo -e " IPv4: ${IPV4_ADDRESS}"
+    echo -e " DHCP: ${dhcpCheckBox}    IPv6: ${dhcpIPv6CheckBox}"
   elif [ "$1" = "mini" ]; then
     echo "${boldText}NETWORK ======================${resetText}"
     echo -e " Host:    ${fullHostname}"
@@ -474,6 +480,9 @@ PrintPiholeInformation() {
   # size checks
   if [ "$1" = "pico" ]; then
     :
+  elif [ "$1" = "nano" ]; then
+    echo "${boldText}PI-HOLE ================${resetText}"
+    echo -e " Up:  ${piHoleCheckBox}      FTL: ${ftlCheckBox}"
   elif [ "$1" = "mini" ]; then
     echo "${boldText}PI-HOLE ======================${resetText}"
     echo -e " Status:  ${piHoleCheckBox}      FTL:  ${ftlCheckBox}"
@@ -490,6 +499,9 @@ PrintPiholeStats() {
     echo "${boldText}PI-HOLE ============${resetText}"
     echo -e " [${adsBlockedBar}] ${ads_percentage_today}%"
     echo -e " ${ads_blocked_today} / ${dns_queries_today}"
+  elif [ "$1" = "nano" ]; then
+    echo -e " Blk: [${adsBlockedBar}] ${ads_percentage_today}%"
+    echo -e " Blk: ${ads_blocked_today} / ${dns_queries_today}"
   elif [ "$1" = "mini" ]; then
     echo "${boldText}STATS ========================${resetText}"
     echo -e " Blckng:  ${domains_being_blocked} domains"
@@ -514,6 +526,10 @@ PrintSystemInformation() {
   if [ "$1" = "pico" ]; then
     echo "${boldText}CPU ==============${resetText}"
     echo -e " [${cpuLoad1Heatmap}${cpuBar}${resetText}] ${cpuPercent}%"
+  elif [ "$1" = "nano" ]; then
+    echo "${boldText}SYSTEM =================${resetText}"
+    echo -e  " Up:  ${systemUptime}"
+    echo -e  " CPU: [${cpuLoad1Heatmap}${cpuBar}${resetText}] ${cpuPercent}%"
   elif [ "$1" = "mini" ]; then
     echo "${boldText}SYSTEM =======================${resetText}"
     echo -e  " Uptime:  ${systemUptime}"
@@ -638,7 +654,7 @@ NormalPADD() {
       PADDsize="regular"
     fi
 
-    echo ${PADDsize} ${consoleWidth}"x"${consoleHeight}
+    # echo ${PADDsize} ${consoleWidth}"x"${consoleHeight}
 
     # if [[ "$consoleWidth" -lt "30" || "$consoleHeight" -lt "16" ]]; then
     #   clear
@@ -656,7 +672,7 @@ NormalPADD() {
       PrintNetworkInformation ${PADDsize}
       PrintSystemInformation ${PADDsize}
 
-      picoStatus="test"
+      picoStatus=${picoStatusOk}
       miniStatus=${miniStatusOk}
 
       # Start getting our information
@@ -706,9 +722,10 @@ if [[ $# = 0 ]]; then
   . /etc/pihole/setupVars.conf
 
   if [[ "$consoleWidth" -lt "30" || "$consoleHeight" -lt "16" ]]; then
-    clear
-    echo -e "${checkBoxBad} Error!\nPADD doesn't run on a screen this small!"
-    exit 0
+    # clear
+    # echo -e "${checkBoxBad} Error!\nPADD doesn't run on a screen this small!"
+    # exit 0
+    :
   elif [[ "$consoleWidth" -lt "60" || "$consoleHeight" -lt "22" ]]; then
     #statements
     echo -e "${miniPADDLogo}\n"
