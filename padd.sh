@@ -431,11 +431,11 @@ PrintLogo() {
   elif [ "$1" = "nano" ]; then
     echo -e "n${PADDText} ${miniStatus}"
   elif [ "$1" = "micro" ]; then
-    echo -e "µ${PADDText}     ${miniStatus}"
+    echo -e "µ${PADDText}     ${miniStatus}\n"
   elif [ "$1" = "mini" ]; then
     echo -e "${PADDText}${dimText}mini${resetText}  ${miniStatus}\n"
   elif [ "$1" = "slim" ]; then
-    echo -e "${PADDText}${dimText}slim${resetText}  ${miniStatus}\n"
+    echo -e "${PADDText}${dimText}slim${resetText}   ${miniStatus}\n"
   # normal or not defined
   else
     echo -e "${PADDLogo1}"
@@ -457,11 +457,20 @@ PrintNetworkInformation() {
     echo -e " Host: ${piHostname}"
     echo -e " IPv4: ${IPV4_ADDRESS}"
     echo -e " DHCP: ${dhcpCheckBox}    IPv6: ${dhcpIPv6CheckBox}"
-  elif [ "$1" = "mini" ]; then
+  elif [ "$1" = "micro" ]; then
     echo "${boldText}NETWORK ======================${resetText}"
     echo -e " Host:    ${fullHostname}"
     echo -e " IPv4:    ${IPV4_ADDRESS}"
     echo -e " DHCP:    ${dhcpCheckBox}     IPv6:  ${dhcpIPv6CheckBox}"
+  elif [ "$1" = "mini" ]; then
+    echo "${boldText}NETWORK ================================${resetText}"
+    printf " %-9s%-19s\n" "Host:" "${fullHostname}"
+    printf " %-9s%-19s\n" "IPv4:" "${IPV4_ADDRESS}"
+    printf " %-9s%-10s %-9s%-10s\n" "DNS:" "${dnsCount} servers" "DNSSEC:" "${dnssecHeatmap}${dnssecStatus}${resetText}"
+
+    if [[ "${DHCP_ACTIVE}" == "true" ]]; then
+      printf " %-9s${dhcpHeatmap}%-10s${resetText} %-9s${dhcpIPv6Heatmap}%-10s${resetText}\n" "DHCP:" "${dhcpStatus}" "IPv6:" ${dhcpIPv6Status}
+    fi
   # else we're not
   else
     echo "${boldText}NETWORK ====================================================${resetText}"
@@ -483,10 +492,12 @@ PrintPiholeInformation() {
   elif [ "$1" = "nano" ]; then
     echo "${boldText}PI-HOLE ================${resetText}"
     echo -e " Up:  ${piHoleCheckBox}      FTL: ${ftlCheckBox}"
-  elif [ "$1" = "mini" ]; then
+  elif [ "$1" = "micro" ]; then
     echo "${boldText}PI-HOLE ======================${resetText}"
     echo -e " Status:  ${piHoleCheckBox}      FTL:  ${ftlCheckBox}"
-  # else we're not
+  elif [ "$1" = "mini" ]; then
+    echo "${boldText}PI-HOLE ================================${resetText}"
+    printf " %-9s${piHoleHeatmap}%-10s${resetText} %-9s${ftlHeatmap}%-10s${resetText}\n" "Status:" "${piHoleStatus}" "FTL:" "${ftlStatus}"
   else
     echo "${boldText}PI-HOLE ====================================================${resetText}"
     printf " %-10s${piHoleHeatmap}%-19s${resetText} %-10s${ftlHeatmap}%-19s${resetText}\n" "Status:" "${piHoleStatus}" "FTL:" "${ftlStatus}"
@@ -502,11 +513,20 @@ PrintPiholeStats() {
   elif [ "$1" = "nano" ]; then
     echo -e " Blk: [${adsBlockedBar}] ${ads_percentage_today}%"
     echo -e " Blk: ${ads_blocked_today} / ${dns_queries_today}"
-  elif [ "$1" = "mini" ]; then
+  elif [ "$1" = "micro" ]; then
     echo "${boldText}STATS ========================${resetText}"
     echo -e " Blckng:  ${domains_being_blocked} domains"
     echo -e " Piholed: [${adsBlockedBar}] ${ads_percentage_today}%"
     echo -e " Piholed: ${ads_blocked_today} / ${dns_queries_today}"
+  elif [ "$1" = "mini" ]; then
+    echo "${boldText}STATS ==================================${resetText}"
+    printf " %-9s%-29s\n" "Blckng:" "${domains_being_blocked} domains"
+    printf " %-9s[%-20s] %-5s\n" "Piholed:" "${adsBlockedBar}" "${ads_percentage_today}%"
+    printf " %-9s%-29s\n" "Piholed:" "${ads_blocked_today} out of ${dns_queries_today}"
+    printf " %-9s%-29s\n" "Latest:" "${latestBlocked}"
+    if [[ "${DHCP_ACTIVE}" != "true" ]]; then
+      printf " %-9s%-29s\n" "Top Ad:" "${topBlocked}"
+    fi
   # else we're not
   else
     echo "${boldText}STATS ======================================================${resetText}"
@@ -530,9 +550,14 @@ PrintSystemInformation() {
     echo "${boldText}SYSTEM =================${resetText}"
     echo -e  " Up:  ${systemUptime}"
     echo -e  " CPU: [${cpuLoad1Heatmap}${cpuBar}${resetText}] ${cpuPercent}%"
-  elif [ "$1" = "mini" ]; then
+  elif [ "$1" = "micro" ]; then
     echo "${boldText}SYSTEM =======================${resetText}"
     echo -e  " Uptime:  ${systemUptime}"
+    echo -e  " Load:    [${cpuLoad1Heatmap}${cpuBar}${resetText}] ${cpuPercent}%"
+    echo -ne " Memory:  [${memoryHeatmap}${memoryBar}${resetText}] ${memoryUsedPercent}%"
+  elif [ "$1" = "mini" ]; then
+    echo "${boldText}SYSTEM =================================${resetText}"
+    printf " %-9s%-29s\n" "Uptime:" "${systemUptime}"
     echo -e  " Load:    [${cpuLoad1Heatmap}${cpuBar}${resetText}] ${cpuPercent}%"
     echo -ne " Memory:  [${memoryHeatmap}${memoryBar}${resetText}] ${memoryUsedPercent}%"
   # else we're not
@@ -542,11 +567,11 @@ PrintSystemInformation() {
     printf " %-10s%-39s\n" "Uptime:" "${systemUptime}"
 
     # Temp and Loads
-    printf " %-10s${tempHeatMap}%-19s${resetText}" "CPU Temp:" "${temperature}"
+    printf " %-10s${tempHeatMap}%-20s${resetText}" "CPU Temp:" "${temperature}"
     printf " %-10s${cpuLoad1Heatmap}%-4s${resetText}, ${cpuLoad5Heatmap}%-4s${resetText}, ${cpuLoad15Heatmap}%-4s${resetText}\n" "CPU Load:" "${cpuLoad1}" "${cpuLoad5}" "${cpuLoad15}"
 
     # Memory and CPU bar
-    printf " %-10s[${memoryHeatmap}%-10s${resetText}] %-5s %-10s[${cpuLoad1Heatmap}%-10s${resetText}] %-5s" "Memory:" "${memoryBar}" "${memoryUsedPercent}%" "CPU Load:" "${cpuBar}" "${cpuPercent}%"
+    printf " %-10s[${memoryHeatmap}%-10s${resetText}] %-6s %-10s[${cpuLoad1Heatmap}%-10s${resetText}] %-5s" "Memory:" "${memoryBar}" "${memoryUsedPercent}%" "CPU Load:" "${cpuBar}" "${cpuPercent}%"
   fi
 }
 
