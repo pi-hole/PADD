@@ -55,11 +55,20 @@ picoStatusUnknown="${checkBoxQuestion} Stat. Unk."
 # MINI STATUS
 miniStatusOk="${checkBoxGood} System OK"
 miniStatusUpdate="${checkBoxInfo} Update avail."
-miniStatusHot="${checkBoxBad} Hot Pi!"
+miniStatusHot="${checkBoxBad} System is hot!"
 miniStatusOff="${checkBoxBad} Pi-hole off!"
 miniStatusFTLDown="${checkBoxInfo} FTL down!"
 miniStatusDNSDown="${checkBoxBad} DNS off!"
-miniStatusUnknown="${checkBoxQuestion} Status unknown!"
+miniStatusUnknown="${checkBoxQuestion} Status unknown"
+
+# MINI STATUS
+fullStatusOk="${checkBoxGood} System is healthy."
+fullStatusUpdate="${checkBoxInfo} Updates are available."
+fullStatusHot="${checkBoxBad} System is hot!"
+fullStatusOff="${checkBoxBad} Pi-hole is offline"
+fullStatusFTLDown="${checkBoxInfo} FTL is down!"
+fullStatusDNSDown="${checkBoxBad} DNS is off!"
+fullStatusUnknown="${checkBoxQuestion} Status unknown!"
 
 # Text only "logos"
 PADDText="${greenText}${boldText}PADD${resetText}"
@@ -123,8 +132,10 @@ GetSummaryInformation() {
   ads_percentage_today_raw=$(grep "ads_percentage_today" <<< "$summary" | grep -Eo "[0-9.]+$")
   LC_NUMERIC=C ads_percentage_today=$(printf "%'.1f" ${ads_percentage_today_raw})
 
-  if [ "$1" = "mini" ]; then
+  if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     adsBlockedBar=$(BarGenerator $ads_percentage_today 10 "color")
+  elif [ "$1" = "mini" ]; then
+    adsBlockedBar=$(BarGenerator $ads_percentage_today 20 "color")
   else
     adsBlockedBar=$(BarGenerator $ads_percentage_today 40 "color")
   fi
@@ -132,7 +143,7 @@ GetSummaryInformation() {
 
 GetSystemInformation() {
   # System uptime
-  if [ "$1" = "mini" ]; then
+  if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     systemUptime=$(uptime | awk -F'( |,|:)+' '{if ($7=="min") m=$6; else {if ($7~/^day/) {d=$6;h=$8;m=$9} else {h=$6;m=$7}}} {print d+0,"days,",h+0,"hours"}')
   else
     systemUptime=$(uptime | awk -F'( |,|:)+' '{if ($7=="min") m=$6; else {if ($7~/^day/) {d=$6;h=$8;m=$9} else {h=$6;m=$7}}} {print d+0,"days,",h+0,"hours,",m+0,"minutes"}')
@@ -151,7 +162,7 @@ GetSystemInformation() {
     temperature=$(printf %.1f "$(echo "scale=4; ${cpu}/1000" | bc)")°C
   fi
 
-  # CPU load, heatmap and bar
+  # CPU load, heatmap
   cpuLoad1=$(cat /proc/loadavg | awk '{print $1}')
   cpuLoad1Heatmap=$(HeatmapGenerator ${cpuLoad1} ${coreCount})
   cpuLoad5=$(cat /proc/loadavg | awk '{print $2}')
@@ -159,14 +170,14 @@ GetSystemInformation() {
   cpuLoad15=$(cat /proc/loadavg | awk '{print $3}')
   cpuLoad15Heatmap=$(HeatmapGenerator ${cpuLoad15} ${coreCount})
   cpuPercent=$(printf %.1f "$(echo "scale=4; (${cpuLoad1}/${coreCount})*100" | bc)")
-  cpuBar=$(BarGenerator ${cpuPercent} 10)
 
   # CPU temperature heatmap
   # If we're getting close to 85°C... (https://www.raspberrypi.org/blog/introducing-turbo-mode-up-to-50-more-performance-for-free/)
   if [ ${cpu} -gt 80000 ]; then
     tempHeatMap=${blinkingText}${redText}
-    picoStatus="${miniStatusHot}"
+    picoStatus="${picoStatusHot}"
     miniStatus="${miniStatusHot} ${blinkingText}${redText}${temperature}${resetText}"
+    fullStatus="${fullStatusHot} ${blinkingText}${redText}${temperature}${resetText}"
   elif [ ${cpu} -gt 70000 ]; then
     tempHeatMap=${magentaText}
   elif [ ${cpu} -gt 60000 ]; then
@@ -178,7 +189,16 @@ GetSystemInformation() {
   # Memory use, heatmap and bar
   memoryUsedPercent=$(awk '/MemTotal:/{total=$2} /MemFree:/{free=$2} /Buffers:/{buffers=$2} /^Cached:/{cached=$2} END {printf "%.1f", (total-free-buffers-cached)*100/total}' '/proc/meminfo')
   memoryHeatmap=$(HeatmapGenerator ${memoryUsedPercent})
-  memoryBar=$(BarGenerator ${memoryUsedPercent} 10)
+
+  #  Bar generations
+  if [ "$1" = "mini" ]; then
+    cpuBar=$(BarGenerator ${cpuPercent} 20)
+    memoryBar=$(BarGenerator ${memoryUsedPercent} 20)
+  else
+    cpuBar=$(BarGenerator ${cpuPercent} 10)
+    memoryBar=$(BarGenerator ${memoryUsedPercent} 10)
+  fi
+
 }
 
 GetNetworkInformation() {
@@ -273,18 +293,21 @@ GetPiholeInformation() {
     piHoleCheckBox=${checkBoxBad}
     picoStatus=${picoStatusOff}
     miniStatus=${miniStatusOff}
+    fullStatus=${fullStatusOff}
   elif [[ $(pihole status web) == -1 ]]; then
     piHoleStatus="DNS Offline"
     piHoleHeatmap=${redText}
     piHoleCheckBox=${checkBoxBad}
     picoStatus=${picoStatusDNSDown}
     miniStatus=${miniStatusDNSDown}
+    fullStatus=${fullStatusDNSDown}
   else
     piHoleStatus="Unknown"
     piHoleHeatmap=${yellowText}
     piHoleCheckBox=${checkBoxQuestion}
-    picoStatus${picoStatusUnknown}
-    miniStatus${miniStatusUnknown}
+    picoStatus=${picoStatusUnknown}
+    miniStatus=${miniStatusUnknown}
+    fullStatus=${fullStatusUnknown}
   fi
 
   # Get FTL status
@@ -293,9 +316,10 @@ GetPiholeInformation() {
   if [ -z ${ftlPID+x} ]; then
     ftlStatus="Not running"
     ftlHeatmap=${yellowText}
-    ftlCheckBox=${informationCheckBox}
+    ftlCheckBox=${checkBoxInfo}
     picoStatus=${picoStatusFTLDown}
     miniStatus=${miniStatusFTLDown}
+    fullStatus=${fullStatusFTLDown}
   else
     ftlStatus="Running"
     ftlHeatmap=${greenText}
@@ -362,6 +386,7 @@ GetVersionInformation() {
         versionCheckBox=${checkBoxBad}
         picoStatus=${picoStatusUpdate}
         miniStatus=${miniStatusUpdate}
+        fullStatus=${fullStatusUpdate}
       else
         # but is PADD out-of-date?
         if [[ "${PADDOutOfDateFlag}" == "true" ]]; then
@@ -370,6 +395,7 @@ GetVersionInformation() {
           versionCheckBox=${checkBoxBad}
           picoStatus=${picoStatusUpdate}
           miniStatus=${miniStatusUpdate}
+          fullStatus=${fullStatusUpdate}
         # else, everything is good!
         else
           versionStatus="Pi-hole is up-to-date!"
@@ -377,6 +403,7 @@ GetVersionInformation() {
           versionCheckBox=${checkBoxGood}
           picoStatus=${picoStatusOk}
           miniStatus=${miniStatusOk}
+          fullStatus=${fullStatusOk}
         fi
       fi
 
@@ -401,6 +428,7 @@ GetVersionInformation() {
 
       echo "picoStatus="\"$picoStatus\" >> ./piHoleVersion
       echo "miniStatus="\"$miniStatus\" >> ./piHoleVersion
+      echo "fullStatus="\"$fullStatus\" >> ./piHoleVersion
 
     fi
 
@@ -435,12 +463,12 @@ PrintLogo() {
   elif [ "$1" = "mini" ]; then
     echo -e "${PADDText}${dimText}mini${resetText}  ${miniStatus}\n"
   elif [ "$1" = "slim" ]; then
-    echo -e "${PADDText}${dimText}slim${resetText}   ${miniStatus}\n"
+    echo -e "${PADDText}${dimText}slim${resetText}   ${fullStatus}\n"
   # normal or not defined
   else
     echo -e "${PADDLogo1}"
     echo -e "${PADDLogo2}Pi-hole® ${piholeVersionHeatmap}v${piholeVersion}${resetText}, Web ${webVersionHeatmap}v${webVersion}${resetText}, FTL ${ftlVersionHeatmap}v${ftlVersion}${resetText}"
-    echo -e "${PADDLogo3}PADD ${PADDVersionHeatmap}v${PADDVersion}${resetText} ${versionHeatmap}${versionStatus}${resetText}"
+    echo -e "${PADDLogo3}PADD ${PADDVersionHeatmap}v${PADDVersion}${resetText} ${fullStatus}${resetText}"
 
     echo ""
   fi
@@ -544,12 +572,12 @@ PrintPiholeStats() {
 
 PrintSystemInformation() {
   if [ "$1" = "pico" ]; then
-    echo "${boldText}CPU ==============${resetText}"
-    echo -e " [${cpuLoad1Heatmap}${cpuBar}${resetText}] ${cpuPercent}%"
+    echo "${boldText}CPU ================${resetText}"
+    echo -ne " [${cpuLoad1Heatmap}${cpuBar}${resetText}] ${cpuPercent}%"
   elif [ "$1" = "nano" ]; then
     echo "${boldText}SYSTEM =================${resetText}"
     echo -e  " Up:  ${systemUptime}"
-    echo -e  " CPU: [${cpuLoad1Heatmap}${cpuBar}${resetText}] ${cpuPercent}%"
+    echo -ne  " CPU: [${cpuLoad1Heatmap}${cpuBar}${resetText}] ${cpuPercent}%"
   elif [ "$1" = "micro" ]; then
     echo "${boldText}SYSTEM =======================${resetText}"
     echo -e  " Uptime:  ${systemUptime}"
@@ -701,11 +729,11 @@ NormalPADD() {
       miniStatus=${miniStatusOk}
 
       # Start getting our information
-      GetVersionInformation
-      GetPiholeInformation
-      GetNetworkInformation
-      GetSummaryInformation "mini"
-      GetSystemInformation "mini"
+      GetVersionInformation ${PADDsize}
+      GetPiholeInformation ${PADDsize}
+      GetNetworkInformation ${PADDsize}
+      GetSummaryInformation ${PADDsize}
+      GetSystemInformation ${PADDsize}
 
 		latestBlocked=$(GetFTLData recentBlocked)
     topBlocked=$(GetFTLData "top-ads (1)" | awk '{print $3}')
