@@ -48,8 +48,8 @@ picoStatusOk="${checkBoxGood} Sys. OK"
 picoStatusUpdate="${checkBoxInfo} Update"
 picoStatusHot="${checkBoxBad} Sys. Hot!"
 picoStatusOff="${checkBoxBad} Offline"
-picoStatusFTLDown="${checkBoxInfo} FTL"
-picoStatusDNSDown="${checkBoxBad} DNS"
+picoStatusFTLDown="${checkBoxInfo} FTL Down"
+picoStatusDNSDown="${checkBoxBad} DNS Down"
 picoStatusUnknown="${checkBoxQuestion} Stat. Unk."
 
 # MINI STATUS
@@ -94,24 +94,33 @@ PiholeLogoScriptRetro3="${greenText}'  ${redText}'   ${magentaText}' ${yellowTex
 ############################################# GETTERS ##############################################
 
 GetFTLData() {
-  # Open connection to FTL
-  exec 3<>/dev/tcp/localhost/"$(cat /var/run/pihole-FTL.port)"
+  # Get FTL port number
+  ftlPort=$(cat /var/run/pihole-FTL.port 2> /dev/null)
 
-  # Test if connection is open
-  if { >&3; } 2> /dev/null; then
-    # Send command to FTL
-    echo -e ">$1" >&3
+  # Did we find a port for FTL?
+  if [[ -n "$ftlPort" ]]; then
+    # Open connection to FTL
+    exec 3<>"/dev/tcp/localhost/$ftlPort"
 
-    # Read input
-    read -r -t 1 LINE <&3
-    until [ ! $? ] || [[ "$LINE" == *"EOM"* ]]; do
-      echo "$LINE" >&1
+    # Test if connection is open
+    if { >&3; } 2> /dev/null; then
+      # Send command to FTL
+      echo -e ">$1" >&3
+
+      # Read input
       read -r -t 1 LINE <&3
-    done
+      until [ ! $? ] || [[ "$LINE" == *"EOM"* ]]; do
+        echo "$LINE" >&1
+        read -r -t 1 LINE <&3
+      done
 
-    # Close connection
-    exec 3>&-
-    exec 3<&-
+      # Close connection
+      exec 3>&-
+      exec 3<&-
+    fi
+  # We didn't...?
+  else
+    echo "0"
   fi
 }
 
@@ -132,10 +141,24 @@ GetSummaryInformation() {
   ads_percentage_today_raw=$(grep "ads_percentage_today" <<< "$summary" | grep -Eo "[0-9.]+$")
   LC_NUMERIC=C ads_percentage_today=$(printf "%'.1f" ${ads_percentage_today_raw})
 
+  latestBlocked=$(GetFTLData recentBlocked)
+  topBlocked=$(GetFTLData "top-ads (1)" | awk '{print $3}')
+
+  topDomain=$(GetFTLData "top-domains (1)" | awk '{print $3}')
+  topClient=$(GetFTLData "top-clients (1)" | awk '{print $3}')
+
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     adsBlockedBar=$(BarGenerator $ads_percentage_today 10 "color")
   elif [ "$1" = "mini" ]; then
     adsBlockedBar=$(BarGenerator $ads_percentage_today 20 "color")
+
+    if [ ${#latestBlocked} -gt 30 ]; then
+      latestBlocked=$(echo $latestBlocked | cut -c1-27)"..."
+    fi
+
+    if [ ${#topBlocked} -gt 30 ]; then
+      topBlocked=$(echo $topBlocked | cut -c1-27)"..."
+    fi
   else
     adsBlockedBar=$(BarGenerator $ads_percentage_today 40 "color")
   fi
@@ -664,127 +687,80 @@ BarGenerator() {
   echo $out
 }
 
+SizeChecker(){
+  # Below Pico. Gives you nothing...
+  if [[ "$consoleWidth" -lt "20" || "$consoleHeight" -lt "10" ]]; then
+    # Nothing is this small, sorry
+    clear
+    echo -e "${checkBoxBad} Error!\n    PADD isn't\n    for ants!"
+    exit 0
+  # Below Nano. Gives you Pico.
+  elif [[ "$consoleWidth" -lt "24" || "$consoleHeight" -lt "12" ]]; then
+    PADDsize="pico"
+  # Below Micro, Gives you Nano.
+  elif [[ "$consoleWidth" -lt "30" || "$consoleHeight" -lt "16" ]]; then
+    PADDsize="nano"
+  # Below Mini. Gives you Micro.
+  elif [[ "$consoleWidth" -lt "40" || "$consoleHeight" -lt "18" ]]; then
+    PADDsize="micro"
+  # Below Slim. Gives you Mini.
+  elif [[ "$consoleWidth" -lt "60" || "$consoleHeight" -lt "20" ]]; then
+    PADDsize="mini"
+  # Below Regular. Gives you Slim.
+  elif [[ "$consoleWidth" -lt "60" || "$consoleHeight" -lt "22" ]]; then
+    PADDsize="slim"
+  # Regular
+  else
+    PADDsize="regular"
+  fi
+}
+
+########################################## MAIN FUNCTIONS ##########################################
+
 OutputJSON() {
   GetSummaryInformation
   echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw}}"
 }
 
 StartupRoutine(){
-  :
-}
 
-NormalPADD() {
-  for (( ; ; )); do
+  if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
+    PrintLogo $1
+    echo -e "START-UP ==========="
+    echo -e "Starting PADD.\nPlease stand by."
 
-    consoleWidth=$(tput cols)
-    consoleHeight=$(tput lines)
+    # Get PID of PADD
+    pid=$(echo $$)
+    echo -ne " [■·········]  10%\r"
+    echo ${pid} > ./PADD.pid
 
-    # Sizing Checks
-
-    # Below Pico. Gives you nothing...
-    if [[ "$consoleWidth" -lt "20" || "$consoleHeight" -lt "10" ]]; then
-      # Nothing is this small, sorry
-      clear
-      echo -e "${checkBoxBad} Error!\n    PADD isn't\n    for ants!"
-      exit 0
-    # Below Nano. Gives you Pico.
-    elif [[ "$consoleWidth" -lt "24" || "$consoleHeight" -lt "12" ]]; then
-      PADDsize="pico"
-    # Below Micro, Gives you Nano.
-    elif [[ "$consoleWidth" -lt "30" || "$consoleHeight" -lt "16" ]]; then
-      PADDsize="nano"
-    # Below Mini. Gives you Micro.
-    elif [[ "$consoleWidth" -lt "40" || "$consoleHeight" -lt "18" ]]; then
-      PADDsize="micro"
-    # Below Slim. Gives you Mini.
-    elif [[ "$consoleWidth" -lt "60" || "$consoleHeight" -lt "20" ]]; then
-      PADDsize="mini"
-    # Below Regular. Gives you Slim.
-    elif [[ "$consoleWidth" -lt "60" || "$consoleHeight" -lt "22" ]]; then
-      PADDsize="slim"
-    # Regular
+    # Check for updates
+    echo -ne " [■■········]  20%\r"
+    if [ -e "piHoleVersion" ]; then
+      echo -ne " [■■■·······]  30%\r"
+      rm -f piHoleVersion
     else
-      PADDsize="regular"
+      echo -ne " [■■■·······]  30%\r"
     fi
 
-    # echo ${PADDsize} ${consoleWidth}"x"${consoleHeight}
+    # Get our information for the first time
+    echo -ne " [■■■■······]  40%\r"
+    GetSystemInformation $1
+    echo -ne " [■■■■■·····]  50%\r"
+    GetSummaryInformation $1
+    echo -ne " [■■■■■■····]  60%\r"
+    GetPiholeInformation $1
+    echo -ne " [■■■■■■■···]  70%\r"
+    GetNetworkInformation $1
+    echo -ne " [■■■■■■■■··]  80%\r"
+    GetVersionInformation $1
+    echo -ne " [■■■■■■■■■·]  90%\r"
+    GetVersionInformation $1
+    echo -ne " [■■■■■■■■■■] 100%\n"
 
-    # if [[ "$consoleWidth" -lt "30" || "$consoleHeight" -lt "16" ]]; then
-    #   clear
-    #   echo -e "${checkBoxBad} Error!\nPADD doesn't run on a screen that small!"
-    #   exit 0
-    # fi
-
-    # Get Config variables
-    . /etc/pihole/setupVars.conf
-
-    # Output everything to the screen
-      PrintLogo ${PADDsize}
-      PrintPiholeInformation ${PADDsize}
-      PrintPiholeStats ${PADDsize}
-      PrintNetworkInformation ${PADDsize}
-      PrintSystemInformation ${PADDsize}
-
-      picoStatus=${picoStatusOk}
-      miniStatus=${miniStatusOk}
-
-      # Start getting our information
-      GetVersionInformation ${PADDsize}
-      GetPiholeInformation ${PADDsize}
-      GetNetworkInformation ${PADDsize}
-      GetSummaryInformation ${PADDsize}
-      GetSystemInformation ${PADDsize}
-
-		latestBlocked=$(GetFTLData recentBlocked)
-    topBlocked=$(GetFTLData "top-ads (1)" | awk '{print $3}')
-
-    topDomain=$(GetFTLData "top-domains (1)" | awk '{print $3}')
-    topClient=$(GetFTLData "top-clients (1)" | awk '{print $3}')
-
-    # Sleep for 5 seconds, then clear the screen
-    sleep 5
-    clear
-  done
-}
-
-DisplayHelp() {
-  cat << EOM
-::: PADD displays stats about your piHole!
-:::
-::: Note: If no option is passed, then stats are displayed on screen, updated every 5 seconds
-:::
-::: Options:
-:::  -j, --json    output stats as JSON formatted string
-:::  -h, --help    display this help text
-EOM
-    exit 0
-}
-
-if [[ $# = 0 ]]; then
-  # Turns off the cursor
-  # (From Pull request #8 https://github.com/jpmck/PADD/pull/8)
-  setterm -cursor off
-  trap "{ setterm -cursor on ; echo "" ; exit 0 ; }" SIGINT SIGTERM EXIT
-
-  clear
-
-  consoleWidth=$(tput cols)
-  consoleHeight=$(tput lines)
-
-  # Get Our Config Values
-  . /etc/pihole/setupVars.conf
-
-  if [[ "$consoleWidth" -lt "30" || "$consoleHeight" -lt "16" ]]; then
-    # clear
-    # echo -e "${checkBoxBad} Error!\nPADD doesn't run on a screen this small!"
-    # exit 0
-    :
-  elif [[ "$consoleWidth" -lt "60" || "$consoleHeight" -lt "22" ]]; then
-    #statements
-    echo -e "${miniPADDLogo}\n"
-
+  elif [ "$1" = "mini" ]; then
+    PrintLogo $1
     echo "START UP ====================="
-
     # Get PID of PADD
     pid=$(echo $$)
     echo "- Writing PID (${pid}) to file."
@@ -805,14 +781,15 @@ if [[ $# = 0 ]]; then
     echo "- Gathering Pi-hole info."
     GetSummaryInformation "mini"
     echo "- Gathering network info."
-    GetNetworkInformation
+    GetNetworkInformation "mini"
     echo "- Gathering version info."
-    GetVersionInformation
+    GetVersionInformation "mini"
     echo "  - Core v$piholeVersion, Web v$webVersion"
     echo "  - FTL v$ftlVersion, PADD v$PADDVersion"
     echo "- Checking for update info."
-    GetVersionInformation
+    GetVersionInformation "mini"
     echo "  - $versionStatus"
+
   else
     echo -e "${PADDLogoRetro1}"
     echo -e "${PADDLogoRetro2}Pi-hole® Ad Detection Display"
@@ -852,22 +829,87 @@ if [[ $# = 0 ]]; then
     echo "  - $versionStatus"
   fi
 
+  printf "Starting in"
+
+  for i in 3 2 1
+  do
+    printf " $i"
+    sleep 1
+  done
+}
+
+NormalPADD() {
+  for (( ; ; )); do
+
+    consoleWidth=$(tput cols)
+    consoleHeight=$(tput lines)
+
+    # Sizing Checks
+    SizeChecker
+
+    # Get Config variables
+    . /etc/pihole/setupVars.conf
+
+    # Output everything to the screen
+    PrintLogo ${PADDsize}
+    PrintPiholeInformation ${PADDsize}
+    PrintPiholeStats ${PADDsize}
+    PrintNetworkInformation ${PADDsize}
+    PrintSystemInformation ${PADDsize}
+
+    picoStatus=${picoStatusOk}
+    miniStatus=${miniStatusOk}
+
+    # Start getting our information
+    GetVersionInformation ${PADDsize}
+    GetPiholeInformation ${PADDsize}
+    GetNetworkInformation ${PADDsize}
+    GetSummaryInformation ${PADDsize}
+    GetSystemInformation ${PADDsize}
+
+    # Sleep for 5 seconds, then clear the screen
+    sleep 5
+    clear
+  done
+}
+
+DisplayHelp() {
+  cat << EOM
+::: PADD displays stats about your piHole!
+:::
+::: Note: If no option is passed, then stats are displayed on screen, updated every 5 seconds
+:::
+::: Options:
+:::  -j, --json    output stats as JSON formatted string
+:::  -h, --help    display this help text
+EOM
+    exit 0
+}
+
+if [[ $# = 0 ]]; then
+  # Turns off the cursor
+  # (From Pull request #8 https://github.com/jpmck/PADD/pull/8)
+  setterm -cursor off
+  trap "{ setterm -cursor on ; echo "" ; exit 0 ; }" SIGINT SIGTERM EXIT
+
+  clear
+
+  consoleWidth=$(tput cols)
+  consoleHeight=$(tput lines)
+
+  # Get Our Config Values
+  . /etc/pihole/setupVars.conf
+
+  SizeChecker
+
+  StartupRoutine ${PADDsize}
+
   latestBlocked=$(GetFTLData recentBlocked)
   topBlocked=$(GetFTLData "top-ads (1)" | awk '{print $3}')
 
   topDomain=$(GetFTLData "top-domains (1)" | awk '{print $3}')
   topClient=$(GetFTLData "top-clients (1)" | awk '{print $3}')
 
-  echo ""
-  printf "PADD will start in"
-
-  for i in 3 2 1
-  do
-    printf " $i,"
-    sleep 1
-  done
-
-  printf " 0."
   # Run PADD
   clear
   NormalPADD
