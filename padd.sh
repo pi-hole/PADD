@@ -867,9 +867,11 @@ NormalPADD() {
     GetSummaryInformation ${PADDsize}
     GetSystemInformation ${PADDsize}
 
-    # Sleep for 5 seconds, then clear the screen
+    # Sleep for 5 seconds
     sleep 5
-    clear
+    
+    # use tput cup to reposition cursor at top of screen to avoid clear/redraw flicker
+    tput cup 0 0
   done
 }
 
