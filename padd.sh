@@ -13,7 +13,7 @@ export LC_ALL=en_US.UTF-8 > /dev/null 2>&1 || export LC_ALL=en_GB.UTF-8 > /dev/n
 ############################################ VARIABLES #############################################
 
 # VERSION
-PADDVersion="2.0.0"
+PADDVersion="2.1.0"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -611,7 +611,6 @@ PrintSystemInformation() {
     printf " %-9s%-29s\n" "Uptime:" "${systemUptime}"
     echo -e  " Load:    [${cpuLoad1Heatmap}${cpuBar}${resetText}] ${cpuPercent}%"
     echo -ne " Memory:  [${memoryHeatmap}${memoryBar}${resetText}] ${memoryUsedPercent}%"
-  # else we're not
   else
     echo "${boldText}SYSTEM =====================================================${resetText}"
     # Uptime
@@ -867,9 +866,20 @@ NormalPADD() {
     GetSummaryInformation ${PADDsize}
     GetSystemInformation ${PADDsize}
 
-    # Sleep for 5 seconds, then clear the screen
+    # Sleep for 5 seconds
     sleep 5
-    clear
+
+    # https://github.com/jpmck/PADD/pull/27
+    # if we're started up as the Linux console
+    if [ "$TERM" == "linux" ] ; then
+      # use tput cup to reposition cursor at top of screen to avoid clear/redraw flicker
+      tput cup 0 0
+    # else we're logged in some other way (xterm, putty, etc.)
+    else
+      # clear the screen
+      clear
+    fi
+
   done
 }
 
