@@ -356,11 +356,12 @@ GetVersionInformation() {
     # the file exits, use it
     source piHoleVersion
 
+    # Today is...
+    today=$(date +%Y%m%d)
+    
     # was the last check today?
     if [ "${today}" != "${lastCheck}" ]; then # no, it wasn't today
-      # Today is...
-      today=$(date +%Y%m%d)
-
+      
       # what are the latest available versions?
       # TODO: update if necessary if added to pihole
       piholeVersionLatest=$(pihole -v -p -l | awk '{print $5}' | tr -d "[:alpha:]")
@@ -581,7 +582,8 @@ PrintPiholeStats() {
   # else we're not
   else
     echo "${boldText}STATS ======================================================${resetText}"
-    printf " %-10s%-49s\n" "Blocking:" "${domains_being_blocked} domains"
+    printf " %-10s%-49s\n" "Blocking:" "${domains_being_blocked} dom# Today is...
+      today=$(date +%Y%m%d)ains"
     printf " %-10s[%-40s] %-5s\n" "Pi-holed:" "${adsBlockedBar}" "${ads_percentage_today}%"
     printf " %-10s%-49s\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today} queries"
     printf " %-10s%-39s\n" "Latest:" "${latestBlocked}"
