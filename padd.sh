@@ -19,7 +19,8 @@ PADDVersion="2.1.0"
 today=$(date +%Y%m%d)
 
 # CORES
-coreCount=$(grep -c 'model name' /proc/cpuinfo)
+declare -i coreCount=1
+coreCount=$(cat /sys/devices/system/cpu/kernel_max 2> /dev/null)+1
 
 # COLORS
 blackText=$(tput setaf 0)   # Black
