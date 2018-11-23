@@ -173,7 +173,11 @@ GetSystemInformation() {
   fi
 
   # CPU temperature
-  cpu=$(</sys/class/thermal/thermal_zone0/temp)
+  if [ -f /sys/class/thermal/thermal_zone0/temp ]; then
+    cpu=$(</sys/class/thermal/thermal_zone0/temp)
+  else
+    cpu=0
+  fi
 
   # Convert CPU temperature to correct unit
   if [ "${TEMPERATUREUNIT}" == "F" ]; then
