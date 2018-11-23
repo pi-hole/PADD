@@ -360,11 +360,12 @@ GetVersionInformation() {
     # the file exits, use it
     source piHoleVersion
 
+    # Today is...
+    today=$(date +%Y%m%d)
+    
     # was the last check today?
     if [ "${today}" != "${lastCheck}" ]; then # no, it wasn't today
-      # Today is...
-      today=$(date +%Y%m%d)
-
+      
       # what are the latest available versions?
       # TODO: update if necessary if added to pihole
       piholeVersionLatest=$(pihole -v -p -l | awk '{print $5}' | tr -d "[:alpha:]")
