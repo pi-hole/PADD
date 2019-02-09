@@ -184,12 +184,12 @@ GetSystemInformation() {
 
   # Convert CPU temperature to correct unit
   if [ "${TEMPERATUREUNIT}" == "F" ]; then
-    temperature=$(printf %.1f "$(echo "scale=4; ${cpu}*9/5000+32" | bc)")°F
+    temperature=$(printf %.1f "$(echo "${cpu}" | awk '{print $1 * 9 / 5000 + 32}')")°F
   elif [ "${TEMPERATUREUNIT}" == "K" ]; then
-    temperature=$(printf %.1f "$(echo "scale=4; (${cpu}/1000+273.15)" | bc)")°K
-  # Addresses Issue 1: https://github.com/jpmck/PADD/issues/1
+    temperature=$(printf %.1f "$(echo "${cpu}" | awk '{print $1 / 1000 + 273.15}')")°K
+  # Addresses Issue 1: https://github.com/jpmck/PAD/issues/1
   else
-    temperature=$(printf %.1f "$(echo "scale=4; ${cpu}/1000" | bc)")°C
+    temperature=$(printf %.1f "$(echo "${cpu}" | awk '{print $1 / 1000}')")°C
   fi
 
   # CPU load, heatmap
@@ -199,7 +199,7 @@ GetSystemInformation() {
   cpuLoad5Heatmap=$(HeatmapGenerator "${cpuLoad5}" "${coreCount}")
   cpuLoad15=$(awk '{print $3}' /proc/loadavg)
   cpuLoad15Heatmap=$(HeatmapGenerator "${cpuLoad15}" "${coreCount}")
-  cpuPercent=$(printf %.1f "$(echo "scale=4; (${cpuLoad1}/${coreCount})*100" | bc)")
+  cpuPercent=$(printf %.1f "$(echo "${cpuLoad1} ${coreCount}" | awk '{print ($1 / $2) * 100}')")
 
   # CPU temperature heatmap
   # If we're getting close to 85°C... (https://www.raspberrypi.org/blog/introducing-turbo-mode-up-to-50-more-performance-for-free/)
@@ -649,7 +649,7 @@ HeatmapGenerator () {
     load=$(printf "%.0f" "$1")
   # if two numbers are provided, do some math to make a percentage to figure out the colors
   else
-    load=$(printf "%.0f" "$(echo "scale=2; ($1/$2)*100" | bc)")
+    load=$(printf "%.0f" "$(echo "$1 $2" | awk '{print ($1 / $2) * 100}')")
   fi
 
   # Color logic
@@ -673,7 +673,7 @@ HeatmapGenerator () {
 # $3: colored flag, if "color" backfill with color
 BarGenerator() {
   # number of filled in cells in the bar
-  barNumber=$(printf %.f "$(echo "scale=2; (($1/100)*$2)" | bc)")
+  barNumber=$(printf %.f "$(echo "$1 $2" | awk '{print ($1 / 100) * $2}')")
   frontFill=$(for i in $(seq "$barNumber"); do echo -n '■'; done)
 
   # remaining "unfilled" cells in the bar
