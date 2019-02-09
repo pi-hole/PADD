@@ -261,6 +261,16 @@ GetNetworkInformation() {
   [[ -n "${PIHOLE_DNS_8}" ]] && dnsCount=$((dnsCount+1))
   [[ -n "${PIHOLE_DNS_9}" ]] && dnsCount="$dnsCount+"
 
+  # if there's only one DNS server
+  if [[ ${dnsCount} -eq 1 ]]; then
+    if [[ "${PIHOLE_DNS_1}" == "127.0.0.1#5053" ]]; then
+      dnsInformation="Cloudflared"
+    fi
+    dnsInformation="1 server"
+  else
+    dnsInformation="${dnsCount} servers"
+  fi
+
   # Is Pi-Hole acting as the DHCP server?
   if [[ "${DHCP_ACTIVE}" == "true" ]]; then
     dhcpStatus="Enabled"
@@ -540,7 +550,7 @@ PrintNetworkInformation() {
     echo "${boldText}NETWORK ====================================================${resetText}"
     printf " %-10s%-19s %-10s%-19s\\n" "Hostname:" "${fullHostname}" "IPv4:" "${IPV4_ADDRESS}"
     printf " %-10s%-19s\\n" "IPv6:" "${IPV6_ADDRESS}"
-    printf " %-10s%-19s %-10s%-19s\\n" "DNS:" "${dnsCount} DNS servers" "DNSSEC:" "${dnssecHeatmap}${dnssecStatus}${resetText}"
+    printf " %-10s%-19s %-10s%-19s\\n" "DNS:" "${dnsInformation}" "DNSSEC:" "${dnssecHeatmap}${dnssecStatus}${resetText}"
 
     if [[ "${DHCP_ACTIVE}" == "true" ]]; then
       printf " %-10s${dhcpHeatmap}%-19s${resetText} %-10s${dhcpIPv6Heatmap}%-19s${resetText}\\n" "DHCP:" "${dhcpStatus}" "IPv6:" ${dhcpIPv6Status}
