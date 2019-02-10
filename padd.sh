@@ -259,7 +259,7 @@ GetNetworkInformation() {
   [[ -n "${PIHOLE_DNS_6}" ]] && dnsCount=$((dnsCount+1))
   [[ -n "${PIHOLE_DNS_7}" ]] && dnsCount=$((dnsCount+1))
   [[ -n "${PIHOLE_DNS_8}" ]] && dnsCount=$((dnsCount+1))
-  [[ -n "${PIHOLE_DNS_9}" ]] && dnsCount="$dnsCount+"
+  [[ -n "${PIHOLE_DNS_9}" ]] && dnsCount=$((dnsCount+1))
 
   # if there's only one DNS server
   if [[ ${dnsCount} -eq 1 ]]; then
