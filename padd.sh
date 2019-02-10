@@ -15,7 +15,7 @@ export LC_ALL=en_US.UTF-8 > /dev/null 2>&1 || export LC_ALL=en_GB.UTF-8 > /dev/n
 ############################################ VARIABLES #############################################
 
 # VERSION
-PADDVersion="2.2.0"
+PADDVersion="2.2.1"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -267,6 +267,8 @@ GetNetworkInformation() {
       dnsInformation="Cloudflared"
     fi
     dnsInformation="1 server"
+  elif [[ ${dnsCount} -gt 8 ]]; then
+    dnsInformation="8+ servers"
   else
     dnsInformation="${dnsCount} servers"
   fi
