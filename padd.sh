@@ -559,7 +559,7 @@ PrintLogo() {
   elif [ "$1" = "regular" ]; then
     echo -e "${PADDLogo1}"
     echo -e "${PADDLogo2}Pi-hole® ${piholeVersionHeatmap}v${coreVersion}${reset_text}, Web ${webVersionHeatmap}v${webVersion}${reset_text}, FTL ${ftlVersionHeatmap}v${ftlVersion}${reset_text}"
-    echo -e " ${full_Status_}${reset_text}"
+    echo -e "${PADDLogo3}PADD ${PADDVersionHeatmap}v${PADDVersion}${resetText} ${fullStatus}${resetText}"
 
     echo ""
   # normal or not defined
