@@ -443,7 +443,7 @@ GetVersionInformation() {
       core_version_latest=${core_version}
       core_version_heatmap=${yellow_text}
     else
-      core_version_latest=$(echo "${core_version_lates}" | tr -d '\r\n[:alpha:]')
+      core_version_latest=$(echo "${core_version_latest}" | tr -d '\r\n[:alpha:]')
       # is core up-to-date?
       if [[ "${core_version}" != "${core_version_latest}" ]]; then
         out_of_date_flag="true"
