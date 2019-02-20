@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="3.0.1"
+padd_version="3.0.2"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -187,7 +187,7 @@ GetSummaryInformation() {
     if [ ${#top_blocked} -gt 30 ]; then
       top_blocked=$(echo "$top_blocked" | cut -c1-27)"..."
     fi
-  elif [ "$1" = "regular" ]; then
+  elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 40 "color")
   else
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
@@ -574,7 +574,7 @@ PrintLogo() {
     echo -e "${padd_text}${dim_text}mini${reset_text}  ${mini_status_}\\n"
   elif [ "$1" = "slim" ]; then
     echo -e "${padd_text}${dim_text}slim${reset_text}   ${full_status_}\\n"
-  elif [ "$1" = "regular" ]; then
+  elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     echo -e "${padd_logo_1}"
     echo -e "${padd_logo_2}Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}"
     echo -e "${padd_logo_3}PADD ${padd_version_heatmap}v${padd_version}${reset_text}${full_status_}${reset_text}"
@@ -614,7 +614,7 @@ PrintNetworkInformation() {
     if [[ "${DHCP_ACTIVE}" == "true" ]]; then
       printf " %-9s${dhcp_heatmap}%-10s${reset_text} %-9s${dhcp_ipv6_heatmap}%-10s${reset_text}\\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
     fi
-  elif [ "$1" = "regular" ]; then
+  elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     echo "${bold_text}NETWORK ====================================================${reset_text}"
     printf " %-10s%-19s %-10s%-19s\\n" "Hostname:" "${full_hostname}" "IPv4:" "${IPV4_ADDRESS}"
     printf " %-10s%-19s\\n" "IPv6:" "${IPV6_ADDRESS}"
@@ -651,7 +651,7 @@ PrintPiholeInformation() {
   elif [ "$1" = "mini" ]; then
     echo "${bold_text}PI-HOLE ================================${reset_text}"
     printf " %-9s${pihole_heatmap}%-10s${reset_text} %-9s${ftl_heatmap}%-10s${reset_text}\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
-  elif [ "$1" = "regular" ]; then
+  elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     echo "${bold_text}PI-HOLE ====================================================${reset_text}"
     printf " %-10s${pihole_heatmap}%-19s${reset_text} %-10s${ftl_heatmap}%-19s${reset_text}\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
   else
@@ -682,7 +682,7 @@ PrintPiholeStats() {
     if [[ "${DHCP_ACTIVE}" != "true" ]]; then
       printf " %-9s%-29s\\n" "Top Ad:" "${top_blocked}"
     fi
-  elif [ "$1" = "regular" ]; then
+  elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     echo "${bold_text}STATS ======================================================${reset_text}"
     printf " %-10s%-49s\\n" "Blocking:" "${domains_being_blocked} domains"
     printf " %-10s[%-40s] %-5s\\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
@@ -726,7 +726,7 @@ PrintSystemInformation() {
     echo -e  " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
     echo -ne " Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
   # else we're not
-  elif [ "$1" = "regular" ]; then
+  elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     echo "${bold_text}SYSTEM =====================================================${reset_text}"
     # Uptime
     printf " %-10s%-39s\\n" "Uptime:" "${system_uptime}"
@@ -829,11 +829,12 @@ SizeChecker(){
   elif [[ "$console_width" -lt "60" || "$console_height" -lt "20" ]]; then
     padd_size="mini"
   # Below Regular. Gives you Slim.
-  elif [[ "$console_width" -lt "60" || "$console_height" -lt "22" ]]; then
-    padd_size="slim"
-  # Below Mega. Gives you Regular.
   elif [[ "$console_width" -lt "80" || "$console_height" -lt "26" ]]; then
-    padd_size="regular"
+    if [[ "$console_height" -lt "22" ]]; then
+      padd_size="slim"
+    else
+      padd_size="regular"
+    fi
   # Mega
   else
     padd_size="mega"
@@ -853,7 +854,7 @@ CheckConnectivity() {
       elif [ "$1" = "mini" ]; then
         echo "Attempt ${connection_attempts} passed."
       else
-        echo "  - Attempt ${connection_attempts} passed...                                         "
+        echo "  - Attempt ${connection_attempts} passed...                                     "
       fi
 
       connectivity="true"
