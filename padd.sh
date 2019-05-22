@@ -260,7 +260,7 @@ GetNetworkInformation() {
   # Get pi IP address, hostname and gateway
   pi_ip_address=$(ip addr | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/')
   pi_hostname=$(hostname)
-  pi_gateway=$(route -n | grep 'UG[ \t]' | awk '{print $2}')
+  pi_gateway=$(ip r | grep 'default' | awk '{print $3}')
 
   # does the Pi-hole have a domain set?
   if [ -z ${PIHOLE_DOMAIN+x} ]; then
