@@ -28,6 +28,10 @@ if [ "$TERM" == "linux" ] ; then
   done
 fi
 ```
+One line version
+```bash
+cd ~ ; echo "if [ \"\$TERM\" == \"linux\" ] ; then\n  while :\n  do\n    ./padd.sh\n    sleep 1\n  done\nfi" | tee ~/.bashrc -a
+```
 - Reboot your Pi-Hole by running `sudo reboot`. PADD should now run when your Pi-Hole has completed booting.
 
 ## Updating PADD
