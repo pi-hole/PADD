@@ -16,6 +16,17 @@ wget -N https://raw.githubusercontent.com/jpmck/PADD/master/padd.sh
 ```bash
 sudo chmod +x padd.sh
 ```
+- Make the Raspbian distro autologin at boot by running below two:
+```bash
+sudo systemctl disable getty@tty1.service
+```
+```bash
+sudo systemctl enable autologin@tty1.service
+```
+- You can check which user gets logged in automatically (Raspbian default is "pi") by running:
+```bash
+grep autologin /etc/systemd/system/autologin@.service
+```
 - Set PADD to auto run by adding the following to the end of `~/.bashrc`:
 ```bash
 # Run PADD
