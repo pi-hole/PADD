@@ -565,7 +565,7 @@ GetVersionInformation() {
 # terminfo clr_eol (clears to end of line to erase artifacts after resizing smaller)
 ceol=$(tput el)
 
-# wrapper - echo with a clear eol first
+# wrapper - echo with a clear eol afterwards to wipe any artifacts remaining from last print
 CleanEcho() {
   echo -e $1 "${ceol}"
 }
@@ -1069,7 +1069,7 @@ NormalPADD() {
     PrintNetworkInformation ${padd_size}
     PrintSystemInformation ${padd_size}
     
-    # clear to end of screen
+    # Clear to end of screen (below the drawn dashboard)
     tput ed
 
     pico_status=${pico_status_ok}
