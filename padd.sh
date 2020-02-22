@@ -644,7 +644,7 @@ PrintNetworkInformation() {
   else
     CleanEcho "${bold_text}NETWORK ========================================================================${reset_text}"
     CleanPrintf " %-10s%-19s\e[0K\\n" "Hostname:" "${full_hostname}"
-    CleanPrintf " %-10s%-19s %-10s%-29\e[0Ks\\n" "IPv4 Adr:" "${IPV4_ADDRESS}" "IPv6 Adr:" "${IPV6_ADDRESS}"
+    CleanPrintf " %-10s%-19s %-10s%-29s\e[0K\\n" "IPv4 Adr:" "${IPV4_ADDRESS}" "IPv6 Adr:" "${IPV6_ADDRESS}"
     CleanEcho "DNS ============================================================================"
     CleanPrintf " %-10s%-39s\e[0K\\n" "Servers:" "${dns_information}"
     CleanPrintf " %-10s${dnssec_heatmap}%-19s${reset_text} %-20s${conditional_forwarding_heatmap}%-9s${reset_text}\e[0K\\n" "DNSSEC:" "${dnssec_status}" "Conditional Fwding:" "${conditional_forwarding_status}"
