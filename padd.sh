@@ -581,35 +581,35 @@ PrintLogo() {
     echo -e "${ceol}${padd_logo_1}"
     echo -e "${ceol}${padd_logo_2}Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}"
     echo -e "${ceol}${padd_logo_3}PADD ${padd_version_heatmap}v${padd_version}${reset_text}${full_status_}${reset_text}"
-    echo ""
+    echo -e "${ceol}"
   # normal or not defined
   else
     echo -e "${ceol}${padd_logo_retro_1}"
     echo -e "${ceol}${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}, PADD ${padd_version_heatmap}v${padd_version}${reset_text}"
     echo -e "${ceol}${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
 
-    echo ""
+    echo -e "${ceol}"
   fi
 }
 
 PrintNetworkInformation() {
   if [ "$1" = "pico" ]; then
-    echo "${bold_text}NETWORK ============${reset_text}"
+    echo -e "${ceol}${bold_text}NETWORK ============${reset_text}"
     echo -e "${ceol} Hst: ${pi_hostname}"
     echo -e "${ceol} IP:  ${pi_ip_address}"
     echo -e "${ceol} DHCP ${dhcp_check_box} IPv6 ${dhcp_ipv6_check_box}"
   elif [ "$1" = "nano" ]; then
-    echo "${bold_text}NETWORK ================${reset_text}"
+    echo -e "${ceol}${bold_text}NETWORK ================${reset_text}"
     echo -e "${ceol} Host: ${pi_hostname}"
     echo -e "${ceol} IPv4: ${IPV4_ADDRESS}"
     echo -e "${ceol} DHCP: ${dhcp_check_box}    IPv6: ${dhcp_ipv6_check_box}"
   elif [ "$1" = "micro" ]; then
-    echo "${bold_text}NETWORK ======================${reset_text}"
+    echo -e "${ceol}${bold_text}NETWORK ======================${reset_text}"
     echo -e "${ceol} Host:    ${full_hostname}"
     echo -e "${ceol} IPv4:    ${IPV4_ADDRESS}"
     echo -e "${ceol} DHCP:    ${dhcp_check_box}     IPv6:  ${dhcp_ipv6_check_box}"
   elif [ "$1" = "mini" ]; then
-    echo "${bold_text}NETWORK ================================${reset_text}"
+    echo -e "${ceol}${bold_text}NETWORK ================================${reset_text}"
     tput el
     printf " %-9s%-19s\\n" "Host:" "${full_hostname}"
     tput el
@@ -622,7 +622,7 @@ PrintNetworkInformation() {
       printf " %-9s${dhcp_heatmap}%-10s${reset_text} %-9s${dhcp_ipv6_heatmap}%-10s${reset_text}\\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
     fi
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
-    echo "${bold_text}NETWORK ====================================================${reset_text}"
+    echo -e "${ceol}${bold_text}NETWORK ====================================================${reset_text}"
     tput el
     printf " %-10s%-19s %-10s%-19s\\n" "Hostname:" "${full_hostname}" "IPv4:" "${IPV4_ADDRESS}"
     tput el
@@ -637,7 +637,7 @@ PrintNetworkInformation() {
       printf "%s\\n" "${dhcp_info}"
     fi
   else
-    echo "${bold_text}NETWORK ========================================================================${reset_text}"
+    echo -e "${ceol}${bold_text}NETWORK ========================================================================${reset_text}"
     tput el
     printf " %-10s%-19s\\n" "Hostname:" "${full_hostname}"
     tput el
@@ -648,7 +648,7 @@ PrintNetworkInformation() {
     tput el
     printf " %-10s${dnssec_heatmap}%-19s${reset_text} %-20s${conditional_forwarding_heatmap}%-9s${reset_text}\\n" "DNSSEC:" "${dnssec_status}" "Conditional Fwding:" "${conditional_forwarding_status}"
 
-    echo "DHCP ==========================================================================="
+    echo -e "${ceol}DHCP ==========================================================================="
     tput el
     printf " %-10s${dhcp_heatmap}%-19s${reset_text} %-10s${dhcp_ipv6_heatmap}%-9s${reset_text}\\n" "DHCP:" "${dhcp_status}" "IPv6 Spt:" "${dhcp_ipv6_status}"
     tput el
@@ -661,16 +661,18 @@ PrintPiholeInformation() {
   if [ "$1" = "pico" ]; then
     :
   elif [ "$1" = "nano" ]; then
-    echo "${bold_text}PI-HOLE ================${reset_text}"
+    echo -e "${ceol}${bold_text}PI-HOLE ================${reset_text}"
     echo -e "${ceol} Up:  ${pihole_check_box}      FTL: ${ftl_check_box}"
   elif [ "$1" = "micro" ]; then
-    echo "${bold_text}PI-HOLE ======================${reset_text}"
+    echo -e "${ceol}${bold_text}PI-HOLE ======================${reset_text}"
     echo -e "${ceol} Status:  ${pihole_check_box}      FTL:  ${ftl_check_box}"
   elif [ "$1" = "mini" ]; then
-    echo "${bold_text}PI-HOLE ================================${reset_text}"
+    echo -e "${ceol}${bold_text}PI-HOLE ================================${reset_text}"
+    tput el
     printf " %-9s${pihole_heatmap}%-10s${reset_text} %-9s${ftl_heatmap}%-10s${reset_text}\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
-    echo "${bold_text}PI-HOLE ====================================================${reset_text}"
+    echo "${ceol}${bold_text}PI-HOLE ====================================================${reset_text}"
+    tput el
     printf " %-10s${pihole_heatmap}%-19s${reset_text} %-10s${ftl_heatmap}%-19s${reset_text}\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
   else
     return
@@ -680,87 +682,114 @@ PrintPiholeInformation() {
 PrintPiholeStats() {
   # are we on a tiny screen?
   if [ "$1" = "pico" ]; then
-    echo "${bold_text}PI-HOLE ============${reset_text}"
+    echo -e "${ceol}${bold_text}PI-HOLE ============${reset_text}"
     echo -e "${ceol} [${ads_blocked_bar}] ${ads_percentage_today}%"
     echo -e "${ceol} ${ads_blocked_today} / ${dns_queries_today}"
   elif [ "$1" = "nano" ]; then
     echo -e "${ceol} Blk: [${ads_blocked_bar}] ${ads_percentage_today}%"
     echo -e "${ceol} Blk: ${ads_blocked_today} / ${dns_queries_today}"
   elif [ "$1" = "micro" ]; then
-    echo "${bold_text}STATS ========================${reset_text}"
+    echo -e "${ceol}${bold_text}STATS ========================${reset_text}"
     echo -e "${ceol} Blckng:  ${domains_being_blocked} domains"
     echo -e "${ceol} Piholed: [${ads_blocked_bar}] ${ads_percentage_today}%"
     echo -e "${ceol} Piholed: ${ads_blocked_today} / ${dns_queries_today}"
   elif [ "$1" = "mini" ]; then
-    echo "${bold_text}STATS ==================================${reset_text}"
+    echo -e "${ceol}${bold_text}STATS ==================================${reset_text}"
+    tput el
     printf " %-9s%-29s\\n" "Blckng:" "${domains_being_blocked} domains"
+    tput el
     printf " %-9s[%-20s] %-5s\\n" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+    tput el
     printf " %-9s%-29s\\n" "Piholed:" "${ads_blocked_today} out of ${dns_queries_today}"
+    tput el
     printf " %-9s%-29s\\n" "Latest:" "${latest_blocked}"
     if [[ "${DHCP_ACTIVE}" != "true" ]]; then
+      tput el
       printf " %-9s%-29s\\n" "Top Ad:" "${top_blocked}"
     fi
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
-    echo "${bold_text}STATS ======================================================${reset_text}"
+    echo "${ceol}${bold_text}STATS ======================================================${reset_text}"
+    tput el
     printf " %-10s%-49s\\n" "Blocking:" "${domains_being_blocked} domains"
+    tput el
     printf " %-10s[%-40s] %-5s\\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+    tput el
     printf " %-10s%-49s\\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today} queries"
+    tput el
     printf " %-10s%-39s\\n" "Latest:" "${latest_blocked}"
+    tput el
     printf " %-10s%-39s\\n" "Top Ad:" "${top_blocked}"
     if [[ "${DHCP_ACTIVE}" != "true" ]]; then
+      tput el
       printf " %-10s%-39s\\n" "Top Dmn:" "${top_domain}"
+      tput el
       printf " %-10s%-39s\\n" "Top Clnt:" "${top_client}"
     fi
   else
-    echo "${bold_text}STATS ==========================================================================${reset_text}"
+    echo  -e "${ceol}${bold_text}STATS ==========================================================================${reset_text}"
+    tput el
     printf " %-10s%-19s %-10s[%-40s] %-5s\\n" "Blocking:" "${domains_being_blocked} domains" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+    tput el
     printf " %-10s%-30s%-29s\\n" "Clients:" "${clients}" " ${ads_blocked_today} out of ${dns_queries_today} queries"
+    tput el
     printf " %-10s%-39s\\n" "Latest:" "${latest_blocked}"
+    tput el
     printf " %-10s%-39s\\n" "Top Ad:" "${top_blocked}"
+    tput el
     printf " %-10s%-39s\\n" "Top Dmn:" "${top_domain}"
+    tput el
     printf " %-10s%-39s\\n" "Top Clnt:" "${top_client}"
-    echo "FTL ============================================================================"
+    echo -e "${ceol}FTL ============================================================================"
+    tput el
     printf " %-10s%-9s %-10s%-9s %-10s%-9s\\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}%" "Mem. Use:" "${ftl_mem_percentage}%"
+    tput el
     printf " %-10s%-69s\\n" "DNSCache:" "${cache_inserts} insertions, ${cache_deletes} deletions, ${cache_size} total entries"
   fi
 }
 
 PrintSystemInformation() {
   if [ "$1" = "pico" ]; then
-    echo "${bold_text}CPU ================${reset_text}"
-    echo -ne " [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
+    echo -e "${ceol}${bold_text}CPU ================${reset_text}"
+    echo -ne "${ceol} [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
   elif [ "$1" = "nano" ]; then
-    echo "${bold_text}SYSTEM =================${reset_text}"
-    echo -e  " Up:  ${system_uptime}"
-    echo -ne  " CPU: [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
+    echo -e "${ceol}${ceol}${bold_text}SYSTEM =================${reset_text}"
+    echo -e  "${ceol} Up:  ${system_uptime}"
+    echo -ne  "${ceol} CPU: [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
   elif [ "$1" = "micro" ]; then
-    echo "${bold_text}SYSTEM =======================${reset_text}"
-    echo -e  " Uptime:  ${system_uptime}"
-    echo -e  " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
-    echo -ne " Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
+    echo -e "${ceol}${bold_text}SYSTEM =======================${reset_text}"
+    echo -e  "${ceol} Uptime:  ${system_uptime}"
+    echo -e  "${ceol} Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
+    echo -ne "${ceol} Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
   elif [ "$1" = "mini" ]; then
-    echo "${bold_text}SYSTEM =================================${reset_text}"
+    echo -e "${ceol}${bold_text}SYSTEM =================================${reset_text}"
+    tput el
     printf " %-9s%-29s\\n" "Uptime:" "${system_uptime}"
-    echo -e  " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
-    echo -ne " Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
+    echo -e  "${ceol} Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
+    echo -ne "${ceol} Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
   # else we're not
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
-    echo "${bold_text}SYSTEM =====================================================${reset_text}"
+    echo -e "${ceol}${bold_text}SYSTEM =====================================================${reset_text}"
     # Uptime
+    tput el
     printf " %-10s%-39s\\n" "Uptime:" "${system_uptime}"
 
     # Temp and Loads
+    tput el
     printf " %-10s${temp_heatmap}%-20s${reset_text}" "CPU Temp:" "${temperature}"
+    tput el
     printf " %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}\\n" "CPU Load:" "${cpu_load[0]}" "${cpu_load[1]}" "${cpu_load[2]}"
 
     # Memory and CPU bar
+    tput el
     printf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
   else
-    echo "${bold_text}SYSTEM =========================================================================${reset_text}"
+    echo "${ceol}${bold_text}SYSTEM =========================================================================${reset_text}"
     # Uptime and memory
+    tput el
     printf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s\\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
 
     # CPU temp, load, percentage
+    tput el
     printf " %-10s${temp_heatmap}%-10s${reset_text} %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-7s${reset_text} %-10s[${memory_heatmap}%-10s${reset_text}] %-6s" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load[0]}" "${cpu_load[1]}" "${cpu_load[2]}" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
   fi
 }
