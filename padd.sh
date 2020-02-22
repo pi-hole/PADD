@@ -731,12 +731,12 @@ PrintSystemInformation() {
     CleanEcho "${bold_text}SYSTEM =======================${reset_text}"
     CleanEcho " Uptime:  ${system_uptime}"
     CleanEcho " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
-    echo -ne "${ceol} Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
+    echo -ne "${ceol}Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
   elif [ "$1" = "mini" ]; then
     CleanEcho "${bold_text}SYSTEM =================================${reset_text}"
     CleanPrintf " %-9s%-29s\\n" "Uptime:" "${system_uptime}"
     CleanEcho " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
-    echo -ne "${ceol} Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
+    echo -ne "${ceol}Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
   # else we're not
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${bold_text}SYSTEM =====================================================${reset_text}"
@@ -750,7 +750,7 @@ PrintSystemInformation() {
     # Memory and CPU bar
     CleanPrintf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
   else
-    echo "${ceol}${bold_text}SYSTEM =========================================================================${reset_text}"
+    CleanEcho "${bold_text}SYSTEM =========================================================================${reset_text}"
     # Uptime and memory
     CleanPrintf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s\\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
 
