@@ -570,9 +570,9 @@ CleanEcho() {
   echo -e $1 "${ceol}"
 }
 
-# wrapper - printf with a clear eol first
+# wrapper - printf
 CleanPrintf() {
-#  tput el
+# tput el
   printf "$@"
 }
 
@@ -590,7 +590,7 @@ PrintLogo() {
     CleanEcho ""
   elif [ "$1" = "slim" ]; then
     CleanEcho "${padd_text}${dim_text}slim${reset_text}   ${full_status_}"
-    CleanEcho ""\
+    CleanEcho ""
   # For the next two, use printf to make sure spaces aren't collapsed
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanPrintf "${padd_logo_1}\e[0K\\n"
@@ -1082,7 +1082,7 @@ NormalPADD() {
     GetSummaryInformation ${padd_size}
     GetSystemInformation ${padd_size}
 
-    # Sleep for 5 seconds, then clear the screen
+    # Sleep for 5 seconds
     sleep 5
   done
 }
