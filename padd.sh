@@ -572,7 +572,7 @@ CleanEcho() {
 
 # wrapper - printf with a clear eol first
 CleanPrintf() {
-  tput el
+#  tput el
   printf "$@"
 }
 
@@ -583,11 +583,14 @@ PrintLogo() {
   elif [ "$1" = "nano" ]; then
     CleanEcho "n${padd_text} ${mini_status_}"
   elif [ "$1" = "micro" ]; then
-    CleanEcho "µ${padd_text}     ${mini_status_}\\n"
+    CleanEcho "µ${padd_text}     ${mini_status_}"
+    CleanEcho ""
   elif [ "$1" = "mini" ]; then
-    CleanEcho "${padd_text}${dim_text}mini${reset_text}  ${mini_status_}\\n"
+    CleanEcho "${padd_text}${dim_text}mini${reset_text}  ${mini_status_}"
+    CleanEcho ""
   elif [ "$1" = "slim" ]; then
-    CleanEcho "${padd_text}${dim_text}slim${reset_text}   ${full_status_}\\n"
+    CleanEcho "${padd_text}${dim_text}slim${reset_text}   ${full_status_}"
+    CleanEcho ""
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${padd_logo_1}"
     CleanEcho "${padd_logo_2}Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}"
