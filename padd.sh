@@ -624,34 +624,34 @@ PrintNetworkInformation() {
     CleanEcho " DHCP:    ${dhcp_check_box}     IPv6:  ${dhcp_ipv6_check_box}"
   elif [ "$1" = "mini" ]; then
     CleanEcho "${bold_text}NETWORK ================================${reset_text}"
-    CleanPrintf " %-9s%-19s\\n" "Host:" "${full_hostname}"
-    CleanPrintf " %-9s%-19s\\n" "IPv4:" "${IPV4_ADDRESS}"
-    CleanPrintf " %-9s%-10s\\n" "DNS:" "${dns_information}"
+    CleanPrintf " %-9s%-19s\e[0K\\n" "Host:" "${full_hostname}"
+    CleanPrintf " %-9s%-19s\e[0K\\n" "IPv4:" "${IPV4_ADDRESS}"
+    CleanPrintf " %-9s%-10s\e[0K\\n" "DNS:" "${dns_information}"
 
     if [[ "${DHCP_ACTIVE}" == "true" ]]; then
-      CleanPrintf " %-9s${dhcp_heatmap}%-10s${reset_text} %-9s${dhcp_ipv6_heatmap}%-10s${reset_text}\\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
+      CleanPrintf " %-9s${dhcp_heatmap}%-10s${reset_text} %-9s${dhcp_ipv6_heatmap}%-10s${reset_text}\e[0K\\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
     fi
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${bold_text}NETWORK ====================================================${reset_text}"
-    CleanPrintf " %-10s%-19s %-10s%-19s\\n" "Hostname:" "${full_hostname}" "IPv4:" "${IPV4_ADDRESS}"
-    CleanPrintf " %-10s%-19s\\n" "IPv6:" "${IPV6_ADDRESS}"
-    CleanPrintf " %-10s%-19s %-10s%-19s\\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
+    CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "Hostname:" "${full_hostname}" "IPv4:" "${IPV4_ADDRESS}"
+    CleanPrintf " %-10s%-19s\e[0K\\n" "IPv6:" "${IPV6_ADDRESS}"
+    CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
 
     if [[ "${DHCP_ACTIVE}" == "true" ]]; then
-      CleanPrintf " %-10s${dhcp_heatmap}%-19s${reset_text} %-10s${dhcp_ipv6_heatmap}%-19s${reset_text}\\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
-      CleanPrintf "%s\\n" "${dhcp_info}"
+      CleanPrintf " %-10s${dhcp_heatmap}%-19s${reset_text} %-10s${dhcp_ipv6_heatmap}%-19s${reset_text}\e[0K\\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
+      CleanPrintf "%s\e[0K\\n" "${dhcp_info}"
     fi
   else
     CleanEcho "${bold_text}NETWORK ========================================================================${reset_text}"
-    CleanPrintf " %-10s%-19s\\n" "Hostname:" "${full_hostname}"
-    CleanPrintf " %-10s%-19s %-10s%-29s\\n" "IPv4 Adr:" "${IPV4_ADDRESS}" "IPv6 Adr:" "${IPV6_ADDRESS}"
+    CleanPrintf " %-10s%-19s\e[0K\\n" "Hostname:" "${full_hostname}"
+    CleanPrintf " %-10s%-19s %-10s%-29\e[0Ks\\n" "IPv4 Adr:" "${IPV4_ADDRESS}" "IPv6 Adr:" "${IPV6_ADDRESS}"
     CleanEcho "DNS ============================================================================"
-    CleanPrintf " %-10s%-39s\\n" "Servers:" "${dns_information}"
-    CleanPrintf " %-10s${dnssec_heatmap}%-19s${reset_text} %-20s${conditional_forwarding_heatmap}%-9s${reset_text}\\n" "DNSSEC:" "${dnssec_status}" "Conditional Fwding:" "${conditional_forwarding_status}"
+    CleanPrintf " %-10s%-39s\e[0K\\n" "Servers:" "${dns_information}"
+    CleanPrintf " %-10s${dnssec_heatmap}%-19s${reset_text} %-20s${conditional_forwarding_heatmap}%-9s${reset_text}\e[0K\\n" "DNSSEC:" "${dnssec_status}" "Conditional Fwding:" "${conditional_forwarding_status}"
 
     CleanEcho "DHCP ==========================================================================="
-    CleanPrintf " %-10s${dhcp_heatmap}%-19s${reset_text} %-10s${dhcp_ipv6_heatmap}%-9s${reset_text}\\n" "DHCP:" "${dhcp_status}" "IPv6 Spt:" "${dhcp_ipv6_status}"
-    CleanPrintf "%s\\n" "${dhcp_info}"
+    CleanPrintf " %-10s${dhcp_heatmap}%-19s${reset_text} %-10s${dhcp_ipv6_heatmap}%-9s${reset_text}\e[0K\\n" "DHCP:" "${dhcp_status}" "IPv6 Spt:" "${dhcp_ipv6_status}"
+    CleanPrintf "%s\e[0K\\n" "${dhcp_info}"
   fi
 }
 
@@ -667,10 +667,10 @@ PrintPiholeInformation() {
     CleanEcho " Status:  ${pihole_check_box}      FTL:  ${ftl_check_box}"
   elif [ "$1" = "mini" ]; then
     CleanEcho "${bold_text}PI-HOLE ================================${reset_text}"
-    CleanPrintf " %-9s${pihole_heatmap}%-10s${reset_text} %-9s${ftl_heatmap}%-10s${reset_text}\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+    CleanPrintf " %-9s${pihole_heatmap}%-10s${reset_text} %-9s${ftl_heatmap}%-10s${reset_text}\e[0K\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${bold_text}PI-HOLE ====================================================${reset_text}"
-    CleanPrintf " %-10s${pihole_heatmap}%-19s${reset_text} %-10s${ftl_heatmap}%-19s${reset_text}\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+    CleanPrintf " %-10s${pihole_heatmap}%-19s${reset_text} %-10s${ftl_heatmap}%-19s${reset_text}\e[0K\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
   else
     return
   fi
@@ -692,35 +692,35 @@ PrintPiholeStats() {
     CleanEcho " Piholed: ${ads_blocked_today} / ${dns_queries_today}"
   elif [ "$1" = "mini" ]; then
     CleanEcho "${bold_text}STATS ==================================${reset_text}"
-    CleanPrintf " %-9s%-29s\\n" "Blckng:" "${domains_being_blocked} domains"
-    CleanPrintf " %-9s[%-20s] %-5s\\n" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
-    CleanPrintf " %-9s%-29s\\n" "Piholed:" "${ads_blocked_today} out of ${dns_queries_today}"
-    CleanPrintf " %-9s%-29s\\n" "Latest:" "${latest_blocked}"
+    CleanPrintf " %-9s%-29s\e[0K\\n" "Blckng:" "${domains_being_blocked} domains"
+    CleanPrintf " %-9s[%-20s] %-5s\e[0K\\n" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+    CleanPrintf " %-9s%-29s\e[0K\\n" "Piholed:" "${ads_blocked_today} out of ${dns_queries_today}"
+    CleanPrintf " %-9s%-29s\e[0K\\n" "Latest:" "${latest_blocked}"
     if [[ "${DHCP_ACTIVE}" != "true" ]]; then
       CleanPrintf " %-9s%-29s\\n" "Top Ad:" "${top_blocked}"
     fi
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${bold_text}STATS ======================================================${reset_text}"
-    CleanPrintf " %-10s%-49s\\n" "Blocking:" "${domains_being_blocked} domains"
-    CleanPrintf " %-10s[%-40s] %-5s\\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
-    CleanPrintf " %-10s%-49s\\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today} queries"
-    CleanPrintf " %-10s%-39s\\n" "Latest:" "${latest_blocked}"
-    CleanPrintf " %-10s%-39s\\n" "Top Ad:" "${top_blocked}"
+    CleanPrintf " %-10s%-49s\e[0K\\n" "Blocking:" "${domains_being_blocked} domains"
+    CleanPrintf " %-10s[%-40s] %-5s\e[0K\\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+    CleanPrintf " %-10s%-49s\e[0K\\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today} queries"
+    CleanPrintf " %-10s%-39s\e[0K\\n" "Latest:" "${latest_blocked}"
+    CleanPrintf " %-10s%-39s\e[0K\\n" "Top Ad:" "${top_blocked}"
     if [[ "${DHCP_ACTIVE}" != "true" ]]; then
-      CleanPrintf " %-10s%-39s\\n" "Top Dmn:" "${top_domain}"
-      CleanPrintf " %-10s%-39s\\n" "Top Clnt:" "${top_client}"
+      CleanPrintf " %-10s%-39s\e[0K\\n" "Top Dmn:" "${top_domain}"
+      CleanPrintf " %-10s%-39s\e[0K\\n" "Top Clnt:" "${top_client}"
     fi
   else
     CleanEcho "${bold_text}STATS ==========================================================================${reset_text}"
-    CleanPrintf " %-10s%-19s %-10s[%-40s] %-5s\\n" "Blocking:" "${domains_being_blocked} domains" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
-    CleanPrintf " %-10s%-30s%-29s\\n" "Clients:" "${clients}" " ${ads_blocked_today} out of ${dns_queries_today} queries"
-    CleanPrintf " %-10s%-39s\\n" "Latest:" "${latest_blocked}"
-    CleanPrintf " %-10s%-39s\\n" "Top Ad:" "${top_blocked}"
-    CleanPrintf " %-10s%-39s\\n" "Top Dmn:" "${top_domain}"
-    CleanPrintf " %-10s%-39s\\n" "Top Clnt:" "${top_client}"
+    CleanPrintf " %-10s%-19s %-10s[%-40s] %-5s\e[0K\\n" "Blocking:" "${domains_being_blocked} domains" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+    CleanPrintf " %-10s%-30s%-29s\e[0K\\n" "Clients:" "${clients}" " ${ads_blocked_today} out of ${dns_queries_today} queries"
+    CleanPrintf " %-10s%-39s\e[0K\\n" "Latest:" "${latest_blocked}"
+    CleanPrintf " %-10s%-39s\e[0K\\n" "Top Ad:" "${top_blocked}"
+    CleanPrintf " %-10s%-39s\e[0K\\n" "Top Dmn:" "${top_domain}"
+    CleanPrintf " %-10s%-39s\e[0K\\n" "Top Clnt:" "${top_client}"
     CleanEcho "FTL ============================================================================"
-    CleanPrintf " %-10s%-9s %-10s%-9s %-10s%-9s\\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}%" "Mem. Use:" "${ftl_mem_percentage}%"
-    CleanPrintf " %-10s%-69s\\n" "DNSCache:" "${cache_inserts} insertions, ${cache_deletes} deletions, ${cache_size} total entries"
+    CleanPrintf " %-10s%-9s %-10s%-9s %-10s%-9s\e[0K\\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}%" "Mem. Use:" "${ftl_mem_percentage}%"
+    CleanPrintf " %-10s%-69s\e[0K\\n" "DNSCache:" "${cache_inserts} insertions, ${cache_deletes} deletions, ${cache_size} total entries"
   fi
 }
 
@@ -746,11 +746,11 @@ PrintSystemInformation() {
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${bold_text}SYSTEM =====================================================${reset_text}"
     # Uptime
-    CleanPrintf " %-10s%-39s\\n" "Uptime:" "${system_uptime}"
+    CleanPrintf " %-10s%-39s\e[0K\\n" "Uptime:" "${system_uptime}"
 
     # Temp and Loads
     CleanPrintf " %-10s${temp_heatmap}%-20s${reset_text}" "CPU Temp:" "${temperature}"
-    CleanPrintf " %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}\\n" "CPU Load:" "${cpu_load[0]}" "${cpu_load[1]}" "${cpu_load[2]}"
+    CleanPrintf " %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}\e[0K\\n" "CPU Load:" "${cpu_load[0]}" "${cpu_load[1]}" "${cpu_load[2]}"
 
     # Memory and CPU bar
     CleanPrintf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
