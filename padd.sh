@@ -565,10 +565,9 @@ GetVersionInformation() {
 # terminfo clr_eol (clears to end of line to erase artifacts after resizing smaller)
 ceol=$(tput el)
 
-# wrapper - echoe with a clear eol first
+# wrapper - echo with a clear eol first
 CleanEcho() {
-  tput el
-  echo -e $1
+  echo -e $1 "${ceol}"
 }
 
 # wrapper - printf with a clear eol first
