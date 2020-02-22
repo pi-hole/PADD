@@ -590,17 +590,18 @@ PrintLogo() {
     CleanEcho ""
   elif [ "$1" = "slim" ]; then
     CleanEcho "${padd_text}${dim_text}slim${reset_text}   ${full_status_}"
-    CleanEcho ""
+    CleanEcho ""\
+  # For the next two, use printf to make sure spaces aren't collapsed
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
-    CleanEcho "${padd_logo_1}"
-    CleanEcho "${padd_logo_2}Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}"
-    CleanEcho "${padd_logo_3}PADD ${padd_version_heatmap}v${padd_version}${reset_text}${full_status_}${reset_text}"
+    CleanPrintf "${padd_logo_1}\e[0K\\n"
+    CleanPrintf "${padd_logo_2}Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_3}PADD ${padd_version_heatmap}v${padd_version}${reset_text}${full_status_}${reset_text}\e[0K\\n"
     CleanEcho ""
   # normal or not defined
   else
-    CleanEcho "${padd_logo_retro_1}"
-    CleanEcho "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}, PADD ${padd_version_heatmap}v${padd_version}${reset_text}"
-    CleanEcho "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
+    CleanPrintf "${padd_logo_retro_1}\e[0K\\n"
+    CleanPrintf "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}, PADD ${padd_version_heatmap}v${padd_version}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}\e[0K\\n"
 
     CleanEcho ""
   fi
