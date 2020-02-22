@@ -1062,6 +1062,9 @@ NormalPADD() {
     PrintPiholeStats ${padd_size}
     PrintNetworkInformation ${padd_size}
     PrintSystemInformation ${padd_size}
+    
+    # clear to end of screen
+    tput ed
 
     pico_status=${pico_status_ok}
     mini_status_=${mini_status_ok}
