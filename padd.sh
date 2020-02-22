@@ -562,28 +562,31 @@ GetVersionInformation() {
 
 ############################################# PRINTERS #############################################
 
+# terminfo clr_eol (clears to end of line
+ceol=$(tput el)
+
 PrintLogo() {
   # Screen size checks
   if [ "$1" = "pico" ]; then
-    echo -e "p${padd_text} ${pico_status}"
+    echo -e "${ceol}p${padd_text} ${pico_status}"
   elif [ "$1" = "nano" ]; then
-    echo -e "n${padd_text} ${mini_status_}"
+    echo -e "${ceol}n${padd_text} ${mini_status_}"
   elif [ "$1" = "micro" ]; then
-    echo -e "µ${padd_text}     ${mini_status_}\\n"
+    echo -e "${ceol}µ${padd_text}     ${mini_status_}\\n"
   elif [ "$1" = "mini" ]; then
-    echo -e "${padd_text}${dim_text}mini${reset_text}  ${mini_status_}\\n"
+    echo -e "${ceol}${padd_text}${dim_text}mini${reset_text}  ${mini_status_}\\n"
   elif [ "$1" = "slim" ]; then
-    echo -e "${padd_text}${dim_text}slim${reset_text}   ${full_status_}\\n"
+    echo -e "${ceol}${padd_text}${dim_text}slim${reset_text}   ${full_status_}\\n"
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
-    echo -e "${padd_logo_1}"
-    echo -e "${padd_logo_2}Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}"
-    echo -e "${padd_logo_3}PADD ${padd_version_heatmap}v${padd_version}${reset_text}${full_status_}${reset_text}"
+    echo -e "${ceol}${padd_logo_1}"
+    echo -e "${ceol}${padd_logo_2}Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}"
+    echo -e "${ceol}${padd_logo_3}PADD ${padd_version_heatmap}v${padd_version}${reset_text}${full_status_}${reset_text}"
     echo ""
   # normal or not defined
   else
-    echo -e "${padd_logo_retro_1}"
-    echo -e "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}, PADD ${padd_version_heatmap}v${padd_version}${reset_text}"
-    echo -e "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
+    echo -e "${ceol}${padd_logo_retro_1}"
+    echo -e "${ceol}${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}, PADD ${padd_version_heatmap}v${padd_version}${reset_text}"
+    echo -e "${ceol}${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
 
     echo ""
   fi
@@ -592,19 +595,19 @@ PrintLogo() {
 PrintNetworkInformation() {
   if [ "$1" = "pico" ]; then
     echo "${bold_text}NETWORK ============${reset_text}"
-    echo -e " Hst: ${pi_hostname}"
-    echo -e " IP:  ${pi_ip_address}"
-    echo -e " DHCP ${dhcp_check_box} IPv6 ${dhcp_ipv6_check_box}"
+    echo -e "${ceol} Hst: ${pi_hostname}"
+    echo -e "${ceol} IP:  ${pi_ip_address}"
+    echo -e "${ceol} DHCP ${dhcp_check_box} IPv6 ${dhcp_ipv6_check_box}"
   elif [ "$1" = "nano" ]; then
     echo "${bold_text}NETWORK ================${reset_text}"
-    echo -e " Host: ${pi_hostname}"
-    echo -e " IPv4: ${IPV4_ADDRESS}"
-    echo -e " DHCP: ${dhcp_check_box}    IPv6: ${dhcp_ipv6_check_box}"
+    echo -e "${ceol} Host: ${pi_hostname}"
+    echo -e "${ceol} IPv4: ${IPV4_ADDRESS}"
+    echo -e "${ceol} DHCP: ${dhcp_check_box}    IPv6: ${dhcp_ipv6_check_box}"
   elif [ "$1" = "micro" ]; then
     echo "${bold_text}NETWORK ======================${reset_text}"
-    echo -e " Host:    ${full_hostname}"
-    echo -e " IPv4:    ${IPV4_ADDRESS}"
-    echo -e " DHCP:    ${dhcp_check_box}     IPv6:  ${dhcp_ipv6_check_box}"
+    echo -e "${ceol} Host:    ${full_hostname}"
+    echo -e "${ceol} IPv4:    ${IPV4_ADDRESS}"
+    echo -e "${ceol} DHCP:    ${dhcp_check_box}     IPv6:  ${dhcp_ipv6_check_box}"
   elif [ "$1" = "mini" ]; then
     echo "${bold_text}NETWORK ================================${reset_text}"
     printf " %-9s%-19s\\n" "Host:" "${full_hostname}"
@@ -644,10 +647,10 @@ PrintPiholeInformation() {
     :
   elif [ "$1" = "nano" ]; then
     echo "${bold_text}PI-HOLE ================${reset_text}"
-    echo -e " Up:  ${pihole_check_box}      FTL: ${ftl_check_box}"
+    echo -e "${ceol} Up:  ${pihole_check_box}      FTL: ${ftl_check_box}"
   elif [ "$1" = "micro" ]; then
     echo "${bold_text}PI-HOLE ======================${reset_text}"
-    echo -e " Status:  ${pihole_check_box}      FTL:  ${ftl_check_box}"
+    echo -e "${ceol} Status:  ${pihole_check_box}      FTL:  ${ftl_check_box}"
   elif [ "$1" = "mini" ]; then
     echo "${bold_text}PI-HOLE ================================${reset_text}"
     printf " %-9s${pihole_heatmap}%-10s${reset_text} %-9s${ftl_heatmap}%-10s${reset_text}\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
@@ -663,16 +666,16 @@ PrintPiholeStats() {
   # are we on a tiny screen?
   if [ "$1" = "pico" ]; then
     echo "${bold_text}PI-HOLE ============${reset_text}"
-    echo -e " [${ads_blocked_bar}] ${ads_percentage_today}%"
-    echo -e " ${ads_blocked_today} / ${dns_queries_today}"
+    echo -e "${ceol} [${ads_blocked_bar}] ${ads_percentage_today}%"
+    echo -e "${ceol} ${ads_blocked_today} / ${dns_queries_today}"
   elif [ "$1" = "nano" ]; then
-    echo -e " Blk: [${ads_blocked_bar}] ${ads_percentage_today}%"
-    echo -e " Blk: ${ads_blocked_today} / ${dns_queries_today}"
+    echo -e "${ceol} Blk: [${ads_blocked_bar}] ${ads_percentage_today}%"
+    echo -e "${ceol} Blk: ${ads_blocked_today} / ${dns_queries_today}"
   elif [ "$1" = "micro" ]; then
     echo "${bold_text}STATS ========================${reset_text}"
-    echo -e " Blckng:  ${domains_being_blocked} domains"
-    echo -e " Piholed: [${ads_blocked_bar}] ${ads_percentage_today}%"
-    echo -e " Piholed: ${ads_blocked_today} / ${dns_queries_today}"
+    echo -e "${ceol} Blckng:  ${domains_being_blocked} domains"
+    echo -e "${ceol} Piholed: [${ads_blocked_bar}] ${ads_percentage_today}%"
+    echo -e "${ceol} Piholed: ${ads_blocked_today} / ${dns_queries_today}"
   elif [ "$1" = "mini" ]; then
     echo "${bold_text}STATS ==================================${reset_text}"
     printf " %-9s%-29s\\n" "Blckng:" "${domains_being_blocked} domains"
@@ -1041,6 +1044,9 @@ NormalPADD() {
     # Get Config variables
     . /etc/pihole/setupVars.conf
 
+    # Move the cursor to top left of console to redraw
+    tput cup 0 0
+
     # Output everything to the screen
     PrintLogo ${padd_size}
     PrintPiholeInformation ${padd_size}
@@ -1060,7 +1066,6 @@ NormalPADD() {
 
     # Sleep for 5 seconds, then clear the screen
     sleep 5
-    clear
   done
 }
 
