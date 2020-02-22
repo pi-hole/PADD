@@ -562,13 +562,16 @@ GetVersionInformation() {
 
 ############################################# PRINTERS #############################################
 
-# terminfo clr_eol (clears to end of line
+# terminfo clr_eol (clears to end of line to erase artifacts after resizing smaller)
 ceol=$(tput el)
 
+# wrapper - echoe with a clear eol first
 CleanEcho() {
   tput el
   echo -e $1
 }
+
+# wrapper - printf with a clear eol first
 CleanPrintf() {
   tput el
   printf "$@"
