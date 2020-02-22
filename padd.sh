@@ -565,9 +565,9 @@ GetVersionInformation() {
 # terminfo clr_eol (clears to end of line
 ceol=$(tput el)
 
-CleanEcho  {
+CleanEcho() {
   tput el
-  echo -e "$1"
+  echo -e $1
 }
 
 PrintLogo() {
