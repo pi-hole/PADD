@@ -610,8 +610,11 @@ PrintNetworkInformation() {
     echo -e "${ceol} DHCP:    ${dhcp_check_box}     IPv6:  ${dhcp_ipv6_check_box}"
   elif [ "$1" = "mini" ]; then
     echo "${bold_text}NETWORK ================================${reset_text}"
+    ceol
     printf " %-9s%-19s\\n" "Host:" "${full_hostname}"
+    ceol
     printf " %-9s%-19s\\n" "IPv4:" "${IPV4_ADDRESS}"
+    ceol
     printf " %-9s%-10s\\n" "DNS:" "${dns_information}"
 
     if [[ "${DHCP_ACTIVE}" == "true" ]]; then
@@ -619,8 +622,11 @@ PrintNetworkInformation() {
     fi
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     echo "${bold_text}NETWORK ====================================================${reset_text}"
+    ceol
     printf " %-10s%-19s %-10s%-19s\\n" "Hostname:" "${full_hostname}" "IPv4:" "${IPV4_ADDRESS}"
+    ceol
     printf " %-10s%-19s\\n" "IPv6:" "${IPV6_ADDRESS}"
+    ceol
     printf " %-10s%-19s %-10s%-19s\\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
 
     if [[ "${DHCP_ACTIVE}" == "true" ]]; then
@@ -629,14 +635,20 @@ PrintNetworkInformation() {
     fi
   else
     echo "${bold_text}NETWORK ========================================================================${reset_text}"
+    ceol
     printf " %-10s%-19s\\n" "Hostname:" "${full_hostname}"
+    ceol
     printf " %-10s%-19s %-10s%-29s\\n" "IPv4 Adr:" "${IPV4_ADDRESS}" "IPv6 Adr:" "${IPV6_ADDRESS}"
     echo "DNS ============================================================================"
+    ceol
     printf " %-10s%-39s\\n" "Servers:" "${dns_information}"
+    ceol
     printf " %-10s${dnssec_heatmap}%-19s${reset_text} %-20s${conditional_forwarding_heatmap}%-9s${reset_text}\\n" "DNSSEC:" "${dnssec_status}" "Conditional Fwding:" "${conditional_forwarding_status}"
 
     echo "DHCP ==========================================================================="
+    ceol
     printf " %-10s${dhcp_heatmap}%-19s${reset_text} %-10s${dhcp_ipv6_heatmap}%-9s${reset_text}\\n" "DHCP:" "${dhcp_status}" "IPv6 Spt:" "${dhcp_ipv6_status}"
+    ceol
     printf "%s\\n" "${dhcp_info}"
   fi
 }
