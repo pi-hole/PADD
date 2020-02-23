@@ -43,5 +43,10 @@ Thumbs.db
 sftp-config.json
 .vscode
 old
+*.sublime-*
 
+# Testing Files #
+#################
 new\.sh
+net-test.sh
+padd.py
