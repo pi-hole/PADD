@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="3.0.2"
+padd_version="3.1"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -435,7 +435,7 @@ GetVersionInformation() {
 
   else # the file doesn't exist, create it...
     # Gather core version information...
-    read -r -a core_versions <<< $(pihole -v -p)
+    read -r -a core_versions <<< "$(pihole -v -p)"
     core_version=$(echo "${core_versions[3]}" | tr -d '\r\n[:alpha:]')
     core_version_latest=${core_versions[5]//)}
 
@@ -454,7 +454,7 @@ GetVersionInformation() {
     fi
 
     # Gather web version information...
-    read -r -a web_versions <<< $(pihole -v -a)
+    read -r -a web_versions <<< "$(pihole -v -a)"
     web_version=$(echo "${web_versions[3]}" | tr -d '\r\n[:alpha:]')
     web_version_latest=${web_versions[5]//)}
     if [[ "${web_version_latest}" == "ERROR" ]]; then
@@ -472,7 +472,7 @@ GetVersionInformation() {
     fi
 
     # Gather FTL version information...
-    read -r -a ftl_versions <<< $(pihole -v -f)
+    read -r -a ftl_versions <<< "$(pihole -v -f)"
     ftl_version=$(echo "${ftl_versions[3]}" | tr -d '\r\n[:alpha:]')
     ftl_version_latest=${ftl_versions[5]//)}
     if [[ "${ftl_version_latest}" == "ERROR" ]]; then
