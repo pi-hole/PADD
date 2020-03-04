@@ -698,7 +698,7 @@ PrintPiholeStats() {
     CleanPrintf " %-9s%-29s\e[0K\\n" "Piholed:" "${ads_blocked_today} out of ${dns_queries_today}"
     CleanPrintf " %-9s%-29s\e[0K\\n" "Latest:" "${latest_blocked}"
     if [[ "${DHCP_ACTIVE}" != "true" ]]; then
-      CleanPrintf " %-9s%-29s\\n" "Top Ad:" "${top_blocked}"
+      CleanPrintf " %-9s%-29s\e[0K\\n" "Top Ad:" "${top_blocked}"
     fi
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${bold_text}STATS ======================================================${reset_text}"
