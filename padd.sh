@@ -211,12 +211,12 @@ GetSystemInformation() {
 
   # Convert CPU temperature to correct unit
   if [ "${TEMPERATUREUNIT}" == "F" ]; then
-    temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 * 9 / 5000 + 32}')")°F"
+    temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 * 9 / 5000 + 32}')") F"
   elif [ "${TEMPERATUREUNIT}" == "K" ]; then
-    temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 / 1000 + 273.15}')")°K"
+    temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 / 1000 + 273.15}')") K"
   # Addresses Issue 1: https://github.com/jpmck/PAD/issues/1
   else
-    temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 / 1000}')")°C"
+    temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 / 1000}')") C"
   fi
 
   # CPU load, heatmap
@@ -1000,7 +1000,7 @@ StartupRoutine(){
 
   else
     echo -e "${padd_logo_retro_1}"
-    echo -e "${padd_logo_retro_2}Pi-hole® Ad Detection Display"
+    echo -e "${padd_logo_retro_2}Pi-hole Ad Detection Display"
     echo -e "${padd_logo_retro_3}A client for Pi-hole\\n"
     echo "START UP ==================================================="
 
