@@ -328,7 +328,7 @@ GetNetworkInformation() {
     # if the DHCP Router variable isn't set
     # Issue 3: https://github.com/jpmck/PADD/issues/3
     if [ -z ${DHCP_ROUTER+x} ]; then
-      DHCP_ROUTER=$(/sbin/ip route | awk '/default/ { print $3 }')
+      DHCP_ROUTER=$(/sbin/ip route | awk '/default/ { printf "%s\t", $3 }')
     fi
 
     dhcp_info=" Router:   ${DHCP_ROUTER}"
@@ -567,7 +567,7 @@ ceol=$(tput el)
 
 # wrapper - echo with a clear eol afterwards to wipe any artifacts remaining from last print
 CleanEcho() {
-  echo -e $1 "${ceol}"
+  echo -e "${ceol}$1"
 }
 
 # wrapper - printf
