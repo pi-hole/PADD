@@ -93,7 +93,7 @@ mini_text_retro="${dim_text}${cyan_text}m${magenta_text}i${red_text}n${yellow_te
 padd_logo_1="${bold_text}${green_text} __      __  __   ${reset_text}"
 padd_logo_2="${bold_text}${green_text}|__) /\\ |  \\|  \\  ${reset_text}"
 padd_logo_3="${bold_text}${green_text}|   /--\\|__/|__/  ${reset_text}"
-padd_logo_retro_1="${bold_text} ${yellow_text}_${green_text}_      ${blue_text}_   ${yellow_text}_${green_text}_   ${reset_text}"
+padd_logo_retro_1="${bold_text} ${yellow_text}_${green_text}_      ${blue_text}_${magenta_text}_  ${yellow_text}_${green_text}_   ${reset_text}"
 padd_logo_retro_2="${bold_text}${yellow_text}|${green_text}_${blue_text}_${cyan_text}) ${red_text}/${yellow_text}\\ ${blue_text}|  ${red_text}\\${yellow_text}|  ${cyan_text}\\  ${reset_text}"
 padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${green_text}-${blue_text}\\${cyan_text}|${magenta_text}_${red_text}_${yellow_text}/${green_text}|${blue_text}_${cyan_text}_${magenta_text}/  ${reset_text}"
 
