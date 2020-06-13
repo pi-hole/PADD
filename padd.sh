@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="3.1"
+padd_version="3.1.1"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -490,7 +490,7 @@ GetVersionInformation() {
     fi
 
     # PADD version information...
-    padd_version_latest=$(curl -sI https://github.com/jpmck/PADD/releases/latest | grep 'Location' | awk -F '/' '{print $NF}' | tr -d '\r\n[:alpha:]')
+    padd_version_latest=$(curl -sI https://github.com/jpmck/PADD/releases/latest | grep 'location' | awk -F '/' '{print $NF}' | tr -d '\r\n[:alpha:]')
 
     # is PADD up-to-date?
     if [[ "${padd_version}" != "${padd_version_latest}" ]]; then
