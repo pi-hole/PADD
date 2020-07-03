@@ -1,3 +1,5 @@
+***Note:** At this time, I’m no longer maintaining PADD. Version 3.2 is the latest version of PADD.*
+
 # PADD
 
 PADD (formerly Chronometer2) is a more expansive version of the original chronometer.sh that is included with [Pi-Hole](https://pi-hole.net). PADD provides in-depth information about your Pi-hole.
