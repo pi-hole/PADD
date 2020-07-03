@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="3.1"
+padd_version="3.2"
 
 # DATE
 today=$(date +%Y%m%d)
