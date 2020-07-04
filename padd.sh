@@ -698,7 +698,7 @@ PrintPiholeStats() {
     CleanPrintf " %-9s%-29s\e[0K\\n" "Piholed:" "${ads_blocked_today} out of ${dns_queries_today}"
     CleanPrintf " %-9s%-29s\e[0K\\n" "Latest:" "${latest_blocked}"
     if [[ "${DHCP_ACTIVE}" != "true" ]]; then
-      CleanPrintf " %-9s%-29s\\n" "Top Ad:" "${top_blocked}"
+      CleanPrintf " %-9s%-29s\e[0K\\n" "Top Ad:" "${top_blocked}"
     fi
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${bold_text}STATS =====================================================${reset_text}"
@@ -737,12 +737,12 @@ PrintSystemInformation() {
     CleanEcho "${bold_text}SYSTEM =======================${reset_text}"
     CleanEcho " Uptime:  ${system_uptime}"
     CleanEcho " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
-    echo -ne "${ceol}Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
+    echo -ne "${ceol} Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
   elif [ "$1" = "mini" ]; then
     CleanEcho "${bold_text}SYSTEM =================================${reset_text}"
-    CleanPrintf " %-9s%-29s\\n" "Uptime:" "${system_uptime}"
+    CleanPrintf " %-9s%-29s\e[0K\\n" "Uptime:" "${system_uptime}"
     CleanEcho " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
-    echo -ne "${ceol}Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
+    echo -ne "${ceol} Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
   # else we're not
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${bold_text}SYSTEM ====================================================${reset_text}"
@@ -857,7 +857,6 @@ SizeChecker(){
   else
     padd_size="mega"
   fi
-  padd_size="mega"
 }
 
 CheckConnectivity() {
