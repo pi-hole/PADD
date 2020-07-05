@@ -858,7 +858,6 @@ SizeChecker(){
   else
     padd_size="mega"
   fi
-  padd_size="mega"
 }
 
 CheckConnectivity() {
