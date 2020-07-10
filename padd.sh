@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="3.2.1"
+padd_version="v3.2.2"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -920,6 +920,23 @@ CheckConnectivity() {
       echo "  - Connectivity check passed..."
     fi
   fi
+}
+
+# Credit: https://stackoverflow.com/a/46324904
+json_extract() {
+    local key=$1
+    local json=$2
+
+    local string_regex='"([^"\]|\\.)*"'
+    local number_regex='-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?'
+    local value_regex="${string_regex}|${number_regex}|true|false|null"
+    local pair_regex="\"${key}\"[[:space:]]*:[[:space:]]*(${value_regex})"
+
+    if [[ ${json} =~ ${pair_regex} ]]; then
+        echo $(sed 's/^"\|"$//g' <<< "${BASH_REMATCH[1]}")
+    else
+        return 1
+    fi
 }
 
 ########################################## MAIN FUNCTIONS ##########################################
