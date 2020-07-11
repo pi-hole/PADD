@@ -595,12 +595,12 @@ PrintLogo() {
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanPrintf "${padd_logo_1}\e[0K\\n"
     CleanPrintf "${padd_logo_2}Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}\e[0K\\n"
-    CleanPrintf "${padd_logo_3}PADD ${padd_version_heatmap}v${padd_version}${reset_text}${full_status_}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}${full_status_}${reset_text}\e[0K\\n"
     CleanEcho ""
   # normal or not defined
   else
     CleanPrintf "${padd_logo_retro_1}\e[0K\\n"
-    CleanPrintf "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}, PADD ${padd_version_heatmap}v${padd_version}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}\e[0K\\n"
     CleanPrintf "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}\e[0K\\n"
 
     CleanEcho ""
@@ -1012,7 +1012,7 @@ StartupRoutine(){
     echo "- Gathering version info."
     GetVersionInformation "mini"
     echo "  - Core v$core_version, Web v$web_version"
-    echo "  - FTL v$ftl_version, PADD v$padd_version"
+    echo "  - FTL v$ftl_version, PADD $padd_version"
     echo "  - $version_status"
 
   else
@@ -1051,7 +1051,7 @@ StartupRoutine(){
     echo "  - Pi-hole Core v$core_version"
     echo "  - Web Admin v$web_version"
     echo "  - FTL v$ftl_version"
-    echo "  - PADD v$padd_version"
+    echo "  - PADD $padd_version"
     echo "  - $version_status"
   fi
 
@@ -1085,7 +1085,7 @@ NormalPADD() {
     PrintPiholeStats ${padd_size}
     PrintNetworkInformation ${padd_size}
     PrintSystemInformation ${padd_size}
-    
+
     # Clear to end of screen (below the drawn dashboard)
     tput ed
 
