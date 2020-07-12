@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="3.2.1"
+padd_version="v3.2.2"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -490,7 +490,7 @@ GetVersionInformation() {
     fi
 
     # PADD version information...
-    padd_version_latest=$(curl -sI https://github.com/jpmck/PADD/releases/latest | awk -F / 'tolower($0) ~ /^location:/ {print $NF; exit}' | tr -d '\r\n[:alpha:]')
+    padd_version_latest=$(json_extract tag_name "$(curl -s 'https://api.github.com/repos/pi-hole/PADD/releases/latest' 2> /dev/null)")
 
     # is PADD up-to-date?
     if [[ "${padd_version}" != "${padd_version_latest}" ]]; then
@@ -595,12 +595,12 @@ PrintLogo() {
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanPrintf "${padd_logo_1}\e[0K\\n"
     CleanPrintf "${padd_logo_2}Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}\e[0K\\n"
-    CleanPrintf "${padd_logo_3}PADD ${padd_version_heatmap}v${padd_version}${reset_text}${full_status_}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}${full_status_}${reset_text}\e[0K\\n"
     CleanEcho ""
   # normal or not defined
   else
     CleanPrintf "${padd_logo_retro_1}\e[0K\\n"
-    CleanPrintf "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}, PADD ${padd_version_heatmap}v${padd_version}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}\e[0K\\n"
     CleanPrintf "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}\e[0K\\n"
 
     CleanEcho ""
@@ -921,6 +921,23 @@ CheckConnectivity() {
   fi
 }
 
+# Credit: https://stackoverflow.com/a/46324904
+json_extract() {
+    local key=$1
+    local json=$2
+
+    local string_regex='"([^"\]|\\.)*"'
+    local number_regex='-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?'
+    local value_regex="${string_regex}|${number_regex}|true|false|null"
+    local pair_regex="\"${key}\"[[:space:]]*:[[:space:]]*(${value_regex})"
+
+    if [[ ${json} =~ ${pair_regex} ]]; then
+        echo $(sed 's/^"\|"$//g' <<< "${BASH_REMATCH[1]}")
+    else
+        return 1
+    fi
+}
+
 ########################################## MAIN FUNCTIONS ##########################################
 
 OutputJSON() {
@@ -995,7 +1012,7 @@ StartupRoutine(){
     echo "- Gathering version info."
     GetVersionInformation "mini"
     echo "  - Core v$core_version, Web v$web_version"
-    echo "  - FTL v$ftl_version, PADD v$padd_version"
+    echo "  - FTL v$ftl_version, PADD $padd_version"
     echo "  - $version_status"
 
   else
@@ -1034,7 +1051,7 @@ StartupRoutine(){
     echo "  - Pi-hole Core v$core_version"
     echo "  - Web Admin v$web_version"
     echo "  - FTL v$ftl_version"
-    echo "  - PADD v$padd_version"
+    echo "  - PADD $padd_version"
     echo "  - $version_status"
   fi
 
@@ -1068,7 +1085,7 @@ NormalPADD() {
     PrintPiholeStats ${padd_size}
     PrintNetworkInformation ${padd_size}
     PrintSystemInformation ${padd_size}
-    
+
     # Clear to end of screen (below the drawn dashboard)
     tput ed
 
