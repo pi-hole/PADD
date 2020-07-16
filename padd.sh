@@ -109,7 +109,7 @@ pihole_logo_script_retro_3="${green_text}'  ${red_text}'   ${magenta_text}' ${ye
 
 GetFTLData() {
   # Get FTL port number
-  ftl_port=$(cat /var/run/pihole-FTL.port)
+  ftl_port=4711
 
   # Did we find a port for FTL?
   if [[ -n "$ftl_port" ]]; then
