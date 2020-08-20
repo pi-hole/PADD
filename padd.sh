@@ -908,7 +908,7 @@ SizeChecker(){
   elif [[ "$console_width" -lt "40" || "$console_height" -lt "18" ]]; then
     padd_size="micro"
   # Below Tiny. Gives you Mini.
-  elif [[ "$console_width" -lt "50" || "$console_height" -lt "20" ]]; then
+  elif [[ "$console_width" -lt "53" || "$console_height" -lt "20" ]]; then
       padd_size="mini"
   # Below Slim. Gives you Tiny.    
   elif [[ "$console_width" -lt "60" || "$console_height" -lt "21" ]]; then
