@@ -1111,14 +1111,14 @@ StartupRoutine(){
 
     # Get our information for the first time
     echo "- Gathering system information..."
-    GetSystemInformation
+    GetSystemInformation "$1"
     echo "- Gathering Pi-hole information..."
-    GetSummaryInformation
-    GetPiholeInformation
+    GetSummaryInformation "$1"
+    GetPiholeInformation "$1"
     echo "- Gathering network information..."
-    GetNetworkInformation
+    GetNetworkInformation "$1"
     echo "- Gathering version information..."
-    GetVersionInformation
+    GetVersionInformation "$1"
     echo "  - Pi-hole Core v$core_version"
     echo "  - Web Admin v$web_version"
     echo "  - FTL v$ftl_version"
