@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.3"
+padd_version="v3.3.1"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -624,8 +624,8 @@ PrintLogo() {
     CleanEcho "${padd_text}${dim_text}mini${reset_text}  ${mini_status_}"
     CleanEcho ""
   elif [ "$1" = "tiny" ]; then
-    CleanEcho "${bold_text} ${reset_text}${padd_text}${dim_text}tiny ${reset_text}Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}"
-    CleanPrintf "          PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status_}${reset_text}\e[0K\\n"    
+    CleanEcho "${bold_text} ${reset_text}${padd_text}${dim_text}tiny ${reset_text} Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}"
+    CleanPrintf "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status_}${reset_text}\e[0K\\n"    
   elif [ "$1" = "slim" ]; then
     CleanEcho "${padd_text}${dim_text}slim${reset_text}   ${full_status_}"
     CleanEcho ""
@@ -756,7 +756,7 @@ PrintPiholeStats() {
     CleanPrintf " %-10s%-39s\e[0K\\n" "Piholed:" "${ads_blocked_today} out of ${dns_queries_today}"
     CleanPrintf " %-10s%-39s\e[0K\\n" "Latest:" "${latest_blocked}"
     CleanPrintf " %-10s%-39s\e[0K\\n" "Top Ad:" "${top_blocked}"
-    CleanPrintf " ${bold_text}%-4s${reset_text}%-6s%-9s %-9s%-6s %-10s%-6s\e[0K\\n" "FTL " "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}%" "Mem. Use:" "${ftl_mem_percentage}%"
+    CleanPrintf " %-4s${reset_text}%-6s%-9s %-9s%-6s %-10s%-6s\e[0K\\n" "FTL " "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}%" "Mem. Use:" "${ftl_mem_percentage}%"
     CleanPrintf " %-10s%-42s\e[0K\\n" "DNSCache:" "${cache_inserts} ins, ${cache_deletes} del, ${cache_size} tot"     
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${bold_text}STATS =====================================================${reset_text}"
