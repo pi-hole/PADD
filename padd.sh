@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.3.1"
+padd_version="v3.4"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -284,17 +284,16 @@ GetNetworkInformation() {
   pi_hostname=$(hostname)
   pi_gateway=$(ip r | grep 'default' | awk '{print $3}')
 
+  full_hostname=${pi_hostname}
   # does the Pi-hole have a domain set?
-  if [ -z ${PIHOLE_DOMAIN+x} ]; then
-    full_hostname=${pi_hostname}
-  else
-    count=${pi_hostname}"."${PIHOLE_DOMAIN}
-    count=${#count}
-
-    if [ "${count}" -lt "18" ]; then
-      full_hostname=${pi_hostname}"."${PIHOLE_DOMAIN}
-    else
-      full_hostname=${pi_hostname}
+  if ! [ -z ${PIHOLE_DOMAIN+x} ]; then
+    # is Pi-hole acting as DHCP server?
+    if [[ "${DHCP_ACTIVE}" == "true" ]]; then
+      count=${pi_hostname}"."${PIHOLE_DOMAIN}
+      count=${#count}
+      if [ "${count}" -lt "18" ]; then
+        full_hostname=${pi_hostname}"."${PIHOLE_DOMAIN}
+      fi
     fi
   fi
 
@@ -374,7 +373,7 @@ GetNetworkInformation() {
   fi
 
   # Conditional forwarding
-  if [[ "${CONDITIONAL_FORWARDING}" == "true" ]]; then
+  if [[ "${CONDITIONAL_FORWARDING}" == "true" ]] || [[ "${REV_SERVER}" == "true" ]]; then
     conditional_forwarding_status="Enabled"
     conditional_forwarding_heatmap=${green_text}
     conditional_forwarding_check_box=${check_box_good}
