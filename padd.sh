@@ -270,8 +270,8 @@ GetSystemInformation() {
     cpu_bar=$(BarGenerator "${cpu_percent}" 20)
     memory_bar=$(BarGenerator "${memory_percent}" 20)
   elif [ "$1" = "tiny" ]; then
-    cpu_bar=$(BarGenerator "${cpu_percent}" 8)
-    memory_bar=$(BarGenerator "${memory_percent}" 8)   
+    cpu_bar=$(BarGenerator "${cpu_percent}" 7)
+    memory_bar=$(BarGenerator "${memory_percent}" 7)
   else
     cpu_bar=$(BarGenerator "${cpu_percent}" 10)
     memory_bar=$(BarGenerator "${memory_percent}" 10)
@@ -623,8 +623,8 @@ PrintLogo() {
     CleanEcho "${padd_text}${dim_text}mini${reset_text}  ${mini_status_}"
     CleanEcho ""
   elif [ "$1" = "tiny" ]; then
-    CleanEcho "${bold_text} ${reset_text}${padd_text}${dim_text}tiny ${reset_text} Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}"
-    CleanPrintf "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status_}${reset_text}\e[0K\\n"    
+    CleanEcho "${padd_text}${dim_text}tiny ${reset_text}Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}"
+    CleanPrintf "         PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status_}${reset_text}\e[0K\\n"
   elif [ "$1" = "slim" ]; then
     CleanEcho "${padd_text}${dim_text}slim${reset_text}   ${full_status_}"
     CleanEcho ""
@@ -670,12 +670,14 @@ PrintNetworkInformation() {
       CleanPrintf " %-9s${dhcp_heatmap}%-10s${reset_text} %-9s${dhcp_ipv6_heatmap}%-10s${reset_text}\e[0K\\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
     fi
   elif [ "$1" = "tiny" ]; then
-    CleanEcho "${bold_text} NETWORK ===========================================${reset_text}"
-    CleanPrintf " %-10s%-15s%-6s%-19s\e[0K\\n" "Hostname:" "${full_hostname}" "IPv4:" "${IPV4_ADDRESS}"
-    CleanPrintf " %-10s%-39s\e[0K\\n" "DNS:" "${dns_information}"
+    CleanEcho "${bold_text}NETWORK ============================================${reset_text}"
+    CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "Hostname:" "${full_hostname}" "IPv4:" "${pi_ip_address}"
+    CleanPrintf " %-10s%-39s\e[0K\\n" "IPv6:" "${IPV6_ADDRESS}"
+    CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
 
     if [[ "${DHCP_ACTIVE}" == "true" ]]; then
-      CleanPrintf " %-10s${dhcp_heatmap}%-14s${reset_text} %-6s${dhcp_ipv6_heatmap}%-10s${reset_text}\e[0K\\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
+      CleanPrintf " %-10s${dhcp_heatmap}%-16s${reset_text} %-8s${dhcp_ipv6_heatmap}%-10s${reset_text}\e[0K\\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
+      CleanPrintf "%s\e[0K\\n" "${dhcp_info}"
     fi        
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${bold_text}NETWORK ===================================================${reset_text}"
@@ -715,8 +717,8 @@ PrintPiholeInformation() {
     CleanEcho "${bold_text}PI-HOLE ================================${reset_text}"
     CleanPrintf " %-9s${pihole_heatmap}%-10s${reset_text} %-9s${ftl_heatmap}%-10s${reset_text}\e[0K\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
   elif [ "$1" = "tiny" ]; then
-    CleanEcho "${bold_text} PI-HOLE ===========================================${reset_text}"
-    CleanPrintf " %-10s${pihole_heatmap}%-14s${reset_text} %-7s${ftl_heatmap}%-10s${reset_text}\e[0K\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"    
+    CleanEcho "${bold_text}PI-HOLE ============================================${reset_text}"
+    CleanPrintf " %-10s${pihole_heatmap}%-16s${reset_text} %-8s${ftl_heatmap}%-10s${reset_text}\e[0K\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${bold_text}PI-HOLE ===================================================${reset_text}"
     CleanPrintf " %-10s${pihole_heatmap}%-19s${reset_text} %-10s${ftl_heatmap}%-19s${reset_text}\e[0K\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
@@ -749,14 +751,16 @@ PrintPiholeStats() {
       CleanPrintf " %-9s%-29s\\n" "Top Ad:" "${top_blocked}"
     fi
   elif [ "$1" = "tiny" ]; then
-    CleanEcho "${bold_text} STATS =============================================${reset_text}"
-    CleanPrintf " %-10s%-29s\e[0K\\n" "Blckng:" "${domains_being_blocked} domains"
-    CleanPrintf " %-10s[%-30s] %-5s\e[0K\\n" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
-    CleanPrintf " %-10s%-39s\e[0K\\n" "Piholed:" "${ads_blocked_today} out of ${dns_queries_today}"
+    CleanEcho "${bold_text}STATS ==============================================${reset_text}"
+    CleanPrintf " %-10s%-29s\e[0K\\n" "Blocking:" "${domains_being_blocked} domains"
+    CleanPrintf " %-10s[%-30s] %-5s\e[0K\\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+    CleanPrintf " %-10s%-39s\e[0K\\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today}"
     CleanPrintf " %-10s%-39s\e[0K\\n" "Latest:" "${latest_blocked}"
     CleanPrintf " %-10s%-39s\e[0K\\n" "Top Ad:" "${top_blocked}"
-    CleanPrintf " %-4s${reset_text}%-6s%-9s %-9s%-6s %-10s%-6s\e[0K\\n" "FTL " "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}%" "Mem. Use:" "${ftl_mem_percentage}%"
-    CleanPrintf " %-10s%-42s\e[0K\\n" "DNSCache:" "${cache_inserts} ins, ${cache_deletes} del, ${cache_size} tot"     
+    if [[ "${DHCP_ACTIVE}" != "true" ]]; then
+      CleanPrintf " %-10s%-39s\e[0K\\n" "Top Dmn:" "${top_domain}"
+      CleanPrintf " %-10s%-39s\e[0K\\n" "Top Clnt:" "${top_client}"
+    fi
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${bold_text}STATS =====================================================${reset_text}"
     CleanPrintf " %-10s%-49s\e[0K\\n" "Blocking:" "${domains_being_blocked} domains"
@@ -801,11 +805,11 @@ PrintSystemInformation() {
     CleanEcho " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
     echo -ne "${ceol}Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
   elif [ "$1" = "tiny" ]; then
-    CleanEcho "${bold_text} SYSTEM ============================================${reset_text}"
+    CleanEcho "${bold_text}SYSTEM =============================================${reset_text}"
     CleanPrintf " %-10s%-29s\e[0K\\n" "Uptime:" "${system_uptime}"
-    CleanPrintf " %-10s${temp_heatmap}%-19s${reset_text}%-6s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}\e[0K\\n" "CPU Temp:" "${temperature}" "Load:" "${cpu_load[0]}" "${cpu_load[1]}" "${cpu_load[2]}"
+    CleanPrintf " %-10s${temp_heatmap}%-17s${reset_text} %-8s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}\e[0K\\n" "CPU Temp:" "${temperature}" "Load:" "${cpu_load[0]}" "${cpu_load[1]}" "${cpu_load[2]}"
     # Memory and CPU bar
-    CleanPrintf " %-10s[${memory_heatmap}%-8s${reset_text}] %-6s %-5s[${cpu_load_1_heatmap}%-8s${reset_text}] %-5s" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU:" "${cpu_bar}" "${cpu_percent}%"     
+    CleanPrintf " %-10s[${memory_heatmap}%-7s${reset_text}] %-6s %-8s[${cpu_load_1_heatmap}%-7s${reset_text}] %-5s" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU:" "${cpu_bar}" "${cpu_percent}%"
   # else we're not
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${bold_text}SYSTEM ====================================================${reset_text}"
@@ -1086,7 +1090,7 @@ StartupRoutine(){
     echo -e "${padd_logo_retro_2}Pi-hole® Ad Detection Display"
     echo -e "${padd_logo_retro_3}A client for Pi-hole\\n"
     if [ "$1" = "tiny" ]; then
-      echo "START UP =========================================="
+      echo "START UP ============================================"
     else
       echo "START UP ==================================================="
     fi
@@ -1110,14 +1114,14 @@ StartupRoutine(){
 
     # Get our information for the first time
     echo "- Gathering system information..."
-    GetSystemInformation
+    GetSystemInformation "$1"
     echo "- Gathering Pi-hole information..."
-    GetSummaryInformation
-    GetPiholeInformation
+    GetSummaryInformation "$1"
+    GetPiholeInformation "$1"
     echo "- Gathering network information..."
-    GetNetworkInformation
+    GetNetworkInformation "$1"
     echo "- Gathering version information..."
-    GetVersionInformation
+    GetVersionInformation "$1"
     echo "  - Pi-hole Core v$core_version"
     echo "  - Web Admin v$web_version"
     echo "  - FTL v$ftl_version"
