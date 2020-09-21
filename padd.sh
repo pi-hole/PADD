@@ -623,8 +623,8 @@ PrintLogo() {
     CleanEcho "${padd_text}${dim_text}mini${reset_text}  ${mini_status_}"
     CleanEcho ""
   elif [ "$1" = "tiny" ]; then
-    CleanEcho "${padd_text}${dim_text}tiny ${reset_text}Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}"
-    CleanPrintf "         PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status_}${reset_text}\e[0K\\n"
+    CleanEcho "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}"
+    CleanPrintf "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status_}${reset_text}\e[0K\\n"
   elif [ "$1" = "slim" ]; then
     CleanEcho "${padd_text}${dim_text}slim${reset_text}   ${full_status_}"
     CleanEcho ""
