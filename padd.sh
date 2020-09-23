@@ -671,7 +671,7 @@ PrintNetworkInformation() {
     fi
   elif [ "$1" = "tiny" ]; then
     CleanEcho "${bold_text}NETWORK ============================================${reset_text}"
-    CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "Hostname:" "${full_hostname}" "IPv4:" "${pi_ip_address}"
+    CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "Hostname:" "${full_hostname}" "IPv4:" "${IPV4_ADDRESS}"
     CleanPrintf " %-10s%-39s\e[0K\\n" "IPv6:" "${IPV6_ADDRESS}"
     CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
 
