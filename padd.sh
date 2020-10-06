@@ -260,7 +260,7 @@ GetSystemInformation() {
     temp_heatmap=${magenta_text}
   elif [ ${cpu} -gt 60000 ]; then
     temp_heatmap=${blue_text}
-  elif [ ${cpu} == 0]; then
+  elif [ ${cpu} == 0 ]; then
     temp_heatmap=${white_text}
   else
     temp_heatmap=${cyan_text}
