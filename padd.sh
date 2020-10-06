@@ -229,7 +229,10 @@ GetSystemInformation() {
   fi
 
   # Convert CPU temperature to correct unit
-  if [ "${TEMPERATUREUNIT}" == "F" ]; then
+  # if CPU temp is 0, this indicates unreadable temp and/or PADD is running on a VM
+  if [ ${cpu} == 0 ]; then
+    temperature="Unknown"
+  elif [ "${TEMPERATUREUNIT}" == "F" ]; then
     temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 * 9 / 5000 + 32}')")°F"
   elif [ "${TEMPERATUREUNIT}" == "K" ]; then
     temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 / 1000 + 273.15}')")°K"
@@ -257,6 +260,8 @@ GetSystemInformation() {
     temp_heatmap=${magenta_text}
   elif [ ${cpu} -gt 60000 ]; then
     temp_heatmap=${blue_text}
+  elif [ ${cpu} == 0]; then
+    temp_heatmap=${white_text}
   else
     temp_heatmap=${cyan_text}
   fi
