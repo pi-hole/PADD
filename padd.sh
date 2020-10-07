@@ -231,7 +231,7 @@ GetSystemInformation() {
   # Convert CPU temperature to correct unit
   # if CPU temp is 0, this indicates unreadable temp and/or PADD is running on a VM
   if [ ${cpu} == 0 ]; then
-    temperature="Unknown"
+    temperature="Unknown  "
   elif [ "${TEMPERATUREUNIT}" == "F" ]; then
     temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 * 9 / 5000 + 32}')")°F"
   elif [ "${TEMPERATUREUNIT}" == "K" ]; then
