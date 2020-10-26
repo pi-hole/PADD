@@ -581,6 +581,9 @@ GetVersionInformation() {
     # write it all to the file
     echo "last_check=${today}" > ./piHoleVersion
     {
+      echo "console_width=$console_width"
+      echo "console_height=$console_height"
+    
       echo "core_version=$core_version"
       echo "core_version_latest=$core_version_latest"     
       echo "core_version_heatmap=$core_version_heatmap"
