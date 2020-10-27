@@ -113,16 +113,6 @@ padd_logo_retro_1="${bold_text} ${yellow_text}_${green_text}_      ${blue_text}_
 padd_logo_retro_2="${bold_text}${yellow_text}|${green_text}_${blue_text}_${cyan_text}) ${red_text}/${yellow_text}\\ ${blue_text}|  ${red_text}\\${yellow_text}|  ${cyan_text}\\  ${reset_text}"
 padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${green_text}-${blue_text}\\${cyan_text}|${magenta_text}_${red_text}_${yellow_text}/${green_text}|${blue_text}_${cyan_text}_${magenta_text}/  ${reset_text}"
 
-# PI-HOLE logos - regular and retro
-pihole_logo_1="${bold_text}${green_text}|¯¯¯(¯)_|¯|_  ___|¯|___  ${reset_text}"
-pihole_logo_2="${bold_text}${green_text}| ¯_/¯|_| ' \/ _ \ / -_) ${reset_text}"
-pihole_logo_3="${bold_text}${green_text}|_| |_| |_||_\___/_\___| ${reset_text}"
-
-# PI-HOLE Logo retro colorful
-pihole_logo_retro_1="${bold_text}${red_text}|¯${white_text}¯${blue_text}¯(¯${cyan_text})${green_text}_${magenta_text}|${magenta_text}¯${magenta_text}|_  ${blue_text}__${cyan_text}_|${red_text}¯${green_text}|${magenta_text}__${red_text}_  ${reset_text}"
-pihole_logo_retro_2="${bold_text}${white_text}| ¯${blue_text}_${cyan_text}/¯${green_text}|${green_text}_| ${white_text}' ${blue_text}\/ ${cyan_text}_ ${green_text}\ ${magenta_text}/ ${red_text}-${white_text}_) ${reset_text}"
-pihole_logo_retro_3="${bold_text}${blue_text}|_${cyan_text}| ${green_text}|_${magenta_text}| ${white_text}|_${blue_text}||${cyan_text}_\_${green_text}_${magenta_text}_/${red_text}_\_${white_text}_${blue_text}_| ${reset_text}"
-
 # old script Pi-hole logos - regular and retro
 pihole_logo_script_1="${bold_text}${green_text}.-..   .      .      ${reset_text}"
 pihole_logo_script_2="${bold_text}${green_text}|-'. - |-. .-.| .-,  ${reset_text}"
@@ -656,9 +646,9 @@ PrintLogo() {
     CleanEcho ""
   # hyper
   elif [ "$1" = "hyper" ]; then
-    CleanPrintf "${pihole_logo_retro_1}\e[0K\\n"
-    CleanPrintf "${pihole_logo_retro_2}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}, RaspberryPI ${green_text}${model}${reset_text}\e[0K\\n"
-    CleanPrintf "${pihole_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status} ${check_box_info} "$(date +%d/%m/%y)", "$(date +%R)" ${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_retro_1}\e[0K\\n"
+    CleanPrintf "${padd_logo_retro_2}         Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}, RaspberryPI ${green_text}${model}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_retro_3}         ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status} ${check_box_info} "$(date +%d/%m/%y)", "$(date +%R)" ${reset_text}\e[0K\\n"
    
     CleanEcho ""   
   # normal or not defined
