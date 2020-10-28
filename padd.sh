@@ -969,11 +969,13 @@ SizeChecker(){
       padd_size="regular"
     fi
   # Below Mega. Gives you Regular.
-  elif [[ "$console_width" -lt "100" || "$console_height" -lt "27" ]]; then
-    padd_size="mega"
-  #Below Hyper. Gives you Mega.  
   else
-    padd_size="hyper"
+    if [[ "$console_width" -lt "100" ]]; then
+      padd_size="mega"
+    #Below Hyper. Gives you Mega.  
+    else
+      padd_size="hyper"
+    fi  
   fi
 }
 
