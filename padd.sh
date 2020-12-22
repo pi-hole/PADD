@@ -1166,6 +1166,7 @@ NormalPADD() {
     pico_status=${pico_status_ok}
     mini_status_=${mini_status_ok}
     tiny_status_=${tiny_status_ok}   
+    mega_status_=${mega_status_ok}   
 
     # Start getting our information
     GetVersionInformation ${padd_size}
