@@ -205,6 +205,8 @@ GetSystemInformation() {
   # CPU temperature
   if [ -f /sys/class/thermal/thermal_zone0/temp ]; then
     cpu=$(</sys/class/thermal/thermal_zone0/temp)
+  elif [ -f /sys/class/hwmon/hwmon0/temp1_input ]; then
+    cpu=$(</sys/class/hwmon/hwmon0/temp1_input)
   else
     cpu=0
   fi
