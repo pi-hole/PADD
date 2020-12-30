@@ -117,34 +117,32 @@ pihole_logo_script_retro_3="${green_text}'  ${red_text}'   ${magenta_text}' ${ye
 ############################################# GETTERS ##############################################
 
 GetFTLData() {
-  # Get FTL port number
-  ftl_port=$(cat /var/run/pihole-FTL.port)
+    local ftl_port LINE
+    ftl_port=$(cat /run/pihole-FTL.port 2> /dev/null)
+    if [[ -n "$ftl_port" ]]; then
+        # Open connection to FTL
+        exec 3<>"/dev/tcp/127.0.0.1/$ftl_port"
 
-  # Did we find a port for FTL?
-  if [[ -n "$ftl_port" ]]; then
-    # Open connection to FTL
-    exec 3<>"/dev/tcp/localhost/$ftl_port"
+        # Test if connection is open
+        if { "true" >&3; } 2> /dev/null; then
+            # Send command to FTL and ask to quit when finished
+            echo -e ">$1 >quit" >&3
 
-    # Test if connection is open
-    if { "true" >&3; } 2> /dev/null; then
-      # Send command to FTL
-      echo -e ">$1" >&3
+            # Read input until we received an empty string and the connection is
+            # closed
+            read -r -t 1 LINE <&3
+            until [[ -z "${LINE}" ]] && [[ ! -t 3 ]]; do
+                echo "$LINE" >&1
+                read -r -t 1 LINE <&3
+            done
 
-      # Read input
-      read -r -t 1 LINE <&3
-      until [ ! $? ] || [[ "$LINE" == *"EOM"* ]]; do
-        echo "$LINE" >&1
-        read -r -t 1 LINE <&3
-      done
-
-      # Close connection
-      exec 3>&-
-      exec 3<&-
+            # Close connection
+            exec 3>&-
+            exec 3<&-
+        fi
+    else
+        echo "0"
     fi
-  # We didn't...?
-  else
-    echo "0"
-  fi
 }
 
 GetSummaryInformation() {
