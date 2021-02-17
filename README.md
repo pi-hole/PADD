@@ -36,6 +36,45 @@ cd ~ ; echo "if [ \"\$TERM\" == \"linux\" ] ; then\n  while :\n  do\n    ./padd.
 ```
 - Reboot your Pi-Hole by running `sudo reboot`. PADD should now run when your Pi-Hole has completed booting.
 
+## Running PADD with Pi-Hole in Docker
+Using PADD with Pi-Hole in Docker can be easily done with a few extra steps. This assumes that you:
+- Named your Pi-Hole container `pihole`
+- Are preforming these steps under the user you want to run PADD
+- The user you want to run PADD has access to the Docker socket
+
+First, download PADD to a directory owned by the user you want to run PADD:
+```bash
+mkdir -p ${HOME}/padd
+wget -N https://raw.githubusercontent.com/pi-hole/PADD/master/padd.sh -O ${HOME}/padd/padd.sh
+```
+
+Next, make sure you add the following mountpoints to your Pi-Hole container. These are formatted to be added to your `docker create` command:
+```
+-v ${HOME}/padd:/padd \
+-v /proc/loadavg:/proc/loadavg:ro \
+-v /proc/meminfo:/proc/meminfo:ro \
+-v /sys/class/thermal:/sys/class/thermal:ro \
+-v /sys/devices/system/cpu:/sys/devices/system/cpu:ro \
+```
+
+Then, add the following to the end of `~/.bashrc`:
+```bash
+# Run PADD
+# If we’re on the PiTFT screen (ssh is xterm)
+if [ "$TERM" == "linux" ] ; then
+  while :
+  do
+    docker exec -it pihole bash /padd/padd.sh
+    sleep 1
+  done
+fi
+```
+One line version
+```bash
+cd ~ ; echo "if [ \"\$TERM\" == \"linux\" ] ; then\n  while :\n  do\n    docker exec -it pihole bash /padd/padd.sh\n    sleep 1\n  done\nfi" | tee ~/.bashrc -a
+```
+Reboot your Pi-Hole by running `sudo reboot`. PADD should now run when your Pi-Hole has completed booting.
+
 ## Updating PADD
 - Just run
 ```bash
