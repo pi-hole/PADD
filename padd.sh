@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.5.1"
+padd_version="v3.6"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -277,8 +277,33 @@ GetSystemInformation() {
 }
 
 GetNetworkInformation() {
-  # Get pi IP address, hostname and gateway
-  pi_ip_address=$(ip addr | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/')
+  # Get pi IPv4 address
+  readarray -t pi_ip4_addrs <<< "$(ip addr | grep 'inet ' | grep -v '127.0.0.1/8' | awk '{print $2}' | cut -f1 -d'/')"
+  if [ ${#pi_ip4_addrs[@]} -eq 0 ]; then
+    # No IPv4 address available
+    pi_ip4_addr="N/A"
+  elif [ ${#pi_ip4_addrs[@]} -eq 1 ]; then
+    # One IPv4 address available
+    pi_ip4_addr="${pi_ip4_addrs[0]}"
+  else
+    # More than one IPv4 address available
+    pi_ip4_addr="${pi_ip4_addrs[0]}+"
+  fi
+
+  # Get pi IPv6 address
+  readarray -t pi_ip6_addrs <<< "$(ip addr | grep 'inet6 ' | grep -v '::1/128' | awk '{print $2}' | cut -f1 -d'/')"
+  if [ ${#pi_ip6_addrs[@]} -eq 0 ]; then
+    # No IPv6 address available
+    pi_ip6_addr="N/A"
+  elif [ ${#pi_ip6_addrs[@]} -eq 1 ]; then
+    # One IPv6 address available
+    pi_ip4_addr="${pi_ip6_addrs[0]}"
+  else
+    # More than one IPv6 address available
+    pi_ip6_addr="${pi_ip6_addrs[0]}+"
+  fi
+
+  # Get hostname and gateway
   pi_hostname=$(hostname)
   pi_gateway=$(ip r | grep 'default' | awk '{print $3}')
 
@@ -646,22 +671,22 @@ PrintNetworkInformation() {
   if [ "$1" = "pico" ]; then
     CleanEcho "${bold_text}NETWORK ============${reset_text}"
     CleanEcho " Hst: ${pi_hostname}"
-    CleanEcho " IP:  ${pi_ip_address}"
+    CleanEcho " IP:  ${pi_ip4_addr}"
     CleanEcho " DHCP ${dhcp_check_box} IPv6 ${dhcp_ipv6_check_box}"
   elif [ "$1" = "nano" ]; then
     CleanEcho "${bold_text}NETWORK ================${reset_text}"
     CleanEcho " Host: ${pi_hostname}"
-    CleanEcho " IPv4: ${IPV4_ADDRESS}"
+    CleanEcho " IP:  ${pi_ip4_addr}"
     CleanEcho " DHCP: ${dhcp_check_box}    IPv6: ${dhcp_ipv6_check_box}"
   elif [ "$1" = "micro" ]; then
     CleanEcho "${bold_text}NETWORK ======================${reset_text}"
     CleanEcho " Host:    ${full_hostname}"
-    CleanEcho " IPv4:    ${IPV4_ADDRESS}"
+    CleanEcho " IP:      ${pi_ip4_addr}"
     CleanEcho " DHCP:    ${dhcp_check_box}     IPv6:  ${dhcp_ipv6_check_box}"
   elif [ "$1" = "mini" ]; then
     CleanEcho "${bold_text}NETWORK ================================${reset_text}"
     CleanPrintf " %-9s%-19s\e[0K\\n" "Host:" "${full_hostname}"
-    CleanPrintf " %-9s%-19s\e[0K\\n" "IPv4:" "${IPV4_ADDRESS}"
+    CleanPrintf " %-9s%-19s\e[0K\\n" "IP:"   "${pi_ip4_addr}"
     CleanPrintf " %-9s%-10s\e[0K\\n" "DNS:" "${dns_information}"
 
     if [[ "${DHCP_ACTIVE}" == "true" ]]; then
@@ -669,18 +694,18 @@ PrintNetworkInformation() {
     fi
   elif [ "$1" = "tiny" ]; then
     CleanEcho "${bold_text}NETWORK ============================================${reset_text}"
-    CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "Hostname:" "${full_hostname}" "IPv4:" "${IPV4_ADDRESS}"
-    CleanPrintf " %-10s%-39s\e[0K\\n" "IPv6:" "${IPV6_ADDRESS}"
+    CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "Hostname:" "${full_hostname}" "IP:  " "${pi_ip4_addr}"
+    CleanPrintf " %-6s%-39s\e[0K\\n" "IPv6:" "${pi_ip6_addr}"
     CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
 
     if [[ "${DHCP_ACTIVE}" == "true" ]]; then
       CleanPrintf " %-10s${dhcp_heatmap}%-16s${reset_text} %-8s${dhcp_ipv6_heatmap}%-10s${reset_text}\e[0K\\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
       CleanPrintf "%s\e[0K\\n" "${dhcp_info}"
-    fi        
+    fi
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     CleanEcho "${bold_text}NETWORK ===================================================${reset_text}"
-    CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "Hostname:" "${full_hostname}" "IPv4:" "${IPV4_ADDRESS}"
-    CleanPrintf " %-10s%-19s\e[0K\\n" "IPv6:" "${IPV6_ADDRESS}"
+    CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "Hostname:" "${full_hostname}" "IP:" "${pi_ip4_addr}"
+    CleanPrintf " %-6s%-19s\e[0K\\n" "IPv6:" "${pi_ip6_addr}"
     CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
 
     if [[ "${DHCP_ACTIVE}" == "true" ]]; then
@@ -690,7 +715,7 @@ PrintNetworkInformation() {
   else
     CleanEcho "${bold_text}NETWORK =======================================================================${reset_text}"
     CleanPrintf " %-10s%-19s\e[0K\\n" "Hostname:" "${full_hostname}"
-    CleanPrintf " %-10s%-19s %-10s%-29s\e[0K\\n" "IPv4 Adr:" "${IPV4_ADDRESS}" "IPv6 Adr:" "${IPV6_ADDRESS}"
+    CleanPrintf " %-6s%-19s %-10s%-29s\e[0K\\n" "IPv4:" "${pi_ip4_addr}" "IPv6:" "${pi_ip6_addr}"
     CleanEcho "DNS ==========================================================================="
     CleanPrintf " %-10s%-39s\e[0K\\n" "Servers:" "${dns_information}"
     CleanPrintf " %-10s${dnssec_heatmap}%-19s${reset_text} %-20s${conditional_forwarding_heatmap}%-9s${reset_text}\e[0K\\n" "DNSSEC:" "${dnssec_status}" "Conditional Fwding:" "${conditional_forwarding_status}"
