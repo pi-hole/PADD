@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.6"
+padd_version="v3.6.1"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -297,7 +297,7 @@ GetNetworkInformation() {
     pi_ip6_addr="N/A"
   elif [ ${#pi_ip6_addrs[@]} -eq 1 ]; then
     # One IPv6 address available
-    pi_ip4_addr="${pi_ip6_addrs[0]}"
+    pi_ip6_addr="${pi_ip6_addrs[0]}"
   else
     # More than one IPv6 address available
     pi_ip6_addr="${pi_ip6_addrs[0]}+"
