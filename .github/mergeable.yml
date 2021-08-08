@@ -1,0 +1,11 @@
+version: 2
+mergeable:
+  - when: schedule.repository
+    validate:
+      - do: stale
+        days: 20
+        type: pull_request, issues
+    pass:
+      - do: comment
+        payload:
+          body: This is old. Is it still relevant?
