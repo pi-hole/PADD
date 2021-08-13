@@ -511,20 +511,27 @@ GetVersionInformation() {
     fi
 
     # Gather web version information...
-    read -r -a web_versions <<< "$(pihole -v -a)"
-    web_version=$(echo "${web_versions[3]}" | tr -d '\r\n[:alpha:]')
-    web_version_latest=${web_versions[5]//)}
-    if [[ "${web_version_latest}" == "ERROR" ]]; then
-      web_version_heatmap=${yellow_text}
-    else
-      web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
-      # is web up-to-date?
-      if [[ "${web_version}" != "${web_version_latest}" ]]; then
-        out_of_date_flag="true"
-        web_version_heatmap=${red_text}
+    if [[ "$(source /etc/pihole/setupVars.conf; echo "$INSTALL_WEB_INTERFACE")" = true ]]; then
+      read -r -a web_versions <<< "$(pihole -v -a)"
+      web_version=$(echo "${web_versions[3]}" | tr -d '\r\n[:alpha:]')
+      web_version_latest=${web_versions[5]//)}
+      if [[ "${web_version_latest}" == "ERROR" ]]; then
+        web_version_heatmap=${yellow_text}
       else
-        web_version_heatmap=${green_text}
+        web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
+        # is web up-to-date?
+        if [[ "${web_version}" != "${web_version_latest}" ]]; then
+          out_of_date_flag="true"
+          web_version_heatmap=${red_text}
+        else
+          web_version_heatmap=${green_text}
+        fi
       fi
+    else
+      # Web interface not installed
+      web_version_heatmap=${red_text}
+      web_version="$(printf '\x08')"  # Hex 0x08 is for backspace, to delete the leading 'v'
+      web_version="${web_version}N/A" # N/A = Not Available
     fi
 
     # Gather FTL version information...
