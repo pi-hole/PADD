@@ -14,6 +14,9 @@
 LC_ALL=C
 LC_NUMERIC=C
 
+# cd to the directory this script is stored in
+cd "$(dirname "$0")"
+
 ############################################ VARIABLES #############################################
 
 # VERSION
