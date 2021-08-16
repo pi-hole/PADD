@@ -197,16 +197,16 @@ GetSummaryInformation() {
   elif [ "$1" = "tiny" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
 
-    if [ ${#latest_blocked} -gt 37 ]; then
-      latest_blocked=$(echo "$latest_blocked" | cut -c1-37)"..."
+    if [ ${#latest_blocked} -gt 38 ]; then
+      latest_blocked=$(echo "$latest_blocked" | cut -c1-38)"..."
     fi
 
-    if [ ${#top_blocked} -gt 37 ]; then
-      top_blocked=$(echo "$top_blocked" | cut -c1-37)"..."
+    if [ ${#top_blocked} -gt 38 ]; then
+      top_blocked=$(echo "$top_blocked" | cut -c1-38)"..."
     fi     
 
-    if [ ${#top_domain} -gt 37 ]; then
-      top_domain=$(echo "$top_domain" | cut -c1-37)"..."
+    if [ ${#top_domain} -gt 38 ]; then
+      top_domain=$(echo "$top_domain" | cut -c1-38)"..."
     fi
 
     if [ ${#top_client} -gt 37 ]; then
