@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.6.1"
+padd_version="v3.6.2"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -197,8 +197,8 @@ GetSummaryInformation() {
   elif [ "$1" = "tiny" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
 
-    if [ ${#latest_blocked} -gt 39 ]; then
-      latest_blocked=$(echo "$latest_blocked" | cut -c1-39)"..."
+    if [ ${#latest_blocked} -gt 38 ]; then
+      latest_blocked=$(echo "$latest_blocked" | cut -c1-38)"..."
     fi
 
     if [ ${#top_blocked} -gt 39 ]; then
