@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.6.1"
+padd_version="v3.6.2"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -197,13 +197,21 @@ GetSummaryInformation() {
   elif [ "$1" = "tiny" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
 
-    if [ ${#latest_blocked} -gt 39 ]; then
-      latest_blocked=$(echo "$latest_blocked" | cut -c1-39)"..."
+    if [ ${#latest_blocked} -gt 38 ]; then
+      latest_blocked=$(echo "$latest_blocked" | cut -c1-38)"..."
     fi
 
-    if [ ${#top_blocked} -gt 39 ]; then
-      top_blocked=$(echo "$top_blocked" | cut -c1-39)"..."
+    if [ ${#top_blocked} -gt 38 ]; then
+      top_blocked=$(echo "$top_blocked" | cut -c1-38)"..."
     fi     
+
+    if [ ${#top_domain} -gt 38 ]; then
+      top_domain=$(echo "$top_domain" | cut -c1-38)"..."
+    fi
+
+    if [ ${#top_client} -gt 38 ]; then
+      top_client=$(echo "$top_client" | cut -c1-38)"..."
+    fi
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 40 "color")
   else
