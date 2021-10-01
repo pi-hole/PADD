@@ -527,8 +527,8 @@ GetVersionInformation() {
 
     # Gather FTL version information...
     read -r -a ftl_versions <<< "$(pihole -v -f)"
-    ftl_version=$(echo "${ftl_versions[3]}" | tr -d '\r\n[:alpha:]')
-    ftl_version_latest=${ftl_versions[5]//)}
+    ftl_version=$(echo "${ftl_versions[4]}" | tr -d '\r\n[:alpha:]')
+    ftl_version_latest=${ftl_versions[6]//)}
     if [[ "${ftl_version_latest}" == "ERROR" ]]; then
       ftl_version_heatmap=${yellow_text}
     else
