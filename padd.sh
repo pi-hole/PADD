@@ -411,7 +411,7 @@ GetPiholeInformation() {
   # Get Pi-hole status
   pihole_web_status=$(pihole status web)
 
-  if [[ ${pihole_web_status} == 1 ]]; then
+  if [[ ${pihole_web_status} -ge 1 ]]; then
     pihole_status="Active"
     pihole_heatmap=${green_text}
     pihole_check_box=${check_box_good}
