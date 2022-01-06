@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.6.2"
+padd_version="v3.6.3"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -203,7 +203,7 @@ GetSummaryInformation() {
 
     if [ ${#top_blocked} -gt 38 ]; then
       top_blocked=$(echo "$top_blocked" | cut -c1-38)"..."
-    fi     
+    fi
 
     if [ ${#top_domain} -gt 38 ]; then
       top_domain=$(echo "$top_domain" | cut -c1-38)"..."
@@ -419,7 +419,7 @@ GetPiholeInformation() {
   # Get Pi-hole status
   pihole_web_status=$(pihole status web)
 
-  if [[ ${pihole_web_status} == 1 ]]; then
+  if [[ ${pihole_web_status} -ge 1 ]]; then
     pihole_status="Active"
     pihole_heatmap=${green_text}
     pihole_check_box=${check_box_good}
@@ -429,7 +429,7 @@ GetPiholeInformation() {
     pihole_check_box=${check_box_bad}
     pico_status=${pico_status_off}
     mini_status_=${mini_status_off}
-    tiny_status_=${tiny_status_off}   
+    tiny_status_=${tiny_status_off}
     full_status_=${full_status_off}
     mega_status=${mega_status_off}
   elif [[ ${pihole_web_status} == -1 ]]; then
@@ -438,7 +438,7 @@ GetPiholeInformation() {
     pihole_check_box=${check_box_bad}
     pico_status=${pico_status_dns_down}
     mini_status_=${mini_status_dns_down}
-    tiny_status_=${tiny_status_dns_down} 
+    tiny_status_=${tiny_status_dns_down}
     full_status_=${full_status_dns_down}
     mega_status=${mega_status_dns_down}
   else
@@ -447,7 +447,7 @@ GetPiholeInformation() {
     pihole_check_box=${check_box_question}
     pico_status=${pico_status_unknown}
     mini_status_=${mini_status_unknown}
-    tiny_status_=${tiny_status_unknown}  
+    tiny_status_=${tiny_status_unknown}
     full_status_=${full_status_unknown}
     mega_status=${mega_status_unknown}
   fi
@@ -461,7 +461,7 @@ GetPiholeInformation() {
     ftl_check_box=${check_box_info}
     pico_status=${pico_status_ftl_down}
     mini_status_=${mini_status_ftl_down}
-    tiny_status_=${tiny_status_ftl_down}    
+    tiny_status_=${tiny_status_ftl_down}
     full_status_=${full_status_ftl_down}
     mega_status=${mega_status_ftl_down}
   else
@@ -548,14 +548,14 @@ GetVersionInformation() {
     # is PADD up-to-date?
     if [[ "${padd_version_latest}" == "" ]]; then
       padd_version_heatmap=${yellow_text}
-    else   
+    else
       if [[ "${padd_version}" != "${padd_version_latest}" ]]; then
         padd_out_of_date_flag="true"
         padd_version_heatmap=${red_text}
       else
         padd_version_heatmap=${green_text}
       fi
-    fi    
+    fi
 
     # was any portion of Pi-hole out-of-date?
     # yes, pi-hole is out of date
@@ -565,7 +565,7 @@ GetVersionInformation() {
       version_check_box=${check_box_bad}
       pico_status=${pico_status_update}
       mini_status_=${mini_status_update}
-      tiny_status_=${tiny_status_update} 
+      tiny_status_=${tiny_status_update}
       full_status_=${full_status_update}
       mega_status=${mega_status_update}
     else
@@ -576,7 +576,7 @@ GetVersionInformation() {
         version_check_box=${check_box_bad}
         pico_status=${pico_status_update}
         mini_status_=${mini_status_update}
-        tiny_status_=${tiny_status_update}        
+        tiny_status_=${tiny_status_update}
         full_status_=${full_status_update}
         mega_status=${mega_status_update}
       # else, everything is good!
@@ -586,7 +586,7 @@ GetVersionInformation() {
         version_check_box=${check_box_good}
         pico_status=${pico_status_ok}
         mini_status_=${mini_status_ok}
-        tiny_status_=${tiny_status_ok}         
+        tiny_status_=${tiny_status_ok}
         full_status_=${full_status_ok}
         mega_status=${mega_status_ok}
       fi
@@ -596,19 +596,19 @@ GetVersionInformation() {
     echo "last_check=${today}" > ./piHoleVersion
     {
       echo "core_version=$core_version"
-      echo "core_version_latest=$core_version_latest"     
+      echo "core_version_latest=$core_version_latest"
       echo "core_version_heatmap=$core_version_heatmap"
 
       echo "web_version=$web_version"
-      echo "web_version_latest=$web_version_latest"         
+      echo "web_version_latest=$web_version_latest"
       echo "web_version_heatmap=$web_version_heatmap"
 
       echo "ftl_version=$ftl_version"
-      echo "ftl_version_latest=$ftl_version_latest"       
+      echo "ftl_version_latest=$ftl_version_latest"
       echo "ftl_version_heatmap=$ftl_version_heatmap"
 
       echo "padd_version=$padd_version"
-      echo "padd_version_latest=$padd_version_latest"       
+      echo "padd_version_latest=$padd_version_latest"
       echo "padd_version_heatmap=$padd_version_heatmap"
 
       echo "version_status=\"$version_status\""
@@ -617,7 +617,7 @@ GetVersionInformation() {
 
       echo "pico_status=\"$pico_status\""
       echo "mini_status_=\"$mini_status_\""
-      echo "tiny_status_=\"$tiny_status_\""        
+      echo "tiny_status_=\"$tiny_status_\""
       echo "full_status_=\"$full_status_\""
     } >> ./piHoleVersion
 
@@ -944,9 +944,9 @@ SizeChecker(){
   # Below Tiny. Gives you Mini.
   elif [[ "$console_width" -lt "53" || "$console_height" -lt "20" ]]; then
       padd_size="mini"
-  # Below Slim. Gives you Tiny.    
+  # Below Slim. Gives you Tiny.
   elif [[ "$console_width" -lt "60" || "$console_height" -lt "21" ]]; then
-      padd_size="tiny"    
+      padd_size="tiny"
   # Below Regular. Gives you Slim.
   elif [[ "$console_width" -lt "80" || "$console_height" -lt "26" ]]; then
     if [[ "$console_height" -lt "22" ]]; then
@@ -1196,7 +1196,7 @@ NormalPADD() {
 
     pico_status=${pico_status_ok}
     mini_status_=${mini_status_ok}
-    tiny_status_=${tiny_status_ok}   
+    tiny_status_=${tiny_status_ok}
 
     # Start getting our information
     GetVersionInformation ${padd_size}
