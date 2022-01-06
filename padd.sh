@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.6.3"
+padd_version="v3.6.4"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -117,31 +117,14 @@ pihole_logo_script_retro_3="${green_text}'  ${red_text}'   ${magenta_text}' ${ye
 ############################################# GETTERS ##############################################
 
 GetFTLData() {
-    local ftl_port LINE
+    local ftl_port
+
     ftl_port=$(cat /run/pihole-FTL.port 2> /dev/null)
     if [[ -n "$ftl_port" ]]; then
-        # Open connection to FTL
-        exec 3<>"/dev/tcp/127.0.0.1/$ftl_port"
-
-        # Test if connection is open
-        if { "true" >&3; } 2> /dev/null; then
-            # Send command to FTL and ask to quit when finished
-            echo -e ">$1 >quit" >&3
-
-            # Read input until we received an empty string and the connection is
-            # closed
-            read -r -t 1 LINE <&3
-            until [[ -z "${LINE}" ]] && [[ ! -t 3 ]]; do
-                echo "$LINE" >&1
-                read -r -t 1 LINE <&3
-            done
-
-            # Close connection
-            exec 3>&-
-            exec 3<&-
-        fi
+      # Send command to FTL and ask to quit when finished
+      echo ">$1 >quit" | nc 127.0.0.1 "${ftl_port}"
     else
-        echo "0"
+      echo "0"
     fi
 }
 
