@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.6.3"
+padd_version="v3.6.4"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -1043,7 +1043,7 @@ json_extract() {
 
 OutputJSON() {
   GetSummaryInformation
-  echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw}}"
+  echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw},\"clients\": ${clients}}"
 }
 
 StartupRoutine(){
