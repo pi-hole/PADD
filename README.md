@@ -47,3 +47,4 @@ wget -N https://raw.githubusercontent.com/pi-hole/PADD/master/padd.sh
 
 ## FAQ
 *Answers to frequently asked questions can be found in this repo’s [wiki](https://github.com/jpmck/PADD/wiki/FAQ).*
+
