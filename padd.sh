@@ -3,6 +3,8 @@
 # shellcheck disable=SC1091
 # shellcheck disable=SC2154
 
+# test stickler
+
 # PADD
 #
 # A more advanced version of the chronometer provided with Pihole
