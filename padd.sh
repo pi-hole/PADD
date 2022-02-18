@@ -25,14 +25,12 @@ declare -i core_count=1
 core_count=$(cat /sys/devices/system/cpu/kernel_max 2> /dev/null)+1
 
 # COLORS
-#black_text=$(tput setaf 0)   # Black
 red_text=$(tput setaf 1)     # Red
 green_text=$(tput setaf 2)   # Green
 yellow_text=$(tput setaf 3)  # Yellow
 blue_text=$(tput setaf 4)    # Blue
 magenta_text=$(tput setaf 5) # Magenta
 cyan_text=$(tput setaf 6)    # Cyan
-#white_text=$(tput setaf 7)   # White
 reset_text=$(tput sgr0)      # Reset to default color
 
 # STYLES
@@ -85,7 +83,6 @@ mega_status_unknown="${check_box_question} Unable to determine Pi-hole status."
 # TINY STATUS
 tiny_status_ok="${check_box_good} System is healthy."
 tiny_status_update="${check_box_info} Updates are available."
-#tiny_status_hot="${check_box_bad} System is hot!"
 tiny_status_off="${check_box_bad} Pi-hole is offline"
 tiny_status_ftl_down="${check_box_info} FTL is down!"
 tiny_status_dns_down="${check_box_bad} DNS is off!"
@@ -93,8 +90,6 @@ tiny_status_unknown="${check_box_question} Status unknown!"
 
 # Text only "logos"
 padd_text="${green_text}${bold_text}PADD${reset_text}"
-#padd_text_retro="${bold_text}${red_text}P${yellow_text}A${green_text}D${blue_text}D${reset_text}${reset_text}"
-#mini_text_retro="${dim_text}${cyan_text}m${magenta_text}i${red_text}n${yellow_text}i${reset_text}"
 
 # PADD logos - regular and retro
 padd_logo_1="${bold_text}${green_text} __      __  __   ${reset_text}"
@@ -104,13 +99,6 @@ padd_logo_retro_1="${bold_text} ${yellow_text}_${green_text}_      ${blue_text}_
 padd_logo_retro_2="${bold_text}${yellow_text}|${green_text}_${blue_text}_${cyan_text}) ${red_text}/${yellow_text}\\ ${blue_text}|  ${red_text}\\${yellow_text}|  ${cyan_text}\\  ${reset_text}"
 padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${green_text}-${blue_text}\\${cyan_text}|${magenta_text}_${red_text}_${yellow_text}/${green_text}|${blue_text}_${cyan_text}_${magenta_text}/  ${reset_text}"
 
-# old script Pi-hole logos - regular and retro
-#pihole_logo_script_1="${bold_text}${green_text}.-..   .      .      ${reset_text}"
-#pihole_logo_script_2="${bold_text}${green_text}|-'. - |-. .-.| .-,  ${reset_text}"
-#pihole_logo_script_3="${bold_text}${green_text}'  '   ' '-\`-''-\`'-  ${reset_text}"
-#pihole_logo_script_retro_1="${red_text}.${yellow_text}-${green_text}.${blue_text}.   ${green_text}.      ${magenta_text}.      ${reset_text}"
-#pihole_logo_script_retro_2="${yellow_text}|${green_text}-${blue_text}'${magenta_text}. ${yellow_text}- ${blue_text}|${magenta_text}-${red_text}. ${green_text}.${blue_text}-${magenta_text}.${red_text}| ${green_text}.${blue_text}-${magenta_text},  ${reset_text}"
-#pihole_logo_script_retro_3="${green_text}'  ${red_text}'   ${magenta_text}' ${yellow_text}'${green_text}-${blue_text}\`${magenta_text}-${red_text}'${yellow_text}'${green_text}-${blue_text}\`${magenta_text}'${red_text}-  ${reset_text}"
 
 ############################################# GETTERS ##############################################
 
@@ -361,15 +349,9 @@ GetNetworkInformation() {
     dhcp_check_box=${check_box_good}
 
     # Is DHCP handling IPv6?
-    #if [[ "${DHCP_IPv6}" == "true" ]]; then
-    #  dhcp_ipv6_status="Enabled"
-    #  dhcp_ipv6_heatmap=${green_text}
-    #  dhcp_ipv6_check_box=${check_box_good}
-    #else
     dhcp_ipv6_status="Disabled"
     dhcp_ipv6_heatmap=${red_text}
     dhcp_ipv6_check_box=${check_box_bad}
-    #fi
   else
     dhcp_status="Disabled"
     dhcp_heatmap=${red_text}
@@ -394,22 +376,18 @@ GetNetworkInformation() {
   if [[ "${DNSSEC}" == "true" ]]; then
     dnssec_status="Enabled"
     dnssec_heatmap=${green_text}
-    #dnssec_check_box=${check_box_good}
   else
     dnssec_status="Disabled"
     dnssec_heatmap=${red_text}
-    #dnssec_check_box=${check_box_bad}
   fi
 
   # Conditional forwarding
   if [[ "${CONDITIONAL_FORWARDING}" == "true" ]] || [[ "${REV_SERVER}" == "true" ]]; then
     conditional_forwarding_status="Enabled"
     conditional_forwarding_heatmap=${green_text}
-    #conditional_forwarding_check_box=${check_box_good}
   else
     conditional_forwarding_status="Disabled"
     conditional_forwarding_heatmap=${red_text}
-    #conditional_forwarding_check_box=${check_box_bad}
   fi
 }
 
