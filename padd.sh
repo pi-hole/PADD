@@ -17,7 +17,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.6.4"
+padd_version="v3.6.5"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -619,6 +619,7 @@ GetVersionInformation() {
       echo "mini_status_=\"$mini_status_\""
       echo "tiny_status_=\"$tiny_status_\""
       echo "full_status_=\"$full_status_\""
+      echo "mega_status=\"$mega_status\""
     } >> ./piHoleVersion
 
     # there's a file now
