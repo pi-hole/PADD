@@ -1,0 +1,39 @@
+name: Bump 'n' release
+
+on:  
+  release:
+    types: [published]
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout code
+        uses: actions/checkout@v2
+      - 
+        name: Set the new version inside the script
+        run: |
+          GIT_TAG=${{ github.event.release.tag_name }}
+          sed -i "s/^padd_version=.*/padd_version=\"$GIT_TAG\"/" padd.sh
+      - 
+        name: Create Pull Request to update script on master branch
+        uses: peter-evans/create-pull-request@v3
+        with:
+          base: master
+          commit-message: Update report
+          committer: Pralor <pralor-bot@users.noreply.github.com>
+          author: Pralor <pralor-bot@users.noreply.github.com>
+          branch: example-patches
+          delete-branch: true
+          title: 'Bump Script Version After Release'
+          body: |
+            Bumps the `padd_version=` variable in `padd.sh` to match the most recently released version
+          labels: |
+            internal          
+      -
+        name: Attach script to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            padd.sh
