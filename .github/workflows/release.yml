@@ -24,7 +24,7 @@ jobs:
           commit-message: Update report
           committer: Pralor <pralor-bot@users.noreply.github.com>
           author: Pralor <pralor-bot@users.noreply.github.com>
-          branch: example-patches
+          branch: bump/version
           delete-branch: true
           title: 'Bump Script Version After Release'
           body: |
