@@ -15,7 +15,11 @@ LC_ALL=C
 LC_NUMERIC=C
 
 # cd to the directory this script is stored in
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || {
+    EC=$?
+    echo >&2 "Could not chdir to the directory containing padd.sh (exit code $EC)"
+    exit $EC
+}
 
 ############################################ VARIABLES #############################################
 
