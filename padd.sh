@@ -15,7 +15,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.6.5"
+padd_version="v3.6.6"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -208,6 +208,8 @@ GetSystemInformation() {
   # CPU temperature
   if [ -f /sys/class/thermal/thermal_zone0/temp ]; then
     cpu=$(</sys/class/thermal/thermal_zone0/temp)
+  elif [ -f /sys/class/hwmon/hwmon0/temp1_input ]; then
+    cpu=$(</sys/class/hwmon/hwmon0/temp1_input)
   else
     cpu=0
   fi
