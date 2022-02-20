@@ -131,7 +131,7 @@ GetSummaryInformation() {
   clients=$(echo "${summary}" | grep "unique_clients" | grep -Eo "[0-9]+$")
 
   blocking_status=$(echo "${summary}" | grep "status" | grep -Eo "enabled|disabled|unknown" )
-  
+
   domains_being_blocked_raw=$(echo "${summary}" | grep "domains_being_blocked" | grep -Eo "[0-9]+$")
   domains_being_blocked=$(printf "%.f" "${domains_being_blocked_raw}")
 
@@ -1032,10 +1032,7 @@ StartupRoutine(){
     CheckConnectivity "$1"
     printf "%b" "Starting PADD...\n"
 
-    # Get PID of PADD
-    pid=$$
-    printf "%b" " [■·········]  10%\\r"
-    echo ${pid} > ./PADD.pid
+    echo -ne " [■·········]  10%\\r"
 
     # Check for updates
     printf "%b" " [■■········]  20%\\r"
@@ -1067,10 +1064,6 @@ StartupRoutine(){
     CheckConnectivity "$1"
 
     echo "Starting PADD."
-    # Get PID of PADD
-    pid=$$
-    echo "- Writing PID (${pid}) to file."
-    echo ${pid} > ./PADD.pid
 
     # Check for updates
     echo "- Checking for version file."
@@ -1106,11 +1099,6 @@ StartupRoutine(){
 
     printf "%b" "- Checking internet connection...\n"
     CheckConnectivity "$1"
-
-    # Get PID of PADD
-    pid=$$
-    echo "- Writing PID (${pid}) to file..."
-    echo ${pid} > ./PADD.pid
 
     # Check for updates
     echo "- Checking for PADD version file..."
