@@ -26,6 +26,9 @@ today=$(date +%Y%m%d)
 declare -i core_count=1
 core_count=$(cat /sys/devices/system/cpu/kernel_max 2> /dev/null)+1
 
+# Get Config variables
+. /etc/pihole/setupVars.conf
+
 # COLORS
 black_text=$(tput setaf 0)   # Black
 red_text=$(tput setaf 1)     # Red
@@ -511,7 +514,7 @@ GetVersionInformation() {
     fi
 
     # Gather web version information...
-    if [[ "$(source /etc/pihole/setupVars.conf; echo "$INSTALL_WEB_INTERFACE")" = true ]]; then
+    if [[ "$INSTALL_WEB_INTERFACE" = true ]]; then
       read -r -a web_versions <<< "$(pihole -v -a)"
       web_version=$(echo "${web_versions[3]}" | tr -d '\r\n[:alpha:]')
       web_version_latest=${web_versions[5]//)}
@@ -1188,9 +1191,6 @@ NormalPADD() {
     # Sizing Checks
     SizeChecker
 
-    # Get Config variables
-    . /etc/pihole/setupVars.conf
-
     # Move the cursor to top left of console to redraw
     tput cup 0 0
 
@@ -1243,10 +1243,6 @@ if [[ $# = 0 ]]; then
 
   console_width=$(tput cols)
   console_height=$(tput lines)
-
-  # Get Our Config Values
-  # shellcheck disable=SC1091
-  . /etc/pihole/setupVars.conf
 
   SizeChecker
 
