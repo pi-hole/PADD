@@ -26,6 +26,9 @@ today=$(date +%Y%m%d)
 declare -i core_count=1
 core_count=$(cat /sys/devices/system/cpu/kernel_max 2> /dev/null)+1
 
+# Get Config variables
+. /etc/pihole/setupVars.conf
+
 # COLORS
 black_text=$(tput setaf 0)   # Black
 red_text=$(tput setaf 1)     # Red
@@ -511,20 +514,27 @@ GetVersionInformation() {
     fi
 
     # Gather web version information...
-    read -r -a web_versions <<< "$(pihole -v -a)"
-    web_version=$(echo "${web_versions[3]}" | tr -d '\r\n[:alpha:]')
-    web_version_latest=${web_versions[5]//)}
-    if [[ "${web_version_latest}" == "ERROR" ]]; then
-      web_version_heatmap=${yellow_text}
-    else
-      web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
-      # is web up-to-date?
-      if [[ "${web_version}" != "${web_version_latest}" ]]; then
-        out_of_date_flag="true"
-        web_version_heatmap=${red_text}
+    if [[ "$INSTALL_WEB_INTERFACE" = true ]]; then
+      read -r -a web_versions <<< "$(pihole -v -a)"
+      web_version=$(echo "${web_versions[3]}" | tr -d '\r\n[:alpha:]')
+      web_version_latest=${web_versions[5]//)}
+      if [[ "${web_version_latest}" == "ERROR" ]]; then
+        web_version_heatmap=${yellow_text}
       else
-        web_version_heatmap=${green_text}
+        web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
+        # is web up-to-date?
+        if [[ "${web_version}" != "${web_version_latest}" ]]; then
+          out_of_date_flag="true"
+          web_version_heatmap=${red_text}
+        else
+          web_version_heatmap=${green_text}
+        fi
       fi
+    else
+      # Web interface not installed
+      web_version_heatmap=${red_text}
+      web_version="$(printf '\x08')"  # Hex 0x08 is for backspace, to delete the leading 'v'
+      web_version="${web_version}N/A" # N/A = Not Available
     fi
 
     # Gather FTL version information...
@@ -1181,9 +1191,6 @@ NormalPADD() {
     # Sizing Checks
     SizeChecker
 
-    # Get Config variables
-    . /etc/pihole/setupVars.conf
-
     # Move the cursor to top left of console to redraw
     tput cup 0 0
 
@@ -1236,10 +1243,6 @@ if [[ $# = 0 ]]; then
 
   console_width=$(tput cols)
   console_height=$(tput lines)
-
-  # Get Our Config Values
-  # shellcheck disable=SC1091
-  . /etc/pihole/setupVars.conf
 
   SizeChecker
 
