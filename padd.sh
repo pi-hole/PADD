@@ -37,20 +37,21 @@ core_count=$(cat /sys/devices/system/cpu/kernel_max 2> /dev/null)+1
 . /etc/pihole/setupVars.conf
 
 # COLORS
-black_text=$(tput setaf 0)   # Black
-red_text=$(tput setaf 1)     # Red
-green_text=$(tput setaf 2)   # Green
-yellow_text=$(tput setaf 3)  # Yellow
-blue_text=$(tput setaf 4)    # Blue
-magenta_text=$(tput setaf 5) # Magenta
-cyan_text=$(tput setaf 6)    # Cyan
-white_text=$(tput setaf 7)   # White
-reset_text=$(tput sgr0)      # Reset to default color
+CSI="$(printf '\033')["
+black_text="${CSI}90m"   # Black
+red_text="${CSI}91m"     # Red
+green_text="${CSI}92m"   # Green
+yellow_text="${CSI}93m"  # Yellow
+blue_text="${CSI}94m"    # Blue
+magenta_text="${CSI}95m" # Magenta
+cyan_text="${CSI}96m"    # Cyan
+white_text="${CSI}97m"   # White
+reset_text="${CSI}0m"    # Reset to default
 
 # STYLES
-bold_text=$(tput bold)
-blinking_text=$(tput blink)
-dim_text=$(tput dim)
+bold_text="${CSI}1m"
+blinking_text="${CSI}5m"
+dim_text="${CSI}2m"
 
 # CHECK BOXES
 check_box_good="[${green_text}✓${reset_text}]"       # Good
