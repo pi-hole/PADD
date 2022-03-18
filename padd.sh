@@ -24,7 +24,7 @@ cd "$(dirname "$0")" || {
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.6.6"
+padd_version="v3.6.7"
 
 # DATE
 today=$(date +%Y%m%d)
