@@ -133,7 +133,6 @@ GetFTLData() {
 
 GetSummaryInformation() {
   local summary
-  #local cache_summary
   summary=$(GetFTLData "stats")
   cache_info=$(GetFTLData "cacheinfo")
 
@@ -297,7 +296,7 @@ GetNetworkInformation() {
 
   full_hostname=${pi_hostname}
   # does the Pi-hole have a domain set?
-  if [ -n "${PIHOLE_DOMAIN+x}" ]; then
+  if [[ -n "${PIHOLE_DOMAIN+x}" ]]; then
     # is Pi-hole acting as DHCP server?
     if [[ "${DHCP_ACTIVE}" == "true" ]]; then
       count=${pi_hostname}"."${PIHOLE_DOMAIN}
