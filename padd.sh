@@ -12,10 +12,17 @@
 LC_ALL=C
 LC_NUMERIC=C
 
+# cd to the directory this script is stored in
+cd "$(dirname "$0")" || {
+    EC=$?
+    echo >&2 "Could not chdir to the directory containing padd.sh (exit code $EC)"
+    exit $EC
+}
+
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.6.6"
+padd_version="v3.6.7"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -24,19 +31,25 @@ today=$(date +%Y%m%d)
 declare -i core_count=1
 core_count=$(cat /sys/devices/system/cpu/kernel_max 2> /dev/null)+1
 
+# Get Config variables
+. /etc/pihole/setupVars.conf
+
 # COLORS
-red_text=$(tput setaf 1)     # Red
-green_text=$(tput setaf 2)   # Green
-yellow_text=$(tput setaf 3)  # Yellow
-blue_text=$(tput setaf 4)    # Blue
-magenta_text=$(tput setaf 5) # Magenta
-cyan_text=$(tput setaf 6)    # Cyan
-reset_text=$(tput sgr0)      # Reset to default color
+CSI="$(printf '\033')["
+black_text="${CSI}90m"   # Black
+red_text="${CSI}91m"     # Red
+green_text="${CSI}92m"   # Green
+yellow_text="${CSI}93m"  # Yellow
+blue_text="${CSI}94m"    # Blue
+magenta_text="${CSI}95m" # Magenta
+cyan_text="${CSI}96m"    # Cyan
+white_text="${CSI}97m"   # White
+reset_text="${CSI}0m"    # Reset to default
 
 # STYLES
-bold_text=$(tput bold)
-blinking_text=$(tput blink)
-dim_text=$(tput dim)
+bold_text="${CSI}1m"
+blinking_text="${CSI}5m"
+dim_text="${CSI}2m"
 
 # CHECK BOXES
 check_box_good="[${green_text}✓${reset_text}]"       # Good
@@ -186,8 +199,16 @@ GetSummaryInformation() {
       latest_blocked=$(echo "$latest_blocked" | cut -c1-38)"..."
     fi
 
-    if [ ${#top_blocked} -gt 39 ]; then
-      top_blocked=$(echo "$top_blocked" | cut -c1-39)"..."
+    if [ ${#top_blocked} -gt 38 ]; then
+      top_blocked=$(echo "$top_blocked" | cut -c1-38)"..."
+    fi
+
+    if [ ${#top_domain} -gt 38 ]; then
+      top_domain=$(echo "$top_domain" | cut -c1-38)"..."
+    fi
+
+    if [ ${#top_client} -gt 38 ]; then
+      top_client=$(echo "$top_client" | cut -c1-38)"..."
     fi
   elif [[ "$1" = "regular" || "$1" = "slim" ]]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 40 "color")
@@ -490,8 +511,20 @@ GetVersionInformation() {
         out_of_date_flag="true"
         web_version_heatmap=${red_text}
       else
-        web_version_heatmap=${green_text}
+        web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
+        # is web up-to-date?
+        if [[ "${web_version}" != "${web_version_latest}" ]]; then
+          out_of_date_flag="true"
+          web_version_heatmap=${red_text}
+        else
+          web_version_heatmap=${green_text}
+        fi
       fi
+    else
+      # Web interface not installed
+      web_version_heatmap=${red_text}
+      web_version="$(printf '\x08')"  # Hex 0x08 is for backspace, to delete the leading 'v'
+      web_version="${web_version}N/A" # N/A = Not Available
     fi
 
     # Gather FTL version information...
@@ -1150,9 +1183,6 @@ NormalPADD() {
     # Sizing Checks
     SizeChecker
 
-    # Get Config variables
-    . /etc/pihole/setupVars.conf
-
     # Move the cursor to top left of console to redraw
     tput cup 0 0
 
@@ -1205,10 +1235,6 @@ if [[ $# = 0 ]]; then
 
   console_width=$(tput cols)
   console_height=$(tput lines)
-
-  # Get Our Config Values
-  # shellcheck disable=SC1091
-  . /etc/pihole/setupVars.conf
 
   SizeChecker
 
