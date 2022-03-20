@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2034
 # shellcheck disable=SC1091
-# shellcheck disable=SC2154
 
 # PADD
-#
 # A more advanced version of the chronometer provided with Pihole
 
 # SETS LOCALE
@@ -38,14 +35,12 @@ core_count=$(cat /sys/devices/system/cpu/kernel_max 2> /dev/null)+1
 
 # COLORS
 CSI="$(printf '\033')["
-black_text="${CSI}90m"   # Black
 red_text="${CSI}91m"     # Red
 green_text="${CSI}92m"   # Green
 yellow_text="${CSI}93m"  # Yellow
 blue_text="${CSI}94m"    # Blue
 magenta_text="${CSI}95m" # Magenta
 cyan_text="${CSI}96m"    # Cyan
-white_text="${CSI}97m"   # White
 reset_text="${CSI}0m"    # Reset to default
 
 # STYLES
@@ -98,7 +93,6 @@ mega_status_unknown="${check_box_question} Unable to determine Pi-hole status."
 # TINY STATUS
 tiny_status_ok="${check_box_good} System is healthy."
 tiny_status_update="${check_box_info} Updates are available."
-tiny_status_hot="${check_box_bad} System is hot!"
 tiny_status_off="${check_box_bad} Pi-hole is offline"
 tiny_status_ftl_down="${check_box_info} FTL is down!"
 tiny_status_dns_down="${check_box_bad} DNS is off!"
@@ -106,8 +100,6 @@ tiny_status_unknown="${check_box_question} Status unknown!"
 
 # Text only "logos"
 padd_text="${green_text}${bold_text}PADD${reset_text}"
-padd_text_retro="${bold_text}${red_text}P${yellow_text}A${green_text}D${blue_text}D${reset_text}${reset_text}"
-mini_text_retro="${dim_text}${cyan_text}m${magenta_text}i${red_text}n${yellow_text}i${reset_text}"
 
 # PADD logos - regular and retro
 padd_logo_1="${bold_text}${green_text} __      __  __   ${reset_text}"
@@ -117,13 +109,7 @@ padd_logo_retro_1="${bold_text} ${yellow_text}_${green_text}_      ${blue_text}_
 padd_logo_retro_2="${bold_text}${yellow_text}|${green_text}_${blue_text}_${cyan_text}) ${red_text}/${yellow_text}\\ ${blue_text}|  ${red_text}\\${yellow_text}|  ${cyan_text}\\  ${reset_text}"
 padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${green_text}-${blue_text}\\${cyan_text}|${magenta_text}_${red_text}_${yellow_text}/${green_text}|${blue_text}_${cyan_text}_${magenta_text}/  ${reset_text}"
 
-# old script Pi-hole logos - regular and retro
-pihole_logo_script_1="${bold_text}${green_text}.-..   .      .      ${reset_text}"
-pihole_logo_script_2="${bold_text}${green_text}|-'. - |-. .-.| .-,  ${reset_text}"
-pihole_logo_script_3="${bold_text}${green_text}'  '   ' '-\`-''-\`'-  ${reset_text}"
-pihole_logo_script_retro_1="${red_text}.${yellow_text}-${green_text}.${blue_text}.   ${green_text}.      ${magenta_text}.      ${reset_text}"
-pihole_logo_script_retro_2="${yellow_text}|${green_text}-${blue_text}'${magenta_text}. ${yellow_text}- ${blue_text}|${magenta_text}-${red_text}. ${green_text}.${blue_text}-${magenta_text}.${red_text}| ${green_text}.${blue_text}-${magenta_text},  ${reset_text}"
-pihole_logo_script_retro_3="${green_text}'  ${red_text}'   ${magenta_text}' ${yellow_text}'${green_text}-${blue_text}\`${magenta_text}-${red_text}'${yellow_text}'${green_text}-${blue_text}\`${magenta_text}'${red_text}-  ${reset_text}"
+# old script Pi-hole logos - regular and retro - removed due to shellcheck SC2034: it appears unused.
 
 ############################################# GETTERS ##############################################
 
@@ -158,7 +144,6 @@ GetFTLData() {
 
 GetSummaryInformation() {
   local summary
-  local cache_summary
   summary=$(GetFTLData "stats")
   cache_info=$(GetFTLData "cacheinfo")
 
@@ -330,7 +315,7 @@ GetNetworkInformation() {
 
   full_hostname=${pi_hostname}
   # does the Pi-hole have a domain set?
-  if ! [ -z ${PIHOLE_DOMAIN+x} ]; then
+  if [ -n "${PIHOLE_DOMAIN+x}" ]; then
     # is Pi-hole acting as DHCP server?
     if [[ "${DHCP_ACTIVE}" == "true" ]]; then
       count=${pi_hostname}"."${PIHOLE_DOMAIN}
@@ -376,15 +361,10 @@ GetNetworkInformation() {
     dhcp_check_box=${check_box_good}
 
     # Is DHCP handling IPv6?
-    if [[ "${DHCP_IPv6}" == "true" ]]; then
-      dhcp_ipv6_status="Enabled"
-      dhcp_ipv6_heatmap=${green_text}
-      dhcp_ipv6_check_box=${check_box_good}
-    else
-      dhcp_ipv6_status="Disabled"
-      dhcp_ipv6_heatmap=${red_text}
-      dhcp_ipv6_check_box=${check_box_bad}
-    fi
+    # No, because: DHCP_IPv6 is referenced but not assigned. [SC2154] - removed.
+    dhcp_ipv6_status="Disabled"
+    dhcp_ipv6_heatmap=${red_text}
+    dhcp_ipv6_check_box=${check_box_bad}
   else
     dhcp_status="Disabled"
     dhcp_heatmap=${red_text}
@@ -409,22 +389,18 @@ GetNetworkInformation() {
   if [[ "${DNSSEC}" == "true" ]]; then
     dnssec_status="Enabled"
     dnssec_heatmap=${green_text}
-    dnssec_check_box=${check_box_good}
   else
     dnssec_status="Disabled"
     dnssec_heatmap=${red_text}
-    dnssec_check_box=${check_box_bad}
   fi
 
   # Conditional forwarding
   if [[ "${CONDITIONAL_FORWARDING}" == "true" ]] || [[ "${REV_SERVER}" == "true" ]]; then
     conditional_forwarding_status="Enabled"
     conditional_forwarding_heatmap=${green_text}
-    conditional_forwarding_check_box=${check_box_good}
   else
     conditional_forwarding_status="Disabled"
     conditional_forwarding_heatmap=${red_text}
-    conditional_forwarding_check_box=${check_box_bad}
   fi
 }
 
@@ -497,10 +473,9 @@ GetVersionInformation() {
     today=$(date +%Y%m%d)
 
     # was the last check today?
-    if [ "${today}" != "${last_check}" ]; then # no, it wasn't today
-      # Remove the Pi-hole version file...
-      rm -f piHoleVersion
-    fi
+    # No, because: last_check is referenced but not assigned. [SC2154] - removed.
+    # Remove the Pi-hole version file...
+    rm -f piHoleVersion
 
   else # the file doesn't exist, create it...
     # Gather core version information...
@@ -654,11 +629,14 @@ ceol=$(tput el)
 # wrapper - echo with a clear eol afterwards to wipe any artifacts remaining from last print
 CleanEcho() {
   echo -e "${ceol}$1"
+  #echo -e "$1" "${ceol}"
 }
 
 # wrapper - printf
 CleanPrintf() {
 # tput el
+# don't know how to fix this!?
+# shellcheck disable=SC2059
   printf "$@"
 }
 
@@ -852,6 +830,7 @@ PrintSystemInformation() {
     CleanEcho " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
     echo -ne "${ceol} Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
   elif [ "$1" = "mini" ]; then
+
     CleanEcho "${bold_text}SYSTEM =================================${reset_text}"
     CleanPrintf " %-9s%-29s\\n" "Uptime:" "${system_uptime}"
     CleanEcho " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
@@ -1054,7 +1033,7 @@ json_extract() {
     local pair_regex="\"${key}\"[[:space:]]*:[[:space:]]*(${value_regex})"
 
     if [[ ${json} =~ ${pair_regex} ]]; then
-        echo $(sed 's/^"\|"$//g' <<< "${BASH_REMATCH[1]}")
+        echo "${BASH_REMATCH[1]//^"\|"$/}"
     else
         return 1
     fi
