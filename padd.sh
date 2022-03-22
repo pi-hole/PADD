@@ -361,9 +361,17 @@ GetNetworkInformation() {
     dhcp_check_box=${check_box_good}
 
     # Is DHCP handling IPv6?
-    dhcp_ipv6_status="Disabled"
-    dhcp_ipv6_heatmap=${red_text}
-    dhcp_ipv6_check_box=${check_box_bad}
+    # DHCP_IPv6 is set in setupVars.conf
+    # shellcheck disable=SC2154
+    if [[ "${DHCP_IPv6}" == "true" ]]; then
+      dhcp_ipv6_status="Enabled"
+      dhcp_ipv6_heatmap=${green_text}
+      dhcp_ipv6_check_box=${check_box_good}
+    else
+      dhcp_ipv6_status="Disabled"
+      dhcp_ipv6_heatmap=${red_text}
+      dhcp_ipv6_check_box=${check_box_bad}
+    fi
   else
     dhcp_status="Disabled"
     dhcp_heatmap=${red_text}
@@ -472,9 +480,12 @@ GetVersionInformation() {
     today=$(date +%Y%m%d)
 
     # was the last check today?
-    # No, because: last_check is referenced but not assigned. [SC2154] - removed.
-    # Remove the Pi-hole version file...
-    rm -f piHoleVersion
+    # last_check is read from ./piHoleVersion
+    # shellcheck disable=SC2154
+    if [ "${today}" != "${last_check}" ]; then # no, it wasn't today
+      # Remove the Pi-hole version file...
+      rm -f piHoleVersion
+    fi
 
   else # the file doesn't exist, create it...
     # Gather core version information...
@@ -628,13 +639,13 @@ ceol=$(tput el)
 # wrapper - echo with a clear eol afterwards to wipe any artifacts remaining from last print
 CleanEcho() {
   echo -e "${ceol}$1"
-  #echo -e "$1" "${ceol}"
 }
 
 # wrapper - printf
 CleanPrintf() {
 # tput el
 # don't know how to fix this!?
+# this doesn't work and screws up everything: printf "%s" "$@"
 # shellcheck disable=SC2059
   printf "$@"
 }
