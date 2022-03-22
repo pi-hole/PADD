@@ -109,7 +109,6 @@ padd_logo_retro_1="${bold_text} ${yellow_text}_${green_text}_      ${blue_text}_
 padd_logo_retro_2="${bold_text}${yellow_text}|${green_text}_${blue_text}_${cyan_text}) ${red_text}/${yellow_text}\\ ${blue_text}|  ${red_text}\\${yellow_text}|  ${cyan_text}\\  ${reset_text}"
 padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${green_text}-${blue_text}\\${cyan_text}|${magenta_text}_${red_text}_${yellow_text}/${green_text}|${blue_text}_${cyan_text}_${magenta_text}/  ${reset_text}"
 
-# old script Pi-hole logos - regular and retro - removed due to shellcheck SC2034: it appears unused.
 
 ############################################# GETTERS ##############################################
 
@@ -144,6 +143,7 @@ GetFTLData() {
 
 GetSummaryInformation() {
   local summary
+  local cache_info
   summary=$(GetFTLData "stats")
   cache_info=$(GetFTLData "cacheinfo")
 
@@ -361,7 +361,6 @@ GetNetworkInformation() {
     dhcp_check_box=${check_box_good}
 
     # Is DHCP handling IPv6?
-    # No, because: DHCP_IPv6 is referenced but not assigned. [SC2154] - removed.
     dhcp_ipv6_status="Disabled"
     dhcp_ipv6_heatmap=${red_text}
     dhcp_ipv6_check_box=${check_box_bad}
@@ -830,7 +829,6 @@ PrintSystemInformation() {
     CleanEcho " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
     echo -ne "${ceol} Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
   elif [ "$1" = "mini" ]; then
-
     CleanEcho "${bold_text}SYSTEM =================================${reset_text}"
     CleanPrintf " %-9s%-29s\\n" "Uptime:" "${system_uptime}"
     CleanEcho " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
