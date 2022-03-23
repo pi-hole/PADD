@@ -644,8 +644,7 @@ CleanEcho() {
 # wrapper - printf
 CleanPrintf() {
 # tput el
-# don't know how to fix this!?
-# this doesn't work and screws up everything: printf "%s" "$@"
+# disabling shellcheck here because we pass formatting instructions within `"${@}"`
 # shellcheck disable=SC2059
   printf "$@"
 }
