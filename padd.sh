@@ -1041,7 +1041,8 @@ json_extract() {
     local pair_regex="\"${key}\"[[:space:]]*:[[:space:]]*(${value_regex})"
 
     if [[ ${json} =~ ${pair_regex} ]]; then
-        echo "${BASH_REMATCH[1]//^"\|"$/}"
+        # remove leading and trailing quotes
+        sed -e 's/^"//' -e 's/"$//' <<<"${BASH_REMATCH[1]}"
     else
         return 1
     fi
