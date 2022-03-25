@@ -11,10 +11,14 @@
 LC_ALL=C
 LC_NUMERIC=C
 
-# cd to the directory this script is stored in
-cd "$(dirname "$0")" || {
+# get the local temp directory
+# credits to https://unix.stackexchange.com/a/174818
+tmpdir=$(dirname "$(mktemp -u)")
+
+# cd into the temp directory
+cd "$tmpdir" || {
     EC=$?
-    echo >&2 "Could not chdir to the directory containing padd.sh (exit code $EC)"
+    echo >&2 "Could not chdir to the temp directory (exit code $EC)"
     exit $EC
 }
 
