@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2034
 # shellcheck disable=SC1091
-# shellcheck disable=SC2154
 
 # PADD
-#
 # A more advanced version of the chronometer provided with Pihole
 
 # SETS LOCALE
@@ -14,10 +11,17 @@
 LC_ALL=C
 LC_NUMERIC=C
 
+# cd to the directory this script is stored in
+cd "$(dirname "$0")" || {
+    EC=$?
+    echo >&2 "Could not chdir to the directory containing padd.sh (exit code $EC)"
+    exit $EC
+}
+
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.6.6"
+padd_version="v3.6.7"
 
 # DATE
 today=$(date +%Y%m%d)
@@ -26,21 +30,23 @@ today=$(date +%Y%m%d)
 declare -i core_count=1
 core_count=$(cat /sys/devices/system/cpu/kernel_max 2> /dev/null)+1
 
+# Get Config variables
+. /etc/pihole/setupVars.conf
+
 # COLORS
-black_text=$(tput setaf 0)   # Black
-red_text=$(tput setaf 1)     # Red
-green_text=$(tput setaf 2)   # Green
-yellow_text=$(tput setaf 3)  # Yellow
-blue_text=$(tput setaf 4)    # Blue
-magenta_text=$(tput setaf 5) # Magenta
-cyan_text=$(tput setaf 6)    # Cyan
-white_text=$(tput setaf 7)   # White
-reset_text=$(tput sgr0)      # Reset to default color
+CSI="$(printf '\033')["
+red_text="${CSI}91m"     # Red
+green_text="${CSI}92m"   # Green
+yellow_text="${CSI}93m"  # Yellow
+blue_text="${CSI}94m"    # Blue
+magenta_text="${CSI}95m" # Magenta
+cyan_text="${CSI}96m"    # Cyan
+reset_text="${CSI}0m"    # Reset to default
 
 # STYLES
-bold_text=$(tput bold)
-blinking_text=$(tput blink)
-dim_text=$(tput dim)
+bold_text="${CSI}1m"
+blinking_text="${CSI}5m"
+dim_text="${CSI}2m"
 
 # CHECK BOXES
 check_box_good="[${green_text}✓${reset_text}]"       # Good
@@ -87,7 +93,6 @@ mega_status_unknown="${check_box_question} Unable to determine Pi-hole status."
 # TINY STATUS
 tiny_status_ok="${check_box_good} System is healthy."
 tiny_status_update="${check_box_info} Updates are available."
-tiny_status_hot="${check_box_bad} System is hot!"
 tiny_status_off="${check_box_bad} Pi-hole is offline"
 tiny_status_ftl_down="${check_box_info} FTL is down!"
 tiny_status_dns_down="${check_box_bad} DNS is off!"
@@ -95,8 +100,6 @@ tiny_status_unknown="${check_box_question} Status unknown!"
 
 # Text only "logos"
 padd_text="${green_text}${bold_text}PADD${reset_text}"
-padd_text_retro="${bold_text}${red_text}P${yellow_text}A${green_text}D${blue_text}D${reset_text}${reset_text}"
-mini_text_retro="${dim_text}${cyan_text}m${magenta_text}i${red_text}n${yellow_text}i${reset_text}"
 
 # PADD logos - regular and retro
 padd_logo_1="${bold_text}${green_text} __      __  __   ${reset_text}"
@@ -106,13 +109,6 @@ padd_logo_retro_1="${bold_text} ${yellow_text}_${green_text}_      ${blue_text}_
 padd_logo_retro_2="${bold_text}${yellow_text}|${green_text}_${blue_text}_${cyan_text}) ${red_text}/${yellow_text}\\ ${blue_text}|  ${red_text}\\${yellow_text}|  ${cyan_text}\\  ${reset_text}"
 padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${green_text}-${blue_text}\\${cyan_text}|${magenta_text}_${red_text}_${yellow_text}/${green_text}|${blue_text}_${cyan_text}_${magenta_text}/  ${reset_text}"
 
-# old script Pi-hole logos - regular and retro
-pihole_logo_script_1="${bold_text}${green_text}.-..   .      .      ${reset_text}"
-pihole_logo_script_2="${bold_text}${green_text}|-'. - |-. .-.| .-,  ${reset_text}"
-pihole_logo_script_3="${bold_text}${green_text}'  '   ' '-\`-''-\`'-  ${reset_text}"
-pihole_logo_script_retro_1="${red_text}.${yellow_text}-${green_text}.${blue_text}.   ${green_text}.      ${magenta_text}.      ${reset_text}"
-pihole_logo_script_retro_2="${yellow_text}|${green_text}-${blue_text}'${magenta_text}. ${yellow_text}- ${blue_text}|${magenta_text}-${red_text}. ${green_text}.${blue_text}-${magenta_text}.${red_text}| ${green_text}.${blue_text}-${magenta_text},  ${reset_text}"
-pihole_logo_script_retro_3="${green_text}'  ${red_text}'   ${magenta_text}' ${yellow_text}'${green_text}-${blue_text}\`${magenta_text}-${red_text}'${yellow_text}'${green_text}-${blue_text}\`${magenta_text}'${red_text}-  ${reset_text}"
 
 ############################################# GETTERS ##############################################
 
@@ -147,7 +143,7 @@ GetFTLData() {
 
 GetSummaryInformation() {
   local summary
-  local cache_summary
+  local cache_info
   summary=$(GetFTLData "stats")
   cache_info=$(GetFTLData "cacheinfo")
 
@@ -319,7 +315,7 @@ GetNetworkInformation() {
 
   full_hostname=${pi_hostname}
   # does the Pi-hole have a domain set?
-  if ! [ -z ${PIHOLE_DOMAIN+x} ]; then
+  if [ -n "${PIHOLE_DOMAIN+x}" ]; then
     # is Pi-hole acting as DHCP server?
     if [[ "${DHCP_ACTIVE}" == "true" ]]; then
       count=${pi_hostname}"."${PIHOLE_DOMAIN}
@@ -365,6 +361,8 @@ GetNetworkInformation() {
     dhcp_check_box=${check_box_good}
 
     # Is DHCP handling IPv6?
+    # DHCP_IPv6 is set in setupVars.conf
+    # shellcheck disable=SC2154
     if [[ "${DHCP_IPv6}" == "true" ]]; then
       dhcp_ipv6_status="Enabled"
       dhcp_ipv6_heatmap=${green_text}
@@ -398,22 +396,18 @@ GetNetworkInformation() {
   if [[ "${DNSSEC}" == "true" ]]; then
     dnssec_status="Enabled"
     dnssec_heatmap=${green_text}
-    dnssec_check_box=${check_box_good}
   else
     dnssec_status="Disabled"
     dnssec_heatmap=${red_text}
-    dnssec_check_box=${check_box_bad}
   fi
 
   # Conditional forwarding
   if [[ "${CONDITIONAL_FORWARDING}" == "true" ]] || [[ "${REV_SERVER}" == "true" ]]; then
     conditional_forwarding_status="Enabled"
     conditional_forwarding_heatmap=${green_text}
-    conditional_forwarding_check_box=${check_box_good}
   else
     conditional_forwarding_status="Disabled"
     conditional_forwarding_heatmap=${red_text}
-    conditional_forwarding_check_box=${check_box_bad}
   fi
 }
 
@@ -486,6 +480,8 @@ GetVersionInformation() {
     today=$(date +%Y%m%d)
 
     # was the last check today?
+    # last_check is read from ./piHoleVersion
+    # shellcheck disable=SC2154
     if [ "${today}" != "${last_check}" ]; then # no, it wasn't today
       # Remove the Pi-hole version file...
       rm -f piHoleVersion
@@ -511,20 +507,27 @@ GetVersionInformation() {
     fi
 
     # Gather web version information...
-    read -r -a web_versions <<< "$(pihole -v -a)"
-    web_version=$(echo "${web_versions[3]}" | tr -d '\r\n[:alpha:]')
-    web_version_latest=${web_versions[5]//)}
-    if [[ "${web_version_latest}" == "ERROR" ]]; then
-      web_version_heatmap=${yellow_text}
-    else
-      web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
-      # is web up-to-date?
-      if [[ "${web_version}" != "${web_version_latest}" ]]; then
-        out_of_date_flag="true"
-        web_version_heatmap=${red_text}
+    if [[ "$INSTALL_WEB_INTERFACE" = true ]]; then
+      read -r -a web_versions <<< "$(pihole -v -a)"
+      web_version=$(echo "${web_versions[3]}" | tr -d '\r\n[:alpha:]')
+      web_version_latest=${web_versions[5]//)}
+      if [[ "${web_version_latest}" == "ERROR" ]]; then
+        web_version_heatmap=${yellow_text}
       else
-        web_version_heatmap=${green_text}
+        web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
+        # is web up-to-date?
+        if [[ "${web_version}" != "${web_version_latest}" ]]; then
+          out_of_date_flag="true"
+          web_version_heatmap=${red_text}
+        else
+          web_version_heatmap=${green_text}
+        fi
       fi
+    else
+      # Web interface not installed
+      web_version_heatmap=${red_text}
+      web_version="$(printf '\x08')"  # Hex 0x08 is for backspace, to delete the leading 'v'
+      web_version="${web_version}N/A" # N/A = Not Available
     fi
 
     # Gather FTL version information...
@@ -641,6 +644,8 @@ CleanEcho() {
 # wrapper - printf
 CleanPrintf() {
 # tput el
+# disabling shellcheck here because we pass formatting instructions within `"${@}"`
+# shellcheck disable=SC2059
   printf "$@"
 }
 
@@ -1036,7 +1041,8 @@ json_extract() {
     local pair_regex="\"${key}\"[[:space:]]*:[[:space:]]*(${value_regex})"
 
     if [[ ${json} =~ ${pair_regex} ]]; then
-        echo $(sed 's/^"\|"$//g' <<< "${BASH_REMATCH[1]}")
+        # remove leading and trailing quotes
+        sed -e 's/^"//' -e 's/"$//' <<<"${BASH_REMATCH[1]}"
     else
         return 1
     fi
@@ -1181,9 +1187,6 @@ NormalPADD() {
     # Sizing Checks
     SizeChecker
 
-    # Get Config variables
-    . /etc/pihole/setupVars.conf
-
     # Move the cursor to top left of console to redraw
     tput cup 0 0
 
@@ -1236,10 +1239,6 @@ if [[ $# = 0 ]]; then
 
   console_width=$(tput cols)
   console_height=$(tput lines)
-
-  # Get Our Config Values
-  # shellcheck disable=SC1091
-  . /etc/pihole/setupVars.conf
 
   SizeChecker
 
