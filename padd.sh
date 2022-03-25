@@ -149,6 +149,8 @@ GetSummaryInformation() {
 
   clients=$(grep "unique_clients" <<< "${summary}" | grep -Eo "[0-9]+$")
 
+  blocking_status=$(grep "status" <<< "${summary}" | grep -Eo "enabled|disabled|unknown")
+
   domains_being_blocked_raw=$(grep "domains_being_blocked" <<< "${summary}" | grep -Eo "[0-9]+$")
   domains_being_blocked=$(printf "%'.f" "${domains_being_blocked_raw}")
 
@@ -412,42 +414,6 @@ GetNetworkInformation() {
 }
 
 GetPiholeInformation() {
-  # Get Pi-hole status
-  pihole_web_status=$(pihole status web)
-
-  if [[ ${pihole_web_status} -ge 1 ]]; then
-    pihole_status="Active"
-    pihole_heatmap=${green_text}
-    pihole_check_box=${check_box_good}
-  elif [[ ${pihole_web_status} == 0 ]]; then
-    pihole_status="Offline"
-    pihole_heatmap=${red_text}
-    pihole_check_box=${check_box_bad}
-    pico_status=${pico_status_off}
-    mini_status_=${mini_status_off}
-    tiny_status_=${tiny_status_off}
-    full_status_=${full_status_off}
-    mega_status=${mega_status_off}
-  elif [[ ${pihole_web_status} == -1 ]]; then
-    pihole_status="DNS Offline"
-    pihole_heatmap=${red_text}
-    pihole_check_box=${check_box_bad}
-    pico_status=${pico_status_dns_down}
-    mini_status_=${mini_status_dns_down}
-    tiny_status_=${tiny_status_dns_down}
-    full_status_=${full_status_dns_down}
-    mega_status=${mega_status_dns_down}
-  else
-    pihole_status="Unknown"
-    pihole_heatmap=${yellow_text}
-    pihole_check_box=${check_box_question}
-    pico_status=${pico_status_unknown}
-    mini_status_=${mini_status_unknown}
-    tiny_status_=${tiny_status_unknown}
-    full_status_=${full_status_unknown}
-    mega_status=${mega_status_unknown}
-  fi
-
   # Get FTL status
   ftlPID=$(pidof pihole-FTL)
 
@@ -467,6 +433,48 @@ GetPiholeInformation() {
     ftl_cpu="$(ps -p "${ftlPID}" -o %cpu | tail -n1 | tr -d '[:space:]')"
     ftl_mem_percentage="$(ps -p "${ftlPID}" -o %mem | tail -n1 | tr -d '[:space:]')"
   fi
+
+  # Get Pi-hole (blocking) status
+  ftl_dns_port=$(GetFTLData "dns-port")
+
+  # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled, ${ftl_status} == "Not running" no ftlPID found
+  if [[ ${ftl_dns_port} == 0 ]] || [[ ${ftl_status} == "Not running" ]]; then
+    pihole_status="DNS Offline"
+    pihole_heatmap=${red_text}
+    pihole_check_box=${check_box_bad}
+    pico_status=${pico_status_dns_down}
+    mini_status_=${mini_status_dns_down}
+    tiny_status_=${tiny_status_dns_down}
+    full_status_=${full_status_dns_down}
+    mega_status=${mega_status_dns_down}
+  else
+    if [[ ${blocking_status} == "enabled" ]]; then
+      pihole_status="Active"
+      pihole_heatmap=${green_text}
+      pihole_check_box=${check_box_good}
+    fi
+    if [[ ${blocking_status} == "disabled" ]]; then
+      pihole_status="Blocking disabled"
+      pihole_heatmap=${red_text}
+      pihole_check_box=${check_box_bad}
+      pico_status=${pico_status_off}
+      mini_status_=${mini_status_off}
+      tiny_status_=${tiny_status_off}
+      full_status_=${full_status_off}
+      mega_status=${mega_status_off}
+    fi
+    if [[ ${blocking_status} == "unknown" ]]; then
+      pihole_status="Unknown"
+      pihole_heatmap=${yellow_text}
+      pihole_check_box=${check_box_question}
+      pico_status=${pico_status_unknown}
+      mini_status_=${mini_status_unknown}
+      tiny_status_=${tiny_status_unknown}
+      full_status_=${full_status_unknown}
+      mega_status=${mega_status_unknown}
+    fi
+  fi
+
 }
 
 GetVersionInformation() {
@@ -1206,9 +1214,9 @@ NormalPADD() {
 
     # Start getting our information
     GetVersionInformation ${padd_size}
+    GetSummaryInformation ${padd_size}
     GetPiholeInformation ${padd_size}
     GetNetworkInformation ${padd_size}
-    GetSummaryInformation ${padd_size}
     GetSystemInformation ${padd_size}
 
     # Sleep for 5 seconds
