@@ -15,8 +15,9 @@ LC_NUMERIC=C
 # credits to https://unix.stackexchange.com/a/174818
 tmpdir=$(dirname "$(mktemp -u)")
 
-# cd into the temp directory
-cd "$tmpdir" || {
+mkdir -p "$tmpdir/PADD/"
+# cd into the /temp/PADD/ directory
+cd "$tmpdir/padd/" || {
     EC=$?
     echo >&2 "Could not chdir to the temp directory (exit code $EC)"
     exit $EC
