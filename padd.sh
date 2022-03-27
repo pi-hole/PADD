@@ -11,11 +11,12 @@
 LC_ALL=C
 LC_NUMERIC=C
 
-# creates a new local temp directory
-tmpdir=$(mktemp -d --tmpdir padd.XXX)
+# creates a new local temp directory /tmp/padd_uid
+tmpdir=$(dirname "$(mktemp -u)")
+mkdir -p "$tmpdir/padd_$(id -u)/"
 
-# cd into the newly created /tmp/padd.XXX/ directory
-cd "$tmpdir" || {
+# change into the newly created directory
+pushd "$tmpdir/padd_$(id -u)/" > /dev/null || {
     EC=$?
     echo >&2 "Could not chdir to the temp directory (exit code $EC)"
     exit $EC
@@ -1025,6 +1026,7 @@ CheckConnectivity() {
 OutputJSON() {
   GetSummaryInformation
   echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw},\"clients\": ${clients}}"
+    popd > /dev/null || exit
 }
 
 StartupRoutine(){
@@ -1207,6 +1209,7 @@ if [ $# = 0 ]; then
   # Run PADD
   clear
   NormalPADD
+  popd > /dev/null || exit
 fi
 
 for var in "$@"; do
