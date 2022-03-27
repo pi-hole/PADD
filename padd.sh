@@ -478,16 +478,15 @@ GetVersionInformation() {
 
   else # the file doesn't exist, create it...
     # Gather core version information...
-    read -r -a core_versions <<< "$(pihole -v -p)"
-    core_version=$(echo "${core_versions[3]}" | tr -d '\r\n[:alpha:]')
-    core_version_latest=${core_versions[5]//)}
+    core_version=$(pihole -v -p | awk '{print $4}' | tr -d '[:alpha:]')
+    core_version_latest=$(pihole -v -p | awk '{print $6}' | tr -d ')')
 
     if [ "${core_version_latest}" = "ERROR" ]; then
       core_version_heatmap=${yellow_text}
     else
       core_version_latest=$(echo "${core_version_latest}" | tr -d '\r\n[:alpha:]')
       # is core up-to-date?
-      if [[ "${core_version}" != "${core_version_latest}" ]]; then
+      if [ "${core_version}" != "${core_version_latest}" ]; then
         out_of_date_flag="true"
         core_version_heatmap=${red_text}
       else
@@ -497,9 +496,8 @@ GetVersionInformation() {
 
     # Gather web version information...
     if [ "$INSTALL_WEB_INTERFACE" = true ]; then
-      read -r -a web_versions <<< "$(pihole -v -a)"
-      web_version=$(echo "${web_versions[3]}" | tr -d '\r\n[:alpha:]')
-      web_version_latest=${web_versions[5]//)}
+      web_version=$(pihole -v -a | awk '{print $4}' | tr -d '[:alpha:]')
+      web_version_latest=$(pihole -v -a | awk '{print $6}' | tr -d ')')
       if [ "${web_version_latest}" = "ERROR" ]; then
         web_version_heatmap=${yellow_text}
       else
@@ -520,10 +518,9 @@ GetVersionInformation() {
     fi
 
     # Gather FTL version information...
-    read -r -a ftl_versions <<< "$(pihole -v -f)"
-    ftl_version=$(echo "${ftl_versions[3]}" | tr -d '\r\n[:alpha:]')
-    ftl_version_latest=${ftl_versions[5]//)}
-    if [ "${ftl_version_latest}" == "ERROR" ]; then
+    ftl_version=$(pihole -v -f | awk '{print $4}' | tr -d '[:alpha:]')
+    ftl_version_latest=$(pihole -v -f | awk '{print $6}' | tr -d ')')
+    if [ "${ftl_version_latest}" = "ERROR" ]; then
       ftl_version_heatmap=${yellow_text}
     else
       ftl_version_latest=$(echo "${ftl_version_latest}" | tr -d '\r\n[:alpha:]')
@@ -537,8 +534,7 @@ GetVersionInformation() {
     fi
 
     # PADD version information...
-    padd_version_latest=$(json_extract tag_name "$(curl -s 'https://api.github.com/repos/pi-hole/PADD/releases/latest' 2> /dev/null)")
-
+    padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
     # is PADD up-to-date?
     if [ "${padd_version_latest}" = "" ]; then
       padd_version_heatmap=${yellow_text}
@@ -1019,24 +1015,6 @@ CheckConnectivity() {
   fi
 }
 
-# Credit: https://stackoverflow.com/a/46324904
-json_extract() {
-    key=$1
-    json=$2
-
-    string_regex='"([^"\]|\\.)*"'
-    number_regex='-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?'
-    value_regex="${string_regex}|${number_regex}|true|false|null"
-    pair_regex="\"${key}\"[[:space:]]*:[[:space:]]*(${value_regex})"
-
-    if [[ ${json} =~ ${pair_regex} ]]; then
-        # remove leading and trailing quotes
-        sed -e 's/^"//' -e 's/"$//' <<<"${BASH_REMATCH[1]}"
-    else
-        return 1
-    fi
-}
-
 ########################################## MAIN FUNCTIONS ##########################################
 
 OutputJSON() {
@@ -1222,7 +1200,7 @@ if [ $# = 0 ]; then
   # Turns off the cursor
   # (From Pull request #8 https://github.com/jpmck/PADD/pull/8)
   setterm -cursor off
-  trap "{ setterm -cursor on ; echo "" ; exit 0 ; }" SIGINT SIGTERM EXIT
+  trap "{ setterm -cursor on ; echo "" ; exit 0 ; }" INT TERM EXIT
 
   clear
 
