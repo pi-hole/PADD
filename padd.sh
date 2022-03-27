@@ -11,13 +11,11 @@
 LC_ALL=C
 LC_NUMERIC=C
 
-# get the local temp directory
-# credits to https://unix.stackexchange.com/a/174818
-tmpdir=$(dirname "$(mktemp -u)")
+# creates a new local temp directory
+tmpdir=$(mktemp -d --tmpdir padd.XXX)
 
-mkdir -p "$tmpdir/PADD/"
-# cd into the /temp/PADD/ directory
-cd "$tmpdir/padd/" || {
+# cd into the newly created /tmp/padd.XXX/ directory
+cd "$tmpdir" || {
     EC=$?
     echo >&2 "Could not chdir to the temp directory (exit code $EC)"
     exit $EC
