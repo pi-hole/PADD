@@ -33,6 +33,8 @@ core_count=$(cat /sys/devices/system/cpu/kernel_max 2> /dev/null)+1
 # Get Config variables
 . /etc/pihole/setupVars.conf
 
+piHoleVersion="./piHoleVersion"
+
 # COLORS
 CSI="$(printf '\033')["
 red_text="${CSI}91m"     # Red
@@ -131,16 +133,16 @@ GetSummaryInformation() {
   blocking_status=$(grep "status" <<< "${summary}" | grep -Eo "enabled|disabled|unknown")
 
   domains_being_blocked_raw=$(echo "${summary}" | grep "domains_being_blocked" | grep -Eo "[0-9]+$")
-  domains_being_blocked=$(printf "%'.f" "${domains_being_blocked_raw}")
+  domains_being_blocked=$(printf "%.f" "${domains_being_blocked_raw}")
 
   dns_queries_today_raw=$(echo "$summary" | grep "dns_queries_today" | grep -Eo "[0-9]+$")
-  dns_queries_today=$(printf "%'.f" "${dns_queries_today_raw}")
+  dns_queries_today=$(printf "%.f" "${dns_queries_today_raw}")
 
   ads_blocked_today_raw=$(echo "$summary" | grep "ads_blocked_today" | grep -Eo "[0-9]+$")
-  ads_blocked_today=$(printf "%'.f" "${ads_blocked_today_raw}")
+  ads_blocked_today=$(printf "%.f" "${ads_blocked_today_raw}")
 
   ads_percentage_today_raw=$(echo "$summary" | grep "ads_percentage_today" | grep -Eo "[0-9.]+$")
-  ads_percentage_today=$(printf "%'.1f" "${ads_percentage_today_raw}")
+  ads_percentage_today=$(printf "%.1f" "${ads_percentage_today_raw}")
 
   cache_size=$(echo "$cache_info" | grep "cache-size" | grep -Eo "[0-9.]+$")
   cache_deletes=$(echo "$cache_info" | grep "cache-live-freed" | grep -Eo "[0-9.]+$")
@@ -460,12 +462,12 @@ GetPiholeInformation() {
 
 GetVersionInformation() {
   # Check if version status has been saved
-  if [ -e "piHoleVersion" ]; then # the file exists...
+  if [ -f "$piHoleVersion" ]; then # the file exists...
     # the file exits, use it
     # shellcheck disable=SC1091
-    . piHoleVersion
+    . "$piHoleVersion"
 
-    # Today is...
+    # Today is
     today=$(date +%Y%m%d)
 
     # was the last check today?
@@ -473,7 +475,7 @@ GetVersionInformation() {
     # shellcheck disable=SC2154
     if [ "${today}" != "${last_check}" ]; then # no, it wasn't today
       # Remove the Pi-hole version file...
-      rm -f piHoleVersion
+      rm -f "$piHoleVersion"
     fi
 
   else # the file doesn't exist, create it...
@@ -583,7 +585,7 @@ GetVersionInformation() {
     fi
 
     # write it all to the file
-    echo "last_check=${today}" > ./piHoleVersion
+    echo "last_check=${today}" > "$piHoleVersion"
     {
       echo "core_version=$core_version"
       echo "core_version_latest=$core_version_latest"
@@ -610,7 +612,7 @@ GetVersionInformation() {
       echo "tiny_status_=\"$tiny_status_\""
       echo "full_status_=\"$full_status_\""
       echo "mega_status=\"$mega_status\""
-    } >> ./piHoleVersion
+    } >> "$piHoleVersion"
 
     # there's a file now
   fi
@@ -842,7 +844,7 @@ PrintSystemInformation() {
 
     # Temp and Loads
     CleanPrintf " %-10s${temp_heatmap}%-20s${reset_text}" "CPU Temp:" "${temperature}"
-    CleanPrintf " %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}\e[0K\\n" "CPU Load:" "${cpu_load_1}" "${cpu_load_5]}" "${cpu_load_15}"
+    CleanPrintf " %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}\e[0K\\n" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
 
     # Memory and CPU bar
     CleanPrintf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
@@ -1037,8 +1039,8 @@ StartupRoutine(){
 
     # Check for updates
     printf "%b" " [■■········]  20%\\r"
-    if [ -e "piHoleVersion" ]; then
-      rm -f piHoleVersion
+    if [ -f "$piHoleVersion" ]; then
+      rm -f "$piHoleVersion"
       printf "%b" " [■■■·······]  30%\\r"
     else
       printf "%b" " [■■■·······]  30%\\r"
@@ -1072,9 +1074,9 @@ StartupRoutine(){
 
     # Check for updates
     echo "- Checking for version file."
-    if [ -e "piHoleVersion" ]; then
+    if [ -f "$piHoleVersion" ]; then
       echo "  - Found and deleted."
-      rm -f piHoleVersion
+      rm -f "$piHoleVersion"
     else
       echo "  - Not found."
     fi
@@ -1112,9 +1114,9 @@ StartupRoutine(){
 
     # Check for updates
     echo "- Checking for PADD version file..."
-    if [ -e "piHoleVersion" ]; then
+    if [ -f "$piHoleVersion" ]; then
       echo "  - PADD version file found... deleting."
-      rm -f piHoleVersion
+      rm -f "$piHoleVersion"
     else
       echo "  - PADD version file not found."
     fi
