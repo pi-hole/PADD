@@ -33,7 +33,7 @@ core_count=$(cat /sys/devices/system/cpu/kernel_max 2> /dev/null)+1
 # Get Config variables
 . /etc/pihole/setupVars.conf
 
-piHoleVersion="./piHoleVersion"
+piHoleVersion_file="./piHoleVersion"
 
 # COLORS
 CSI="$(printf '\033')["
@@ -462,10 +462,10 @@ GetPiholeInformation() {
 
 GetVersionInformation() {
   # Check if version status has been saved
-  if [ -f "$piHoleVersion" ]; then # the file exists...
+  if [ -f "$piHoleVersion_file" ]; then # the file exists...
     # the file exits, use it
-    # shellcheck disable=SC1091
-    . "$piHoleVersion"
+    # shellcheck source=./piHoleVersion
+    . "$piHoleVersion_file"
 
     # Today is
     today=$(date +%Y%m%d)
@@ -475,7 +475,7 @@ GetVersionInformation() {
     # shellcheck disable=SC2154
     if [ "${today}" != "${last_check}" ]; then # no, it wasn't today
       # Remove the Pi-hole version file...
-      rm -f "$piHoleVersion"
+      rm -f "$piHoleVersion_file"
     fi
 
   else # the file doesn't exist, create it...
@@ -585,7 +585,7 @@ GetVersionInformation() {
     fi
 
     # write it all to the file
-    echo "last_check=${today}" > "$piHoleVersion"
+    echo "last_check=${today}" > "$piHoleVersion_file"
     {
       echo "core_version=$core_version"
       echo "core_version_latest=$core_version_latest"
@@ -612,7 +612,7 @@ GetVersionInformation() {
       echo "tiny_status_=\"$tiny_status_\""
       echo "full_status_=\"$full_status_\""
       echo "mega_status=\"$mega_status\""
-    } >> "$piHoleVersion"
+    } >> "$piHoleVersion_file"
 
     # there's a file now
   fi
@@ -925,7 +925,7 @@ SizeChecker(){
   if [ "$console_width" -lt "20" ] || [ "$console_height" -lt "10" ]; then
     # Nothing is this small, sorry
     clear
-    printf "%b" "${check_box_bad} Error!\\n    PADD isn't\\n    for ants!"
+    printf "%b" "${check_box_bad} Error!\\n    PADD isn't\\n    for ants!\n"
     exit 1
   # Below Nano. Gives you Pico.
   elif [ "$console_width" -lt "24" ] || [ "$console_height" -lt "12" ]; then
@@ -1027,10 +1027,10 @@ OutputJSON() {
 StartupRoutine(){
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     PrintLogo "$1"
-    printf "%b" "START-UP ==========="
-    printf "%b" "Checking connection."
+    printf "%b" "START-UP ===========\n"
+    printf "%b" "Checking connection.\n"
     CheckConnectivity "$1"
-    printf "%b" "Starting PADD..."
+    printf "%b" "Starting PADD...\n"
 
     # Get PID of PADD
     pid=$$
@@ -1039,8 +1039,8 @@ StartupRoutine(){
 
     # Check for updates
     printf "%b" " [■■········]  20%\\r"
-    if [ -f "$piHoleVersion" ]; then
-      rm -f "$piHoleVersion"
+    if [ -f "$piHoleVersion_file" ]; then
+      rm -f "$piHoleVersion_file"
       printf "%b" " [■■■·······]  30%\\r"
     else
       printf "%b" " [■■■·······]  30%\\r"
@@ -1074,9 +1074,9 @@ StartupRoutine(){
 
     # Check for updates
     echo "- Checking for version file."
-    if [ -f "$piHoleVersion" ]; then
+    if [ -f "$piHoleVersion_file" ]; then
       echo "  - Found and deleted."
-      rm -f "$piHoleVersion"
+      rm -f "$piHoleVersion_file"
     else
       echo "  - Not found."
     fi
@@ -1095,16 +1095,16 @@ StartupRoutine(){
     echo "  - $version_status"
 
   else
-    printf "%b" "${padd_logo_retro_1}\\n"
-    printf "%b" "${padd_logo_retro_2}Pi-hole® Ad Detection Display\\n"
-    printf "%b" "${padd_logo_retro_3}A client for Pi-hole\\n"
+    printf "%b" "${padd_logo_retro_1}\n"
+    printf "%b" "${padd_logo_retro_2}Pi-hole® Ad Detection Display\n"
+    printf "%b" "${padd_logo_retro_3}A client for Pi-hole\n\n"
     if [ "$1" = "tiny" ]; then
       echo "START UP ============================================"
     else
       echo "START UP ==================================================="
     fi
 
-    printf "%b" "- Checking internet connection..."
+    printf "%b" "- Checking internet connection...\n"
     CheckConnectivity "$1"
 
     # Get PID of PADD
@@ -1114,9 +1114,9 @@ StartupRoutine(){
 
     # Check for updates
     echo "- Checking for PADD version file..."
-    if [ -f "$piHoleVersion" ]; then
+    if [ -f "$piHoleVersion_file" ]; then
       echo "  - PADD version file found... deleting."
-      rm -f "$piHoleVersion"
+      rm -f "$piHoleVersion_file"
     else
       echo "  - PADD version file not found."
     fi
