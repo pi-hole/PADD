@@ -130,8 +130,8 @@ GetSummaryInformation() {
 
   clients=$(echo "${summary}" | grep "unique_clients" | grep -Eo "[0-9]+$")
 
-  blocking_status=$(grep "status" <<< "${summary}" | grep -Eo "enabled|disabled|unknown")
-
+  blocking_status=$(echo "${summary}" | grep "status" | grep -Eo "enabled|disabled|unknown" )
+  
   domains_being_blocked_raw=$(echo "${summary}" | grep "domains_being_blocked" | grep -Eo "[0-9]+$")
   domains_being_blocked=$(printf "%.f" "${domains_being_blocked_raw}")
 
@@ -421,7 +421,7 @@ GetPiholeInformation() {
   ftl_dns_port=$(GetFTLData "dns-port")
 
   # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled, ${ftl_status} == "Not running" no ftlPID found
-  if [[ ${ftl_dns_port} == 0 ]] || [[ ${ftl_status} == "Not running" ]]; then
+  if [ "${ftl_dns_port}" = 0 ] || [ "${ftl_status}" = "Not running" ]; then
     pihole_status="DNS Offline"
     pihole_heatmap=${red_text}
     pihole_check_box=${check_box_bad}
@@ -431,12 +431,12 @@ GetPiholeInformation() {
     full_status_=${full_status_dns_down}
     mega_status=${mega_status_dns_down}
   else
-    if [[ ${blocking_status} == "enabled" ]]; then
+    if [ "${blocking_status}" = "enabled" ]; then
       pihole_status="Active"
       pihole_heatmap=${green_text}
       pihole_check_box=${check_box_good}
     fi
-    if [[ ${blocking_status} == "disabled" ]]; then
+    if [ "${blocking_status}" = "disabled" ]; then
       pihole_status="Blocking disabled"
       pihole_heatmap=${red_text}
       pihole_check_box=${check_box_bad}
@@ -446,7 +446,7 @@ GetPiholeInformation() {
       full_status_=${full_status_off}
       mega_status=${mega_status_off}
     fi
-    if [[ ${blocking_status} == "unknown" ]]; then
+    if [ "${blocking_status}" = "unknown" ]; then
       pihole_status="Unknown"
       pihole_heatmap=${yellow_text}
       pihole_check_box=${check_box_question}
