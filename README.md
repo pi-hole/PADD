@@ -65,5 +65,3 @@ If you're running Pi-hole in the official Docker Container, `padd.sh` is pre-ins
 ```bash
 docker exec -it <container_name> padd [padd_options]
 ```
-## FAQ
-*Answers to frequently asked questions can be found in this repo’s [wiki](https://github.com/pi-hole/PADD/wiki/FAQ).*
