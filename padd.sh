@@ -16,7 +16,8 @@ tmpdir=$(dirname "$(mktemp -u)")
 mkdir -p "$tmpdir/padd_$(id -u)/"
 
 # change into the newly created directory
-pushd "$tmpdir/padd_$(id -u)/" > /dev/null || {
+oldpath=$(pwd)
+cd "$tmpdir/padd_$(id -u)/" > /dev/null || {
     EC=$?
     echo >&2 "Could not chdir to the temp directory (exit code $EC)"
     exit $EC
@@ -1026,7 +1027,7 @@ CheckConnectivity() {
 OutputJSON() {
   GetSummaryInformation
   echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw},\"clients\": ${clients}}"
-    popd > /dev/null || exit
+  cd "$oldpath" > /dev/null || exit
 }
 
 StartupRoutine(){
@@ -1037,7 +1038,7 @@ StartupRoutine(){
     CheckConnectivity "$1"
     printf "%b" "Starting PADD...\n"
 
-    echo -ne " [■·········]  10%\\r"
+    printf "%b" " [■·········]  10%\\r"
 
     # Check for updates
     printf "%b" " [■■········]  20%\\r"
@@ -1209,7 +1210,7 @@ if [ $# = 0 ]; then
   # Run PADD
   clear
   NormalPADD
-  popd > /dev/null || exit
+  cd "$oldpath" > /dev/null || exit
 fi
 
 for var in "$@"; do
