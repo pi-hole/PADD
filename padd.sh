@@ -26,7 +26,7 @@ cd "$tmpdir/padd_$(id -u)/" > /dev/null || {
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.7.0"
+padd_version="v3.7.1"
 
 # DATE
 today=$(date +%Y%m%d)
