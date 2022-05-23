@@ -1,4 +1,4 @@
-#!/usr/bin/sh
+#!/bin/sh
 # shellcheck disable=SC1091
 
 # PADD
