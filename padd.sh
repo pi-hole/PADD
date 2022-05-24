@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/env sh
 # shellcheck disable=SC1091
 
 # PADD
