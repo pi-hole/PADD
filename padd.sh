@@ -713,7 +713,7 @@ PrintNetworkInformation() {
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
     CleanEcho "${bold_text}NETWORK ===================================================${reset_text}"
     CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "Hostname:" "${full_hostname}" "IP:" "${pi_ip4_addr}"
-    CleanPrintf " %-6s%-19s\e[0K\\n" "IPv6:" "${pi_ip6_addr}"
+    CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "IPv6:" "${pi_ip6_addr}"
     CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
 
     if [ "${DHCP_ACTIVE}" = "true" ]; then
