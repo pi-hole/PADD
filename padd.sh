@@ -32,8 +32,7 @@ padd_version="v3.7.1"
 today=$(date +%Y%m%d)
 
 # CORES
-core_count=1
-core_count=$(cat /sys/devices/system/cpu/kernel_max 2> /dev/null)+1
+core_count=$(nproc --all 2> /dev/null)
 
 # Get Config variables
 . /etc/pihole/setupVars.conf
