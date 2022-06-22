@@ -485,11 +485,14 @@ GetVersionInformation() {
   else # the file doesn't exist, create it...
     # Gather core version information...
     core_version=$(pihole -v -p | awk '{print $4}' | tr -d '[:alpha:]')
-    core_version_latest=$(pihole -v -p | awk '{print $6}' | tr -d ')')
+    core_version_latest=$(pihole -v -p | awk '{print $(NF)}' | tr -d ')')
 
-    if [ "${core_version_latest}" = "ERROR" ]; then
+    # if core_version is something else then x.xx set it to N/A
+    if ! echo "${core_version}" | grep -qE '^[0-9]+([.][0-9]+)?$' || [ "${core_version_latest}" = "ERROR" ]; then
+      core_version="N/A"
       core_version_heatmap=${yellow_text}
     else
+      # remove the leading "v" from core_version_latest
       core_version_latest=$(echo "${core_version_latest}" | tr -d '\r\n[:alpha:]')
       # is core up-to-date?
       if [ "${core_version}" != "${core_version_latest}" ]; then
@@ -498,15 +501,21 @@ GetVersionInformation() {
       else
         core_version_heatmap=${green_text}
       fi
+      # add leading "v" to version number
+      core_version="v${core_version}"
     fi
 
     # Gather web version information...
     if [ "$INSTALL_WEB_INTERFACE" = true ]; then
       web_version=$(pihole -v -a | awk '{print $4}' | tr -d '[:alpha:]')
-      web_version_latest=$(pihole -v -a | awk '{print $6}' | tr -d ')')
-      if [ "${web_version_latest}" = "ERROR" ]; then
+      web_version_latest=$(pihole -v -a | awk '{print $(NF)}' | tr -d ')')
+    
+      # if web_version is something else then x.xx set it to N/A
+      if ! echo "${web_version}" | grep -qE '^[0-9]+([.][0-9]+)?$' || [ "${web_version_latest}" = "ERROR" ]; then
+        web_version="N/A"
         web_version_heatmap=${yellow_text}
       else
+        # remove the leading "v" from web_version_latest
         web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
         # is web up-to-date?
         if [ "${web_version}" != "${web_version_latest}" ]; then
@@ -515,20 +524,25 @@ GetVersionInformation() {
         else
           web_version_heatmap=${green_text}
         fi
+        # add leading "v" to version number
+        web_version="v${web_version}"
       fi
     else
       # Web interface not installed
-      web_version_heatmap=${red_text}
-      web_version="$(printf '\x08')"  # Hex 0x08 is for backspace, to delete the leading 'v'
-      web_version="${web_version}N/A" # N/A = Not Available
+      web_version="N/A"
+      web_version_heatmap=${yellow_text}
     fi
 
     # Gather FTL version information...
     ftl_version=$(pihole -v -f | awk '{print $4}' | tr -d '[:alpha:]')
-    ftl_version_latest=$(pihole -v -f | awk '{print $6}' | tr -d ')')
-    if [ "${ftl_version_latest}" = "ERROR" ]; then
+    ftl_version_latest=$(pihole -v -f | awk '{print $(NF)}' | tr -d ')')
+   
+    # if ftl_version is something else then x.xx set it to N/A
+    if ! echo "${ftl_version}" | grep -qE '^[0-9]+([.][0-9]+)?$' || [ "${ftl_version_latest}" = "ERROR" ]; then
+      ftl_version="N/A"
       ftl_version_heatmap=${yellow_text}
     else
+      # remove the leading "v" from ftl_version_latest
       ftl_version_latest=$(echo "${ftl_version_latest}" | tr -d '\r\n[:alpha:]')
       # is ftl up-to-date?
       if [ "${ftl_version}" != "${ftl_version_latest}" ]; then
@@ -537,6 +551,8 @@ GetVersionInformation() {
       else
         ftl_version_heatmap=${green_text}
       fi
+    # add leading "v" to version number
+    ftl_version="v${ftl_version}"
     fi
 
     # PADD version information...
@@ -653,7 +669,7 @@ PrintLogo() {
     CleanEcho "${padd_text}${dim_text}mini${reset_text}  ${mini_status_}"
     CleanEcho ""
   elif [ "$1" = "tiny" ]; then
-    CleanEcho "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}"
+    CleanEcho "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
     CleanPrintf "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status_}${reset_text}\e[0K\\n"
   elif [ "$1" = "slim" ]; then
     CleanEcho "${padd_text}${dim_text}slim${reset_text}   ${full_status_}"
@@ -661,13 +677,13 @@ PrintLogo() {
   # For the next two, use printf to make sure spaces aren't collapsed
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
     CleanPrintf "${padd_logo_1}\e[0K\\n"
-    CleanPrintf "${padd_logo_2}Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_2}Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}\e[0K\\n"
     CleanPrintf "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status_}${reset_text}\e[0K\\n"
     CleanEcho ""
   # normal or not defined
   else
     CleanPrintf "${padd_logo_retro_1}\e[0K\\n"
-    CleanPrintf "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}\e[0K\\n"
     CleanPrintf "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}\e[0K\\n"
 
     CleanEcho ""
@@ -1088,8 +1104,8 @@ StartupRoutine(){
     GetNetworkInformation "mini"
     echo "- Gathering version info."
     GetVersionInformation "mini"
-    echo "  - Core v$core_version, Web v$web_version"
-    echo "  - FTL v$ftl_version, PADD $padd_version"
+    echo "  - Core $core_version, Web $web_version"
+    echo "  - FTL $ftl_version, PADD $padd_version"
     echo "  - $version_status"
 
   else
@@ -1124,9 +1140,9 @@ StartupRoutine(){
     GetNetworkInformation "$1"
     echo "- Gathering version information..."
     GetVersionInformation "$1"
-    echo "  - Pi-hole Core v$core_version"
-    echo "  - Web Admin v$web_version"
-    echo "  - FTL v$ftl_version"
+    echo "  - Pi-hole Core $core_version"
+    echo "  - Web Admin $web_version"
+    echo "  - FTL $ftl_version"
     echo "  - PADD $padd_version"
     echo "  - $version_status"
   fi
