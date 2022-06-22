@@ -269,6 +269,13 @@ GetSystemInformation() {
     cpu_bar=$(BarGenerator "${cpu_percent}" 10)
     memory_bar=$(BarGenerator "${memory_percent}" 10)
   fi
+
+  # Device model
+  if [ -f /sys/firmware/devicetree/base/model ]; then
+    sys_model=$(cat /sys/firmware/devicetree/base/model)
+  else
+    sys_model=""
+  fi
 }
 
 GetNetworkInformation() {
@@ -843,6 +850,8 @@ PrintSystemInformation() {
   # else we're not
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
     CleanEcho "${bold_text}SYSTEM ====================================================${reset_text}"
+    # Device
+    CleanPrintf " %-10s%-39s\e[0K\\n" "Device:" "${sys_model}"
     # Uptime
     CleanPrintf " %-10s%-39s\e[0K\\n" "Uptime:" "${system_uptime}"
 
@@ -854,6 +863,9 @@ PrintSystemInformation() {
     CleanPrintf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
   else
     CleanEcho "${bold_text}SYSTEM ========================================================================${reset_text}"
+    # Device
+    CleanPrintf " %-10s%-39s\e[0K\\n" "Device:" "${sys_model}"
+    
     # Uptime and memory
     CleanPrintf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s\\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
 
