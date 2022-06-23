@@ -272,7 +272,8 @@ GetSystemInformation() {
 
   # Device model
   if [ -f /sys/firmware/devicetree/base/model ]; then
-    sys_model=$(cat /sys/firmware/devicetree/base/model)
+    # Get model, remove possible null byte
+    sys_model=$(tr -d '\0' < /sys/firmware/devicetree/base/model)
   else
     sys_model=""
   fi
