@@ -406,6 +406,12 @@ GetNetworkInformation() {
     conditional_forwarding_status="Disabled"
     conditional_forwarding_heatmap=${red_text}
   fi
+
+  #Default interface data
+  def_iface_data=$(GetFTLData ">interfaces" | head -n1)
+  iface_name="$(echo "$def_iface_data" | awk '{print $1}')"
+  tx_bytes="$(echo "$def_iface_data" | awk '{print $4}')"
+  rx_bytes="$(echo "$def_iface_data" | awk '{print $5}')"
 }
 
 GetPiholeInformation() {
@@ -718,6 +724,7 @@ PrintNetworkInformation() {
     CleanEcho "${bold_text}NETWORK ================================${reset_text}"
     CleanPrintf " %-9s%-19s\e[0K\\n" "Host:" "${full_hostname}"
     CleanPrintf " %-9s%-19s\e[0K\\n" "IP:"   "${pi_ip4_addr}"
+    CleanPrintf " %-9s%-8s %-4s%-5s %-4s%-5s\e[0K\\n" "Iface:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
     CleanPrintf " %-9s%-10s\e[0K\\n" "DNS:" "${dns_information}"
 
     if [ "${DHCP_ACTIVE}" = "true" ]; then
@@ -727,6 +734,7 @@ PrintNetworkInformation() {
     CleanEcho "${bold_text}NETWORK ============================================${reset_text}"
     CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "Hostname:" "${full_hostname}" "IP:  " "${pi_ip4_addr}"
     CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "IPv6:" "${pi_ip6_addr}"
+    CleanPrintf " %-10s%-16s %-4s%-5s %-4s%-5s\e[0K\\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
     CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
 
     if [ "${DHCP_ACTIVE}" = "true" ]; then
@@ -737,6 +745,7 @@ PrintNetworkInformation() {
     CleanEcho "${bold_text}NETWORK ===================================================${reset_text}"
     CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "Hostname:" "${full_hostname}" "IP:" "${pi_ip4_addr}"
     CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "IPv6:" "${pi_ip6_addr}"
+    CleanPrintf " %-10s%-19s %-4s%-5s %-4s%-5s\e[0K\\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
     CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
 
     if [ "${DHCP_ACTIVE}" = "true" ]; then
@@ -746,6 +755,7 @@ PrintNetworkInformation() {
   else
     CleanEcho "${bold_text}NETWORK =======================================================================${reset_text}"
     CleanPrintf " %-10s%-19s\e[0K\\n" "Hostname:" "${full_hostname}"
+    CleanPrintf " %-11s%-14s %-4s%-9s %-4s%-9s\e[0K\\n" "Interface:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
     CleanPrintf " %-6s%-19s %-10s%-29s\e[0K\\n" "IPv4:" "${pi_ip4_addr}" "IPv6:" "${pi_ip6_addr}"
     CleanEcho "DNS ==========================================================================="
     CleanPrintf " %-10s%-39s\e[0K\\n" "Servers:" "${dns_information}"
