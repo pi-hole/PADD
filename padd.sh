@@ -408,7 +408,7 @@ GetNetworkInformation() {
   fi
 
   #Default interface data
-  def_iface_data=$(GetFTLData ">interfaces" | head -n1)
+  def_iface_data=$(GetFTLData "interfaces" | head -n1)
   iface_name="$(echo "$def_iface_data" | awk '{print $1}')"
   tx_bytes="$(echo "$def_iface_data" | awk '{print $4}')"
   rx_bytes="$(echo "$def_iface_data" | awk '{print $5}')"
