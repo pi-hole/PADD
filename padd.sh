@@ -546,10 +546,11 @@ GetVersionInformation() {
   if [ "${padd_version_latest}" = "" ]; then
     padd_version_heatmap=${yellow_text}
   else
-    if [ "${padd_version}" != "${padd_version_latest}" ]; then
+    if [ "$(VersionConverter "${padd_version}")" -lt "$(VersionConverter "${padd_version_latest}")" ]; then
       padd_out_of_date_flag="true"
       padd_version_heatmap=${red_text}
     else
+      # local and remote PADD version match or local is newer
       padd_version_heatmap=${green_text}
     fi
   fi
@@ -990,6 +991,12 @@ CheckConnectivity() {
       echo "  - Connectivity check passed..."
     fi
   fi
+}
+
+# converts a given version string e.g. v3.7.1 to 3007001000 to allow for easier comparison of multi digit version numbers
+# credits https://apple.stackexchange.com/a/123408
+VersionConverter() {
+  echo "$@" | tr -d '[:alpha:]' | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
 }
 
 ########################################## MAIN FUNCTIONS ##########################################
