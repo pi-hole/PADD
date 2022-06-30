@@ -86,6 +86,7 @@ mega_status_unknown="${check_box_question} Unable to determine Pi-hole status."
 # TINY STATUS
 tiny_status_ok="${check_box_good} System is healthy."
 tiny_status_update="${check_box_info} Updates are available."
+tiny_status_hot="${check_box_bad} System is hot!"
 tiny_status_off="${check_box_bad} Pi-hole is offline"
 tiny_status_ftl_down="${check_box_info} FTL is down!"
 tiny_status_dns_down="${check_box_bad} DNS is off!"
@@ -230,8 +231,9 @@ GetSystemInformation() {
   if [ ${cpu} -gt 80000 ]; then
     temp_heatmap=${blinking_text}${red_text}
     pico_status="${pico_status_hot}"
-    mini_status_="${mini_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-    full_status_="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+    mini_status="${mini_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+    tiny_status="${tiny_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+    full_status="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
     mega_status="${mega_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
   elif [ ${cpu} -gt 70000 ]; then
     temp_heatmap=${magenta_text}
@@ -410,9 +412,9 @@ GetPiholeInformation() {
     ftl_heatmap=${yellow_text}
     ftl_check_box=${check_box_info}
     pico_status=${pico_status_ftl_down}
-    mini_status_=${mini_status_ftl_down}
-    tiny_status_=${tiny_status_ftl_down}
-    full_status_=${full_status_ftl_down}
+    mini_status=${mini_status_ftl_down}
+    tiny_status=${tiny_status_ftl_down}
+    full_status=${full_status_ftl_down}
     mega_status=${mega_status_ftl_down}
   else
     ftl_status="Running"
@@ -431,9 +433,9 @@ GetPiholeInformation() {
     pihole_heatmap=${red_text}
     pihole_check_box=${check_box_bad}
     pico_status=${pico_status_dns_down}
-    mini_status_=${mini_status_dns_down}
-    tiny_status_=${tiny_status_dns_down}
-    full_status_=${full_status_dns_down}
+    mini_status=${mini_status_dns_down}
+    tiny_status=${tiny_status_dns_down}
+    full_status=${full_status_dns_down}
     mega_status=${mega_status_dns_down}
   else
     if [ "${blocking_status}" = "enabled" ]; then
@@ -446,9 +448,9 @@ GetPiholeInformation() {
       pihole_heatmap=${red_text}
       pihole_check_box=${check_box_bad}
       pico_status=${pico_status_off}
-      mini_status_=${mini_status_off}
-      tiny_status_=${tiny_status_off}
-      full_status_=${full_status_off}
+      mini_status=${mini_status_off}
+      tiny_status=${tiny_status_off}
+      full_status=${full_status_off}
       mega_status=${mega_status_off}
     fi
     if [ "${blocking_status}" = "unknown" ]; then
@@ -456,9 +458,9 @@ GetPiholeInformation() {
       pihole_heatmap=${yellow_text}
       pihole_check_box=${check_box_question}
       pico_status=${pico_status_unknown}
-      mini_status_=${mini_status_unknown}
-      tiny_status_=${tiny_status_unknown}
-      full_status_=${full_status_unknown}
+      mini_status=${mini_status_unknown}
+      tiny_status=${tiny_status_unknown}
+      full_status=${full_status_unknown}
       mega_status=${mega_status_unknown}
     fi
   fi
@@ -557,26 +559,26 @@ GetVersionInformation() {
   if [ "${out_of_date_flag}" = "true" ]; then
     version_status="Pi-hole is out-of-date!"
     pico_status=${pico_status_update}
-    mini_status_=${mini_status_update}
-    tiny_status_=${tiny_status_update}
-    full_status_=${full_status_update}
+    mini_status=${mini_status_update}
+    tiny_status=${tiny_status_update}
+    full_status=${full_status_update}
     mega_status=${mega_status_update}
   else
     # but is PADD out-of-date?
     if [ "${padd_out_of_date_flag}" = "true" ]; then
       version_status="PADD is out-of-date!"
       pico_status=${pico_status_update}
-      mini_status_=${mini_status_update}
-      tiny_status_=${tiny_status_update}
-      full_status_=${full_status_update}
+      mini_status=${mini_status_update}
+      tiny_status=${tiny_status_update}
+      full_status=${full_status_update}
       mega_status=${mega_status_update}
     # else, everything is good!
     else
       version_status="Pi-hole is up-to-date!"
       pico_status=${pico_status_ok}
-      mini_status_=${mini_status_ok}
-      tiny_status_=${tiny_status_ok}
-      full_status_=${full_status_ok}
+      mini_status=${mini_status_ok}
+      tiny_status=${tiny_status_ok}
+      full_status=${full_status_ok}
       mega_status=${mega_status_ok}
     fi
   fi
@@ -605,24 +607,24 @@ PrintLogo() {
   if [ "$1" = "pico" ]; then
     CleanEcho "p${padd_text} ${pico_status}"
   elif [ "$1" = "nano" ]; then
-    CleanEcho "n${padd_text} ${mini_status_}"
+    CleanEcho "n${padd_text} ${mini_status}"
   elif [ "$1" = "micro" ]; then
-    CleanEcho "µ${padd_text}     ${mini_status_}"
+    CleanEcho "µ${padd_text}     ${mini_status}"
     CleanEcho ""
   elif [ "$1" = "mini" ]; then
-    CleanEcho "${padd_text}${dim_text}mini${reset_text}  ${mini_status_}"
+    CleanEcho "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
     CleanEcho ""
   elif [ "$1" = "tiny" ]; then
     CleanEcho "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
-    CleanPrintf "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status_}${reset_text}\e[0K\\n"
+    CleanPrintf "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}\e[0K\\n"
   elif [ "$1" = "slim" ]; then
-    CleanEcho "${padd_text}${dim_text}slim${reset_text}   ${full_status_}"
+    CleanEcho "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
     CleanEcho ""
   # For the next two, use printf to make sure spaces aren't collapsed
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
     CleanPrintf "${padd_logo_1}\e[0K\\n"
     CleanPrintf "${padd_logo_2}Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}\e[0K\\n"
-    CleanPrintf "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status_}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}\e[0K\\n"
     CleanEcho ""
   # normal or not defined
   else
@@ -998,7 +1000,7 @@ OutputJSON() {
 }
 
 StartupRoutine(){
-    # Get Config variables
+    # Get config variables
   . /etc/pihole/setupVars.conf
 
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
@@ -1040,6 +1042,7 @@ StartupRoutine(){
     echo "- Gathering system info."
     GetSystemInformation "mini"
     echo "- Gathering Pi-hole info."
+    GetPiholeInformation "mini"
     GetSummaryInformation "mini"
     echo "- Gathering network info."
     GetNetworkInformation "mini"
@@ -1111,8 +1114,10 @@ NormalPADD() {
     tput ed
 
     pico_status=${pico_status_ok}
-    mini_status_=${mini_status_ok}
-    tiny_status_=${tiny_status_ok}
+    mini_status=${mini_status_ok}
+    tiny_status=${tiny_status_ok}
+    full_status=${full_status_ok}
+    mega_status=${mega_status_ok}
 
     # Sleep for 5 seconds
     sleep 5
