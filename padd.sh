@@ -28,14 +28,15 @@ cd "$tmpdir/padd_$(id -u)/" > /dev/null || {
 # VERSION
 padd_version="v3.8.0"
 
-# DATE
-today=$(date +%Y%m%d)
+# LastChecks
+LastCheckVersionInformation=$(date +%s)
+LastCheckNetworkInformation=$(date +%s)
+LastCheckSummaryInformation=$(date +%s)
+LastCheckPiholeInformation=$(date +%s)
+LastCheckSystemInformation=$(date +%s)
 
 # CORES
 core_count=$(nproc --all 2> /dev/null)
-
-# Get Config variables
-. /etc/pihole/setupVars.conf
 
 piHoleVersion_file="./piHoleVersion"
 
@@ -1069,6 +1070,9 @@ OutputJSON() {
 }
 
 StartupRoutine(){
+    # Get Config variables
+  . /etc/pihole/setupVars.conf
+  
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     PrintLogo "$1"
     printf "%b" "START-UP ===========\n"
@@ -1205,15 +1209,43 @@ NormalPADD() {
     mini_status_=${mini_status_ok}
     tiny_status_=${tiny_status_ok}
 
-    # Start getting our information
-    GetVersionInformation ${padd_size}
-    GetSummaryInformation ${padd_size}
-    GetPiholeInformation ${padd_size}
-    GetNetworkInformation ${padd_size}
-    GetSystemInformation ${padd_size}
-
     # Sleep for 5 seconds
     sleep 5
+
+    # Start getting our information for next round
+    now=$(date +%s)
+
+    # Get uptime, CPU load, temp, etc. every 5 seconds
+    if [ $((now - LastCheckSystemInformation)) -ge 5 ]; then
+      . /etc/pihole/setupVars.conf
+      GetSystemInformation ${padd_size}
+      LastCheckSystemInformation="${now}"
+    fi
+
+    # Get cache info, last ad domain, blocking percentage, etc. every 5 seconds
+    if [ $((now - LastCheckSummaryInformation)) -ge 5 ]; then
+      GetSummaryInformation ${padd_size}
+      LastCheckSummaryInformation="${now}"
+    fi
+
+    # Get FTL status every 5 seconds
+    if [ $((now - LastCheckPiholeInformation)) -ge 5 ]; then
+      GetPiholeInformation ${padd_size}
+      LastCheckPiholeInformation="${now}"
+    fi
+
+    # Get IPv4 address, DNS servers, DNSSEC, hostname, DHCP status, interface traffic, etc. every 30 seconds
+    if [ $((now - LastCheckNetworkInformation)) -ge 30 ]; then
+      GetNetworkInformation ${padd_size}
+      LastCheckNetworkInformation="${now}"
+    fi
+
+    # Get Pi-hole components and PADD version information once every 24 hours
+    if [ $((now - LastCheckVersionInformation)) -ge 86400 ]; then
+      GetVersionInformation ${padd_size}
+      LastCheckVersionInformation="${now}"
+    fi
+
   done
 }
 
