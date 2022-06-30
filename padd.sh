@@ -11,18 +11,6 @@
 LC_ALL=C
 LC_NUMERIC=C
 
-# creates a new local temp directory /tmp/padd_uid
-tmpdir=$(dirname "$(mktemp -u)")
-mkdir -p "$tmpdir/padd_$(id -u)/"
-
-# change into the newly created directory
-oldpath=$(pwd)
-cd "$tmpdir/padd_$(id -u)/" > /dev/null || {
-    EC=$?
-    echo >&2 "Could not chdir to the temp directory (exit code $EC)"
-    exit $EC
-}
-
 ############################################ VARIABLES #############################################
 
 # VERSION
@@ -37,8 +25,6 @@ LastCheckSystemInformation=$(date +%s)
 
 # CORES
 core_count=$(nproc --all 2> /dev/null)
-
-piHoleVersion_file="./piHoleVersion"
 
 # COLORS
 CSI="$(printf '\033')["
@@ -481,175 +467,118 @@ GetPiholeInformation() {
 
 GetVersionInformation() {
   # Check if version status has been saved
-  if [ -f "$piHoleVersion_file" ]; then # the file exists...
-    # the file exits, use it
-    # shellcheck source=./piHoleVersion
-    . "$piHoleVersion_file"
+  core_version=$(pihole -v -p | awk '{print $4}' | tr -d '[:alpha:]')
+  core_version_latest=$(pihole -v -p | awk '{print $(NF)}' | tr -d ')')
 
-    # Today is
-    today=$(date +%Y%m%d)
-
-    # was the last check today?
-    # last_check is read from ./piHoleVersion
-    # shellcheck disable=SC2154
-    if [ "${today}" != "${last_check}" ]; then # no, it wasn't today
-      # Remove the Pi-hole version file...
-      rm -f "$piHoleVersion_file"
-    fi
-
-  else # the file doesn't exist, create it...
-    # Gather core version information...
-    core_version=$(pihole -v -p | awk '{print $4}' | tr -d '[:alpha:]')
-    core_version_latest=$(pihole -v -p | awk '{print $(NF)}' | tr -d ')')
-
-    # if core_version is something else then x.xx set it to N/A
-    if ! echo "${core_version}" | grep -qE '^[0-9]+([.][0-9]+)?$' || [ "${core_version_latest}" = "ERROR" ]; then
-      core_version="N/A"
-      core_version_heatmap=${yellow_text}
+  # if core_version is something else then x.xx set it to N/A
+  if ! echo "${core_version}" | grep -qE '^[0-9]+([.][0-9]+)?$' || [ "${core_version_latest}" = "ERROR" ]; then
+    core_version="N/A"
+    core_version_heatmap=${yellow_text}
+  else
+    # remove the leading "v" from core_version_latest
+    core_version_latest=$(echo "${core_version_latest}" | tr -d '\r\n[:alpha:]')
+    # is core up-to-date?
+    if [ "${core_version}" != "${core_version_latest}" ]; then
+      out_of_date_flag="true"
+      core_version_heatmap=${red_text}
     else
-      # remove the leading "v" from core_version_latest
-      core_version_latest=$(echo "${core_version_latest}" | tr -d '\r\n[:alpha:]')
-      # is core up-to-date?
-      if [ "${core_version}" != "${core_version_latest}" ]; then
-        out_of_date_flag="true"
-        core_version_heatmap=${red_text}
-      else
-        core_version_heatmap=${green_text}
-      fi
-      # add leading "v" to version number
-      core_version="v${core_version}"
+      core_version_heatmap=${green_text}
     fi
+    # add leading "v" to version number
+    core_version="v${core_version}"
+  fi
 
-    # Gather web version information...
-    if [ "$INSTALL_WEB_INTERFACE" = true ]; then
-      web_version=$(pihole -v -a | awk '{print $4}' | tr -d '[:alpha:]')
-      web_version_latest=$(pihole -v -a | awk '{print $(NF)}' | tr -d ')')
+  # Gather web version information...
+  if [ "$INSTALL_WEB_INTERFACE" = true ]; then
+    web_version=$(pihole -v -a | awk '{print $4}' | tr -d '[:alpha:]')
+    web_version_latest=$(pihole -v -a | awk '{print $(NF)}' | tr -d ')')
 
-      # if web_version is something else then x.xx set it to N/A
-      if ! echo "${web_version}" | grep -qE '^[0-9]+([.][0-9]+)?$' || [ "${web_version_latest}" = "ERROR" ]; then
-        web_version="N/A"
-        web_version_heatmap=${yellow_text}
-      else
-        # remove the leading "v" from web_version_latest
-        web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
-        # is web up-to-date?
-        if [ "${web_version}" != "${web_version_latest}" ]; then
-          out_of_date_flag="true"
-          web_version_heatmap=${red_text}
-        else
-          web_version_heatmap=${green_text}
-        fi
-        # add leading "v" to version number
-        web_version="v${web_version}"
-      fi
-    else
-      # Web interface not installed
+    # if web_version is something else then x.xx set it to N/A
+    if ! echo "${web_version}" | grep -qE '^[0-9]+([.][0-9]+)?$' || [ "${web_version_latest}" = "ERROR" ]; then
       web_version="N/A"
       web_version_heatmap=${yellow_text}
-    fi
-
-    # Gather FTL version information...
-    ftl_version=$(pihole -v -f | awk '{print $4}' | tr -d '[:alpha:]')
-    ftl_version_latest=$(pihole -v -f | awk '{print $(NF)}' | tr -d ')')
-
-    # if ftl_version is something else then x.xx set it to N/A
-    if ! echo "${ftl_version}" | grep -qE '^[0-9]+([.][0-9]+)?$' || [ "${ftl_version_latest}" = "ERROR" ]; then
-      ftl_version="N/A"
-      ftl_version_heatmap=${yellow_text}
     else
-      # remove the leading "v" from ftl_version_latest
-      ftl_version_latest=$(echo "${ftl_version_latest}" | tr -d '\r\n[:alpha:]')
-      # is ftl up-to-date?
-      if [ "${ftl_version}" != "${ftl_version_latest}" ]; then
+      # remove the leading "v" from web_version_latest
+      web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
+      # is web up-to-date?
+      if [ "${web_version}" != "${web_version_latest}" ]; then
         out_of_date_flag="true"
-        ftl_version_heatmap=${red_text}
+        web_version_heatmap=${red_text}
       else
-        ftl_version_heatmap=${green_text}
+        web_version_heatmap=${green_text}
       fi
-    # add leading "v" to version number
-    ftl_version="v${ftl_version}"
+      # add leading "v" to version number
+      web_version="v${web_version}"
     fi
+  else
+    # Web interface not installed
+    web_version="N/A"
+    web_version_heatmap=${yellow_text}
+  fi
 
-    # PADD version information...
-    padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
-    # is PADD up-to-date?
-    if [ "${padd_version_latest}" = "" ]; then
-      padd_version_heatmap=${yellow_text}
+  # Gather FTL version information...
+  ftl_version=$(pihole -v -f | awk '{print $4}' | tr -d '[:alpha:]')
+  ftl_version_latest=$(pihole -v -f | awk '{print $(NF)}' | tr -d ')')
+
+  # if ftl_version is something else then x.xx set it to N/A
+  if ! echo "${ftl_version}" | grep -qE '^[0-9]+([.][0-9]+)?$' || [ "${ftl_version_latest}" = "ERROR" ]; then
+    ftl_version="N/A"
+    ftl_version_heatmap=${yellow_text}
+  else
+    # remove the leading "v" from ftl_version_latest
+    ftl_version_latest=$(echo "${ftl_version_latest}" | tr -d '\r\n[:alpha:]')
+    # is ftl up-to-date?
+    if [ "${ftl_version}" != "${ftl_version_latest}" ]; then
+      out_of_date_flag="true"
+      ftl_version_heatmap=${red_text}
     else
-      if [ "${padd_version}" != "${padd_version_latest}" ]; then
-        padd_out_of_date_flag="true"
-        padd_version_heatmap=${red_text}
-      else
-        padd_version_heatmap=${green_text}
-      fi
+      ftl_version_heatmap=${green_text}
     fi
+  # add leading "v" to version number
+  ftl_version="v${ftl_version}"
+  fi
 
-    # was any portion of Pi-hole out-of-date?
-    # yes, pi-hole is out of date
-    if [ "${out_of_date_flag}" = "true" ]; then
-      version_status="Pi-hole is out-of-date!"
-      version_heatmap=${red_text}
-      version_check_box=${check_box_bad}
+  # PADD version information...
+  padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
+  # is PADD up-to-date?
+  if [ "${padd_version_latest}" = "" ]; then
+    padd_version_heatmap=${yellow_text}
+  else
+    if [ "${padd_version}" != "${padd_version_latest}" ]; then
+      padd_out_of_date_flag="true"
+      padd_version_heatmap=${red_text}
+    else
+      padd_version_heatmap=${green_text}
+    fi
+  fi
+
+  # was any portion of Pi-hole out-of-date?
+  # yes, pi-hole is out of date
+  if [ "${out_of_date_flag}" = "true" ]; then
+    version_status="Pi-hole is out-of-date!"
+    pico_status=${pico_status_update}
+    mini_status_=${mini_status_update}
+    tiny_status_=${tiny_status_update}
+    full_status_=${full_status_update}
+    mega_status=${mega_status_update}
+  else
+    # but is PADD out-of-date?
+    if [ "${padd_out_of_date_flag}" = "true" ]; then
+      version_status="PADD is out-of-date!"
       pico_status=${pico_status_update}
       mini_status_=${mini_status_update}
       tiny_status_=${tiny_status_update}
       full_status_=${full_status_update}
       mega_status=${mega_status_update}
+    # else, everything is good!
     else
-      # but is PADD out-of-date?
-      if [ "${padd_out_of_date_flag}" = "true" ]; then
-        version_status="PADD is out-of-date!"
-        version_heatmap=${red_text}
-        version_check_box=${check_box_bad}
-        pico_status=${pico_status_update}
-        mini_status_=${mini_status_update}
-        tiny_status_=${tiny_status_update}
-        full_status_=${full_status_update}
-        mega_status=${mega_status_update}
-      # else, everything is good!
-      else
-        version_status="Pi-hole is up-to-date!"
-        version_heatmap=${green_text}
-        version_check_box=${check_box_good}
-        pico_status=${pico_status_ok}
-        mini_status_=${mini_status_ok}
-        tiny_status_=${tiny_status_ok}
-        full_status_=${full_status_ok}
-        mega_status=${mega_status_ok}
-      fi
+      version_status="Pi-hole is up-to-date!"
+      pico_status=${pico_status_ok}
+      mini_status_=${mini_status_ok}
+      tiny_status_=${tiny_status_ok}
+      full_status_=${full_status_ok}
+      mega_status=${mega_status_ok}
     fi
-
-    # write it all to the file
-    echo "last_check=${today}" > "$piHoleVersion_file"
-    {
-      echo "core_version=$core_version"
-      echo "core_version_latest=$core_version_latest"
-      echo "core_version_heatmap=$core_version_heatmap"
-
-      echo "web_version=$web_version"
-      echo "web_version_latest=$web_version_latest"
-      echo "web_version_heatmap=$web_version_heatmap"
-
-      echo "ftl_version=$ftl_version"
-      echo "ftl_version_latest=$ftl_version_latest"
-      echo "ftl_version_heatmap=$ftl_version_heatmap"
-
-      echo "padd_version=$padd_version"
-      echo "padd_version_latest=$padd_version_latest"
-      echo "padd_version_heatmap=$padd_version_heatmap"
-
-      echo "version_status=\"$version_status\""
-      echo "version_heatmap=$version_heatmap"
-      echo "version_check_box=\"$version_check_box\""
-
-      echo "pico_status=\"$pico_status\""
-      echo "mini_status_=\"$mini_status_\""
-      echo "tiny_status_=\"$tiny_status_\""
-      echo "full_status_=\"$full_status_\""
-      echo "mega_status=\"$mega_status\""
-    } >> "$piHoleVersion_file"
-
-    # there's a file now
   fi
 }
 
@@ -1066,13 +995,12 @@ CheckConnectivity() {
 OutputJSON() {
   GetSummaryInformation
   echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw},\"clients\": ${clients}}"
-  cd "$oldpath" > /dev/null || exit
 }
 
 StartupRoutine(){
     # Get Config variables
   . /etc/pihole/setupVars.conf
-  
+
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     PrintLogo "$1"
     printf "%b" "START-UP ===========\n"
@@ -1084,12 +1012,7 @@ StartupRoutine(){
 
     # Check for updates
     printf "%b" " [■■········]  20%\\r"
-    if [ -f "$piHoleVersion_file" ]; then
-      rm -f "$piHoleVersion_file"
-      printf "%b" " [■■■·······]  30%\\r"
-    else
-      printf "%b" " [■■■·······]  30%\\r"
-    fi
+    printf "%b" " [■■■·······]  30%\\r"
 
     # Get our information for the first time
     printf "%b" " [■■■■······]  40%\\r"
@@ -1112,15 +1035,6 @@ StartupRoutine(){
     CheckConnectivity "$1"
 
     echo "Starting PADD."
-
-    # Check for updates
-    echo "- Checking for version file."
-    if [ -f "$piHoleVersion_file" ]; then
-      echo "  - Found and deleted."
-      rm -f "$piHoleVersion_file"
-    else
-      echo "  - Not found."
-    fi
 
     # Get our information for the first time
     echo "- Gathering system info."
@@ -1147,15 +1061,6 @@ StartupRoutine(){
 
     printf "%b" "- Checking internet connection...\n"
     CheckConnectivity "$1"
-
-    # Check for updates
-    echo "- Checking for PADD version file..."
-    if [ -f "$piHoleVersion_file" ]; then
-      echo "  - PADD version file found... deleting."
-      rm -f "$piHoleVersion_file"
-    else
-      echo "  - PADD version file not found."
-    fi
 
     # Get our information for the first time
     echo "- Gathering system information..."
@@ -1280,7 +1185,6 @@ if [ $# = 0 ]; then
   # Run PADD
   clear
   NormalPADD
-  cd "$oldpath" > /dev/null || exit
 fi
 
 for var in "$@"; do
