@@ -377,7 +377,7 @@ GetNetworkInformation() {
     # if the DHCP Router variable isn't set
     # Issue 3: https://github.com/jpmck/PADD/issues/3
     if [ -z ${DHCP_ROUTER+x} ]; then
-      DHCP_ROUTER=$(/sbin/ip route | awk '/default/ { printf "%s\t", $3 }')
+      DHCP_ROUTER=$(GetFTLData "gateway" | awk '{ printf $1 }')
     fi
 
     dhcp_info=" Router:   ${DHCP_ROUTER}"
