@@ -546,7 +546,7 @@ GetVersionInformation() {
   if [ "${padd_version_latest}" = "" ]; then
     padd_version_heatmap=${yellow_text}
   else
-    if [ "$(VersionConverter "${padd_version}")" -lt "$(VersionConverter "${padd_version_latest}")" ]; then
+    if [ "$(VersionConverter ${padd_version})" -lt "$(VersionConverter "${padd_version_latest}")" ]; then
       padd_out_of_date_flag="true"
       padd_version_heatmap=${red_text}
     else
@@ -554,6 +554,7 @@ GetVersionInformation() {
       padd_version_heatmap=${green_text}
     fi
   fi
+
 
   # was any portion of Pi-hole out-of-date?
   # yes, pi-hole is out of date
