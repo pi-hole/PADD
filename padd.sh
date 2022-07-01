@@ -523,7 +523,7 @@ GetVersionInformation() {
     if [ "$INSTALL_WEB_INTERFACE" = true ]; then
       web_version=$(pihole -v -a | awk '{print $4}' | tr -d '[:alpha:]')
       web_version_latest=$(pihole -v -a | awk '{print $(NF)}' | tr -d ')')
-    
+
       # if web_version is something else then x.xx set it to N/A
       if ! echo "${web_version}" | grep -qE '^[0-9]+([.][0-9]+)?$' || [ "${web_version_latest}" = "ERROR" ]; then
         web_version="N/A"
@@ -550,7 +550,7 @@ GetVersionInformation() {
     # Gather FTL version information...
     ftl_version=$(pihole -v -f | awk '{print $4}' | tr -d '[:alpha:]')
     ftl_version_latest=$(pihole -v -f | awk '{print $(NF)}' | tr -d ')')
-   
+
     # if ftl_version is something else then x.xx set it to N/A
     if ! echo "${ftl_version}" | grep -qE '^[0-9]+([.][0-9]+)?$' || [ "${ftl_version_latest}" = "ERROR" ]; then
       ftl_version="N/A"
@@ -892,7 +892,7 @@ PrintSystemInformation() {
     CleanEcho "${bold_text}SYSTEM ========================================================================${reset_text}"
     # Device
     CleanPrintf " %-10s%-39s\e[0K\\n" "Device:" "${sys_model}"
-    
+
     # Uptime and memory
     CleanPrintf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s\\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
 
