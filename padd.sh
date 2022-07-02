@@ -157,9 +157,9 @@ DeleteSession() {
 	deleteResponse=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE http://${URL}:${PORT}/${APIPATH}/auth  -H "Accept: application/json" -H "sid: ${SID}")
 
 	case "${deleteResponse}" in
-        "200") echo "A session that was not created cannot be deleted (e.g., empty API password).";;
-        "401") echo "Logout attempt without a valid session. Unauthorized!";;
-        "410") echo "Session deleted successfully";;
+        "200") printf "%b" "\nA session that was not created cannot be deleted (e.g., empty API password).\n";;
+        "401") printf "%b" "\nLogout attempt without a valid session. Unauthorized!\n";;
+        "410") printf "%b" "\nSession deleted successfully\n";;
      esac;
 
 }
@@ -1280,6 +1280,8 @@ NormalPADD() {
     fi
 
   done
+
+  DeleteSession
 }
 
 DisplayHelp() {
@@ -1297,6 +1299,36 @@ DisplayHelp() {
 :::  -h                       display this help text
 EOM
     exit 0
+}
+
+# Called on signals INT QUIT TERM
+sig_cleanup() {
+    # save error code (130 for SIGINT, 143 for SIGTERM, 131 for SIGQUIT)
+    err=$?
+
+    # some shells will call EXIT after the INT signal
+    # causing EXIT trap to be executed, so we trap EXIT after INT
+    trap '' EXIT
+
+    (exit $err) # execute in a subshell just to pass $? to clean_exit()
+    clean_exit
+}
+
+# Called on signal EXIT, or indirectly on INT QUIT TERM
+clean_exit() {
+    # save the return code of the script
+    err=$?
+
+    # reset trap for all signals to not interrupt clean_tempfiles() on any next signal
+    trap '' EXIT INT QUIT TERM
+
+    # restore terminal settings
+    setterm -cursor on
+    stty "${stty_orig}"
+
+    #  Delete session from FTL server
+    DeleteSession
+    exit $err # exit the script with saved $?
 }
 
 # Get supplied options
@@ -1320,7 +1352,11 @@ done
  # Turns off the cursor
 # (From Pull request #8 https://github.com/jpmck/PADD/pull/8)
 setterm -cursor off
-trap "{ setterm -cursor on ; echo "" ; exit 0 ; }" INT TERM EXIT
+
+# Traps for graceful shutdown
+# https://unix.stackexchange.com/a/681201
+trap clean_exit EXIT
+trap sig_cleanup INT QUIT TERM
 
 clear
 
