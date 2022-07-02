@@ -14,7 +14,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.8.0"
+padd_version="v4.0.0"
 
 # LastChecks
 LastCheckVersionInformation=$(date +%s)
@@ -102,6 +102,98 @@ padd_logo_3="${bold_text}${green_text}|   /--\\|__/|__/  ${reset_text}"
 padd_logo_retro_1="${bold_text} ${yellow_text}_${green_text}_      ${blue_text}_${magenta_text}_  ${yellow_text}_${green_text}_   ${reset_text}"
 padd_logo_retro_2="${bold_text}${yellow_text}|${green_text}_${blue_text}_${cyan_text}) ${red_text}/${yellow_text}\\ ${blue_text}|  ${red_text}\\${yellow_text}|  ${cyan_text}\\  ${reset_text}"
 padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${green_text}-${blue_text}\\${cyan_text}|${magenta_text}_${red_text}_${yellow_text}/${green_text}|${blue_text}_${cyan_text}_${magenta_text}/  ${reset_text}"
+
+############################################# FTL ##################################################
+
+ConstructAPI() {
+	# If no arguments were supplied set them to default
+	if [ -z "${URL}" ]; then
+		URL=pi.hole
+	fi
+	if [ -z "${PORT}" ]; then
+		PORT=8080
+	fi
+	if [ -z "${APIPATH}" ]; then
+		APIPATH=api
+	fi
+}
+
+Authenthication() {
+	# Try to authenticate
+	ChallengeResponse
+
+	while [ "${validSession}" = false ]; do
+		echo "Authentication with FTL server failed."
+
+		# no password was supplied as argument
+		if [ -z "${password}" ]; then
+			echo "Please enter your Pi-hole password:"
+		else
+			echo "Wrong Pi-hole password supplied, please enter the correct password:"
+		fi
+
+		# POSIX's `read` does not support `-s` option (suppressing the input)
+		# this workaround changes the terminal characteristics to not echo input and later rests this option
+		# credits https://stackoverflow.com/a/4316765
+
+		stty_orig=$(stty -g)
+		stty -echo
+		read -r password
+		stty "${stty_orig}"
+		echo ""
+
+		# Try to authenticate again
+		ChallengeResponse
+	done
+
+	# Loop exited, authentication was successful
+	echo "Authentication with FTL server successful."
+
+}
+
+DeleteSession() {
+
+	# Try to delte the session. Omitt the output, but get the http status code
+	deleteResponse=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE http://${URL}:${PORT}/${APIPATH}/auth  -H "Accept: application/json" -H "sid: ${SID}")
+
+	case "${deleteResponse}" in
+        "200") echo "A session that was not created cannot be deleted (e.g., empty API password).";;
+        "401") echo "Logout attempt without a valid session. Unauthorized!";;
+        "410") echo "Session deleted successfully";;
+     esac;
+
+}
+
+ChallengeResponse() {
+	# Challenge-response authentication
+
+	# Compute password hash from user password
+	# Compute password hash twice to avoid rainbow table vulnerability
+    hash1=$(printf "%b" "$password" | sha256sum | sed 's/\s.*$//')
+    pwhash=$(printf "%b" "$hash1" | sha256sum | sed 's/\s.*$//')
+
+
+	# Get challenge from FTL
+	# Calculate response based on challenge and password hash
+	# Send response & get session response
+	challenge="$(curl --silent -X GET http://${URL}:${PORT}/${APIPATH}/auth | jq --raw-output .challenge)"
+	response="$(printf "%b" "${challenge}:${pwhash}" | sha256sum | sed 's/\s.*$//')"
+	sessionResponse="$(curl --silent -X POST http://${URL}:${PORT}/${APIPATH}/auth --data "{\"response\":\"${response}\"}" )"
+
+  if [ -z "${sessionResponse}" ]; then
+    echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
+    echo "Usage: $0 [-u <URL>] [-p <port>] [-a <path>] "
+    exit 1
+  fi
+	# obtain validity and session ID from session response
+	validSession=$(echo "${sessionResponse}"| jq .session.valid)
+	SID=$(echo "${sessionResponse}"| jq --raw-output .session.sid)
+}
+
+GetFTLData() {
+	data=$(curl -sS -X GET "http://${URL}:${PORT}/${APIPATH}$1" -H "Accept: application/json" -H "sid: ${SID}" )
+	echo "${data}"
+}
 
 
 ############################################# GETTERS ##############################################
@@ -1008,17 +1100,27 @@ VersionConverter() {
 OutputJSON() {
   GetSummaryInformation
   echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw},\"clients\": ${clients}}"
+  exit 0
 }
 
 StartupRoutine(){
-    # Get config variables
+
+  # Construct FTL's API address depending on the arguments supplied
+  ConstructAPI
+
+  # Get config variables
   . /etc/pihole/setupVars.conf
 
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     PrintLogo "$1"
     printf "%b" "START-UP ===========\n"
-    printf "%b" "Checking connection.\n"
+    printf "%b" "Checking Internet connection.\n"
     CheckConnectivity "$1"
+
+    # Authenticate with the FTL server
+    printf "%b" "Establishing connection with FTL...\n"
+    Authenthication
+
     printf "%b" "Starting PADD...\n"
 
     printf "%b" " [■·········]  10%\\r"
@@ -1046,6 +1148,11 @@ StartupRoutine(){
     echo "START UP ====================="
     echo "Checking connectivity."
     CheckConnectivity "$1"
+
+    # Authenticate with the FTL server
+    printf "%b" "Establishing connection with FTL...\n"
+    Authenthication
+
 
     echo "Starting PADD."
 
@@ -1075,6 +1182,11 @@ StartupRoutine(){
 
     printf "%b" "- Checking internet connection...\n"
     CheckConnectivity "$1"
+
+    # Authenticate with the FTL server
+    printf "%b" "Establishing connection with FTL...\n"
+    Authenthication
+
 
     # Get our information for the first time
     echo "- Gathering system information..."
@@ -1174,39 +1286,51 @@ DisplayHelp() {
   cat << EOM
 ::: PADD displays stats about your piHole!
 :::
-::: Note: If no option is passed, then stats are displayed on screen, updated every 5 seconds
 :::
 ::: Options:
-:::  -j, --json    output stats as JSON formatted string
-:::  -h, --help    display this help text
+:::
+:::   -u <URL|IP>             URL or address of your Pi-hole (default: pi.hole)
+:::   -p <port>               Port of your Pi-hole's API (default: 8080)
+:::   -a <api>                Path where your Pi-hole's API is hosted (default: api)
+:::   -s <secret password>    Your Pi-hole's password, required to access the API
+:::  -j                       output stats as JSON formatted string and exit
+:::  -h                       display this help text
 EOM
     exit 0
 }
 
-if [ $# = 0 ]; then
-  # Turns off the cursor
-  # (From Pull request #8 https://github.com/jpmck/PADD/pull/8)
-  setterm -cursor off
-  trap "{ setterm -cursor on ; echo "" ; exit 0 ; }" INT TERM EXIT
+# Get supplied options
 
-  clear
-
-  console_width=$(tput cols)
-  console_height=$(tput lines)
-
-  SizeChecker
-
-  StartupRoutine ${padd_size}
-
-  # Run PADD
-  clear
-  NormalPADD
-fi
-
-for var in "$@"; do
-  case "$var" in
-    "-j" | "--json"  ) OutputJSON;;
-    "-h" | "--help"  ) DisplayHelp;;
-    *                ) exit 1;;
-  esac
+while getopts ":u:p:a:s:jh" args; do
+	case "${args}" in
+	u)	URL="${OPTARG}" ;;
+  p)	PORT="${OPTARG}" ;;
+	a)	APIPATH="${OPTARG}" ;;
+	s)	password="${OPTARG}" ;;
+  j)  OutputJSON;;
+	h)  DisplayHelp;;
+	\?)	echo "Invalid option: -${OPTARG}"
+		  exit 1 ;;
+	:)	echo "Option -$OPTARG requires an argument."
+     	exit 1 ;;
+	*)	DisplayHelp;;
+	esac
 done
+
+ # Turns off the cursor
+# (From Pull request #8 https://github.com/jpmck/PADD/pull/8)
+setterm -cursor off
+trap "{ setterm -cursor on ; echo "" ; exit 0 ; }" INT TERM EXIT
+
+clear
+
+console_width=$(tput cols)
+console_height=$(tput lines)
+
+SizeChecker
+
+StartupRoutine ${padd_size}
+
+# Run PADD
+clear
+NormalPADD
