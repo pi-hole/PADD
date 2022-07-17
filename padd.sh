@@ -118,49 +118,65 @@ ConstructAPI() {
 	fi
 }
 
+TestAPIAvailability() {
+
+    availabilityResonse=$(curl -s -o /dev/null -w "%{http_code}" http://${URL}:${PORT}/${APIPATH}/auth)
+
+    # test if http status code was 200 (OK)
+    if [ "${availabilityResonse}" = 200 ]; then
+        printf "%b" "API available at: http://${URL}:${PORT}/${APIPATH}\n\n"
+    else
+        echo "API not available at: http://${URL}:${PORT}/${APIPATH}"
+        echo "Exiting."
+        exit 1
+    fi
+}
+
 Authenthication() {
-	# Try to authenticate
-	ChallengeResponse
+    # Try to authenticate
+    ChallengeResponse
 
-	while [ "${validSession}" = false ]; do
-		echo "Authentication with FTL server failed."
+    while [ "${validSession}" = false ]; do
+        echo "Authentication failed."
 
-		# no password was supplied as argument
-		if [ -z "${password}" ]; then
-			echo "Please enter your Pi-hole password:"
-		else
-			echo "Wrong Pi-hole password supplied, please enter the correct password:"
-		fi
+        # no password was supplied as argument
+        if [ -z "${password}" ]; then
+            echo "No password supplied. Please enter your password:"
+        else
+            echo "Wrong password supplied, please enter the correct password:"
+        fi
 
-		# POSIX's `read` does not support `-s` option (suppressing the input)
-		# this workaround changes the terminal characteristics to not echo input and later rests this option
-		# credits https://stackoverflow.com/a/4316765
+        # POSIX's `read` does not support `-s` option (suppressing the input)
+        # this workaround changes the terminal characteristics to not echo input and later rests this option
+        # credits https://stackoverflow.com/a/4316765
 
-		stty_orig=$(stty -g)
-		stty -echo
-		read -r password
-		stty "${stty_orig}"
-		echo ""
+        stty -echo
+        read -r password
+        stty "${stty_orig}"
+        echo ""
 
-		# Try to authenticate again
-		ChallengeResponse
-	done
+        # Try to authenticate again
+        ChallengeResponse
+    done
 
-	# Loop exited, authentication was successful
-	echo "Authentication with FTL server successful."
+    # Loop exited, authentication was successful
+    echo "Authentication successful."
 
 }
 
 DeleteSession() {
+    # if a valid Session exists (no password required or successful authenthication) and
+    # SID is not null (successful authenthication only), delete the session
+    if [ "${validSession}" = true ] && [ ! "${SID}" = null ]; then
+        # Try to delte the session. Omitt the output, but get the http status code
+        deleteResponse=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE http://${URL}:${PORT}/${APIPATH}/auth  -H "Accept: application/json" -H "sid: ${SID}")
 
-	# Try to delte the session. Omitt the output, but get the http status code
-	deleteResponse=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE http://${URL}:${PORT}/${APIPATH}/auth  -H "Accept: application/json" -H "sid: ${SID}")
-
-	case "${deleteResponse}" in
-        "200") printf "%b" "\nA session that was not created cannot be deleted (e.g., empty API password).\n";;
-        "401") printf "%b" "\nLogout attempt without a valid session. Unauthorized!\n";;
-        "410") printf "%b" "\nSession deleted successfully\n";;
-     esac;
+        case "${deleteResponse}" in
+            "200") printf "%b" "\nA session that was not created cannot be deleted (e.g., empty API password).\n";;
+            "401") printf "%b" "\nLogout attempt without a valid session. Unauthorized!\n";;
+            "410") printf "%b" "\nSession successfully deleted.\n";;
+         esac;
+    fi
 
 }
 
@@ -1105,9 +1121,6 @@ OutputJSON() {
 
 StartupRoutine(){
 
-  # Construct FTL's API address depending on the arguments supplied
-  ConstructAPI
-
   # Get config variables
   . /etc/pihole/setupVars.conf
 
@@ -1322,9 +1335,10 @@ clean_exit() {
     # reset trap for all signals to not interrupt clean_tempfiles() on any next signal
     trap '' EXIT INT QUIT TERM
 
-    # restore terminal settings
-    setterm -cursor on
-    stty "${stty_orig}"
+    # restore terminal settings if they have been changed (e.g. user cancled script while at password  input prompt)
+    if [ "$(stty -g)" != "${stty_orig}" ]; then
+        stty "${stty_orig}"
+    fi
 
     #  Delete session from FTL server
     DeleteSession
@@ -1336,10 +1350,10 @@ clean_exit() {
 while getopts ":u:p:a:s:jh" args; do
 	case "${args}" in
 	u)	URL="${OPTARG}" ;;
-  p)	PORT="${OPTARG}" ;;
+    p)	PORT="${OPTARG}" ;;
 	a)	APIPATH="${OPTARG}" ;;
 	s)	password="${OPTARG}" ;;
-  j)  OutputJSON;;
+    j)  OutputJSON;;
 	h)  DisplayHelp;;
 	\?)	echo "Invalid option: -${OPTARG}"
 		  exit 1 ;;
@@ -1349,9 +1363,18 @@ while getopts ":u:p:a:s:jh" args; do
 	esac
 done
 
- # Turns off the cursor
+# Save current terminal settings (needed for later restore after password prompt)
+stty_orig=$(stty -g)
+
+# Turns off the cursor
 # (From Pull request #8 https://github.com/jpmck/PADD/pull/8)
 setterm -cursor off
+
+# Construct FTL's API address depending on the arguments supplied
+ConstructAPI
+
+# Test if the authentication endpoint is availabe
+TestAPIAvailability
 
 # Traps for graceful shutdown
 # https://unix.stackexchange.com/a/681201
