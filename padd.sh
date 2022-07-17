@@ -23,9 +23,6 @@ LastCheckSummaryInformation=$(date +%s)
 LastCheckPiholeInformation=$(date +%s)
 LastCheckSystemInformation=$(date +%s)
 
-# CORES
-core_count=$(nproc --all 2> /dev/null)
-
 # COLORS
 CSI="$(printf '\033')["
 red_text="${CSI}91m"     # Red
@@ -233,7 +230,7 @@ GetSummaryInformation() {
   cache_evictions=$(echo "$cache_info" | jq .evicted)
   cache_inserts=$(echo "$cache_info"| jq .inserted)
 
-  latest_blocked=$(GetFTLData "/stats/recent_blocked" | jq --raw-output .blocked[0])
+  latest_blocked=$(GetFTLData "/stats/recent_blocked&show=1" | jq --raw-output .blocked[0])
 
   top_blocked=$(GetFTLData "/stats/top_blocked" | jq --raw-output .top_domains[0].domain)
 
@@ -279,60 +276,60 @@ GetSummaryInformation() {
 }
 
 GetSystemInformation() {
-  # System uptime
-  if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-    system_uptime=$(uptime | awk -F'( |,|:)+' '{if ($7=="min") m=$6; else {if ($7~/^day/){if ($9=="min") {d=$6;m=$8} else {d=$6;h=$8;m=$9}} else {h=$6;m=$7}}} {print d+0,"days,",h+0,"hours"}')
-  else
-    system_uptime=$(uptime | awk -F'( |,|:)+' '{if ($7=="min") m=$6; else {if ($7~/^day/){if ($9=="min") {d=$6;m=$8} else {d=$6;h=$8;m=$9}} else {h=$6;m=$7}}} {print d+0,"days,",h+0,"hours,",m+0,"minutes"}')
-  fi
+    # System uptime
+    system_uptime_raw=$(echo "${summary}" | jq .system.uptime )
+    if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
+        system_uptime="$(printf '%d days, %d hours' $((system_uptime_raw/86400)) $((system_uptime_raw%86400/3600)))"
+    else
+        system_uptime="$(printf '%d days, %d hours, %d minutes' $((system_uptime_raw/86400)) $((system_uptime_raw%86400/3600)) $((system_uptime_raw%3600/60)))"
+    fi
 
-  # CPU temperature
-  if [ -f /sys/class/thermal/thermal_zone0/temp ]; then
-    cpu=$(cat /sys/class/thermal/thermal_zone0/temp)
-  elif [ -f /sys/class/hwmon/hwmon0/temp1_input ]; then
-    cpu=$(cat /sys/class/hwmon/hwmon0/temp1_input)
-  else
-    cpu=0
-  fi
+    # CPU temperature is returned in °C
+    cpu_temp=$(echo "${summary}" | jq .system.sensors[0].value )
 
-  # Convert CPU temperature to correct unit
-  if [ "${TEMPERATUREUNIT}" = "F" ]; then
-    temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 * 9 / 5000 + 32}')")°F"
-  elif [ "${TEMPERATUREUNIT}" = "K" ]; then
-    temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 / 1000 + 273.15}')")°K"
-  # Addresses Issue 1: https://github.com/jpmck/PAD/issues/1
-  else
-    temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 / 1000}')")°C"
-  fi
+    # Convert CPU temperature to correct unit
+    if [ "${TEMPERATUREUNIT}" = "F" ]; then
+        temperature="$(printf %.1f "$(echo "${cpu_temp}" | awk '{print $1 * 9 / 5 + 32}')")°F"
+    elif [ "${TEMPERATUREUNIT}" = "K" ]; then
+        temperature="$(printf %.1f "$(echo "${cpu_temp}" | awk '{print $1 + 273.15}')")°K"
+    else
+        temperature="$(printf %.1f "${cpu_temp}" )°C"
+    fi
 
-  # CPU load, heatmap
-  cpu_load_1=$(awk '{print $1}' < /proc/loadavg)
-  cpu_load_5=$(awk '{print $2}' < /proc/loadavg)
-  cpu_load_15=$(awk '{print $3}' < /proc/loadavg)
-  cpu_load_1_heatmap=$(HeatmapGenerator "${cpu_load_1}" "${core_count}")
-  cpu_load_5_heatmap=$(HeatmapGenerator "${cpu_load_5}" "${core_count}")
-  cpu_load_15_heatmap=$(HeatmapGenerator "${cpu_load_15}" "${core_count}")
-  cpu_percent=$(printf %.1f "$(echo "${cpu_load_1} ${core_count}" | awk '{print ($1 / $2) * 100}')")
+    # CPU, load, heatmap
+    core_count=$(echo "${summary}" | jq .system.cpu.nprocs)
+    cpu_load_1=$(printf %.2f "$(echo "${summary}" | jq .system.cpu.load.raw[0])")
+    cpu_load_5=$(printf %.2f "$(echo "${summary}" | jq .system.cpu.load.raw[1])")
+    cpu_load_15=$(printf %.2f "$(echo "${summary}" | jq .system.cpu.load.raw[2])")
+    cpu_load_1_heatmap=$(HeatmapGenerator "${cpu_load_1}" "${core_count}")
+    cpu_load_5_heatmap=$(HeatmapGenerator "${cpu_load_5}" "${core_count}")
+    cpu_load_15_heatmap=$(HeatmapGenerator "${cpu_load_15}" "${core_count}")
+    cpu_percent=$(printf %.1f "$(echo "${summary}" | jq .system.cpu.load.percent[0])")
 
-  # CPU temperature heatmap
-  # If we're getting close to 85°C... (https://www.raspberrypi.org/blog/introducing-turbo-mode-up-to-50-more-performance-for-free/)
-  if [ ${cpu} -gt 80000 ]; then
-    temp_heatmap=${blinking_text}${red_text}
-    pico_status="${pico_status_hot}"
-    mini_status="${mini_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-    tiny_status="${tiny_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-    full_status="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-    mega_status="${mega_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-  elif [ ${cpu} -gt 70000 ]; then
-    temp_heatmap=${magenta_text}
-  elif [ ${cpu} -gt 60000 ]; then
-    temp_heatmap=${blue_text}
-  else
-    temp_heatmap=${cyan_text}
-  fi
+    # CPU temperature heatmap
+    # If we're getting close to 85°C... (https://www.raspberrypi.org/blog/introducing-turbo-mode-up-to-50-more-performance-for-free/)
+
+    # Remove decimal accuracy
+    cpu_temp=$(echo "${cpu_temp}" | cut -d '.' -f1)
+    if [ "${cpu_temp}" -gt 80 ]; then
+        temp_heatmap=${blinking_text}${red_text}
+        pico_status="${pico_status_hot}"
+        mini_status="${mini_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+        tiny_status="${tiny_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+        full_status="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+        mega_status="${mega_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+    elif [ "${cpu_temp}" -gt 70 ]; then
+        temp_heatmap=${magenta_text}
+    elif [ "${cpu_temp}" -gt 60 ]; then
+        temp_heatmap=${blue_text}
+    else
+        temp_heatmap=${cyan_text}
+    fi
 
   # Memory use, heatmap and bar
-  memory_percent=$(awk '/MemTotal:/{total=$2} /MemFree:/{free=$2} /Buffers:/{buffers=$2} /^Cached:/{cached=$2} END {printf "%.1f", (total-free-buffers-cached)*100/total}' '/proc/meminfo')
+  memory_total=$(echo "${summary}" | jq .system.memory.ram.total)
+  memory_available=$(echo "${summary}" | jq .system.memory.ram.available)
+  memory_percent=$(printf %.1f $(((memory_total-memory_available)*100/memory_total)) )
   memory_heatmap=$(HeatmapGenerator "${memory_percent}")
 
   #  Bar generations
@@ -513,7 +510,7 @@ GetPiholeInformation() {
   fi
 
   # Get Pi-hole (blocking) status
-  ftl_dns_port=$(GetFTLData "/dns/port" | jq .dns-port)
+  ftl_dns_port=$(GetFTLData "/dns/port" | jq .dns_port)
 
   # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled, ${ftl_status} == "Not running" no ftlPID found
   if [ "${ftl_dns_port}" = 0 ] || [ "${ftl_status}" = "Not running" ]; then
@@ -1111,9 +1108,9 @@ StartupRoutine(){
 
     # Get our information for the first time
     printf "%b" " [■■■■······]  40%\\r"
-    GetSystemInformation "$1"
-    printf "%b" " [■■■■■·····]  50%\\r"
     GetSummaryInformation "$1"
+    printf "%b" " [■■■■■·····]  50%\\r"
+    GetSystemInformation "$1"
     printf "%b" " [■■■■■■····]  60%\\r"
     GetPiholeInformation "$1"
     printf "%b" " [■■■■■■■···]  70%\\r"
@@ -1137,11 +1134,12 @@ StartupRoutine(){
     echo "Starting PADD."
 
     # Get our information for the first time
+    echo "- Gathering Summary info."
+    GetSummaryInformation "mini"
     echo "- Gathering system info."
     GetSystemInformation "mini"
     echo "- Gathering Pi-hole info."
     GetPiholeInformation "mini"
-    GetSummaryInformation "mini"
     echo "- Gathering network info."
     GetNetworkInformation "mini"
     echo "- Gathering version info."
@@ -1169,10 +1167,11 @@ StartupRoutine(){
 
 
     # Get our information for the first time
+    echo "- Gathering Summary information..."
+    GetSummaryInformation "$1"
     echo "- Gathering system information..."
     GetSystemInformation "$1"
     echo "- Gathering Pi-hole information..."
-    GetSummaryInformation "$1"
     GetPiholeInformation "$1"
     echo "- Gathering network information..."
     GetNetworkInformation "$1"
@@ -1228,16 +1227,16 @@ NormalPADD() {
     # Start getting our information for next round
     now=$(date +%s)
 
-    # Get uptime, CPU load, temp, etc. every 5 seconds
-    if [ $((now - LastCheckSystemInformation)) -ge 5 ]; then
-      GetSystemInformation ${padd_size}
-      LastCheckSystemInformation="${now}"
-    fi
-
     # Get cache info, last ad domain, blocking percentage, etc. every 5 seconds
     if [ $((now - LastCheckSummaryInformation)) -ge 5 ]; then
       GetSummaryInformation ${padd_size}
       LastCheckSummaryInformation="${now}"
+    fi
+
+    # Get uptime, CPU load, temp, etc. every 5 seconds
+    if [ $((now - LastCheckSystemInformation)) -ge 5 ]; then
+      GetSystemInformation ${padd_size}
+      LastCheckSystemInformation="${now}"
     fi
 
     # Get FTL status every 5 seconds
