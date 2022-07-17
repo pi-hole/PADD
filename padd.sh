@@ -54,7 +54,6 @@ pico_status_hot="${check_box_bad} Sys. Hot!"
 pico_status_off="${check_box_bad} Offline"
 pico_status_ftl_down="${check_box_info} FTL Down"
 pico_status_dns_down="${check_box_bad} DNS Down"
-pico_status_unknown="${check_box_question} Stat. Unk."
 
 # MINI STATUS
 mini_status_ok="${check_box_good} System OK"
@@ -63,7 +62,6 @@ mini_status_hot="${check_box_bad} System is hot!"
 mini_status_off="${check_box_bad} Pi-hole off!"
 mini_status_ftl_down="${check_box_info} FTL down!"
 mini_status_dns_down="${check_box_bad} DNS off!"
-mini_status_unknown="${check_box_question} Status unknown"
 
 # REGULAR STATUS
 full_status_ok="${check_box_good} System is healthy."
@@ -72,7 +70,6 @@ full_status_hot="${check_box_bad} System is hot!"
 full_status_off="${check_box_bad} Pi-hole is offline"
 full_status_ftl_down="${check_box_info} FTL is down!"
 full_status_dns_down="${check_box_bad} DNS is off!"
-full_status_unknown="${check_box_question} Status unknown!"
 
 # MEGA STATUS
 mega_status_ok="${check_box_good} Your system is healthy."
@@ -81,7 +78,6 @@ mega_status_hot="${check_box_bad} Your system is hot!"
 mega_status_off="${check_box_bad} Pi-hole is offline."
 mega_status_ftl_down="${check_box_info} FTLDNS service is not running."
 mega_status_dns_down="${check_box_bad} Pi-hole's DNS server is off!"
-mega_status_unknown="${check_box_question} Unable to determine Pi-hole status."
 
 # TINY STATUS
 tiny_status_ok="${check_box_good} System is healthy."
@@ -90,7 +86,6 @@ tiny_status_hot="${check_box_bad} System is hot!"
 tiny_status_off="${check_box_bad} Pi-hole is offline"
 tiny_status_ftl_down="${check_box_info} FTL is down!"
 tiny_status_dns_down="${check_box_bad} DNS is off!"
-tiny_status_unknown="${check_box_question} Status unknown!"
 
 # Text only "logos"
 padd_text="${green_text}${bold_text}PADD${reset_text}"
@@ -214,52 +209,37 @@ GetFTLData() {
 
 ############################################# GETTERS ##############################################
 
-GetFTLData() {
-    ftl_port=$(cat /run/pihole-FTL.port 2> /dev/null)
-    if [ -n "$ftl_port" ]; then
-      # Send command to FTL and ask to quit when finished
-      echo ">$1 >quit" | nc 127.0.0.1 "${ftl_port}"
-    else
-      echo "0"
-    fi
-}
-
 GetSummaryInformation() {
-  summary=$(GetFTLData "stats")
-  cache_info=$(GetFTLData "cacheinfo")
+  summary=$(GetFTLData "/stats/summary")
+  cache_info=$(GetFTLData "/dns/cache")
 
-  clients=$(echo "${summary}" | grep "unique_clients" | grep -Eo "[0-9]+$")
+  clients=$(echo "${summary}" | jq .ftl.clients.active )
 
-  blocking_status=$(echo "${summary}" | grep "status" | grep -Eo "enabled|disabled|unknown" )
+  blocking_status=$(echo "${summary}" | jq .system.dns.blocking )
 
-  domains_being_blocked_raw=$(echo "${summary}" | grep "domains_being_blocked" | grep -Eo "[0-9]+$")
+  domains_being_blocked_raw=$(echo "${summary}" | jq .ftl.database.gravity )
   domains_being_blocked=$(printf "%.f" "${domains_being_blocked_raw}")
 
-  dns_queries_today_raw=$(echo "$summary" | grep "dns_queries_today" | grep -Eo "[0-9]+$")
+  dns_queries_today_raw=$(echo "$summary" | jq .queries.total )
   dns_queries_today=$(printf "%.f" "${dns_queries_today_raw}")
 
-  ads_blocked_today_raw=$(echo "$summary" | grep "ads_blocked_today" | grep -Eo "[0-9]+$")
+  ads_blocked_today_raw=$(echo "$summary" | jq .queries.blocked )
   ads_blocked_today=$(printf "%.f" "${ads_blocked_today_raw}")
 
-  ads_percentage_today_raw=$(echo "$summary" | grep "ads_percentage_today" | grep -Eo "[0-9.]+$")
+  ads_percentage_today_raw=$(echo "$summary" | jq .queries.percent_blocked)
   ads_percentage_today=$(printf "%.1f" "${ads_percentage_today_raw}")
 
-  cache_size=$(echo "$cache_info" | grep "cache-size" | grep -Eo "[0-9.]+$")
-  cache_deletes=$(echo "$cache_info" | grep "cache-live-freed" | grep -Eo "[0-9.]+$")
-  cache_inserts=$(echo "$cache_info"| grep "cache-inserted" | grep -Eo "[0-9.]+$")
+  cache_size=$(echo "$cache_info" | jq .size)
+  cache_evictions=$(echo "$cache_info" | jq .evicted)
+  cache_inserts=$(echo "$cache_info"| jq .inserted)
 
-  latest_blocked=$(GetFTLData recentBlocked)
+  latest_blocked=$(GetFTLData "/stats/recent_blocked" | jq --raw-output .blocked[0])
 
-  top_blocked=$(GetFTLData "top-ads (1)" | awk '{print $3}')
+  top_blocked=$(GetFTLData "/stats/top_blocked" | jq --raw-output .top_domains[0].domain)
 
-  top_domain=$(GetFTLData "top-domains (1)" | awk '{print $3}')
+  top_domain=$(GetFTLData "/stats/top_domains" | jq --raw-output .top_domains[0].domain)
 
-  top_client_raw=$(GetFTLData "top-clients (1)" | awk '{print $4}')
-  if [ -z "${top_client_raw}" ]; then
-    top_client=$(GetFTLData "top-clients (1)" | awk '{print $3}')
-  else
-    top_client="${top_client_raw}"
-  fi
+  top_client=$(GetFTLData "/stats/top_clients " | jq --raw-output .top_clients[0].name)
 
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 10 "color")
@@ -533,7 +513,7 @@ GetPiholeInformation() {
   fi
 
   # Get Pi-hole (blocking) status
-  ftl_dns_port=$(GetFTLData "dns-port")
+  ftl_dns_port=$(GetFTLData "/dns/port" | jq .dns-port)
 
   # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled, ${ftl_status} == "Not running" no ftlPID found
   if [ "${ftl_dns_port}" = 0 ] || [ "${ftl_status}" = "Not running" ]; then
@@ -546,12 +526,12 @@ GetPiholeInformation() {
     full_status=${full_status_dns_down}
     mega_status=${mega_status_dns_down}
   else
-    if [ "${blocking_status}" = "enabled" ]; then
+    if [ "${blocking_status}" = "true" ]; then
       pihole_status="Active"
       pihole_heatmap=${green_text}
       pihole_check_box=${check_box_good}
     fi
-    if [ "${blocking_status}" = "disabled" ]; then
+    if [ "${blocking_status}" = "false" ]; then
       pihole_status="Blocking disabled"
       pihole_heatmap=${red_text}
       pihole_check_box=${check_box_bad}
@@ -560,16 +540,6 @@ GetPiholeInformation() {
       tiny_status=${tiny_status_off}
       full_status=${full_status_off}
       mega_status=${mega_status_off}
-    fi
-    if [ "${blocking_status}" = "unknown" ]; then
-      pihole_status="Unknown"
-      pihole_heatmap=${yellow_text}
-      pihole_check_box=${check_box_question}
-      pico_status=${pico_status_unknown}
-      mini_status=${mini_status_unknown}
-      tiny_status=${tiny_status_unknown}
-      full_status=${full_status_unknown}
-      mega_status=${mega_status_unknown}
     fi
   fi
 
@@ -891,7 +861,7 @@ PrintPiholeStats() {
     CleanPrintf " %-10s%-39s\e[0K\\n" "Top Clnt:" "${top_client}"
     CleanEcho "FTL ==========================================================================="
     CleanPrintf " %-10s%-9s %-10s%-9s %-10s%-9s\e[0K\\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}%" "Mem. Use:" "${ftl_mem_percentage}%"
-    CleanPrintf " %-10s%-69s\e[0K\\n" "DNSCache:" "${cache_inserts} insertions, ${cache_deletes} deletions, ${cache_size} total entries"
+    CleanPrintf " %-10s%-69s\e[0K\\n" "DNSCache:" "${cache_inserts} insertions, ${cache_evictions} evictions, ${cache_size} total entries"
   fi
 }
 
@@ -1121,9 +1091,6 @@ OutputJSON() {
 
 StartupRoutine(){
 
-  # Get config variables
-  . /etc/pihole/setupVars.conf
-
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     PrintLogo "$1"
     printf "%b" "START-UP ===========\n"
@@ -1263,7 +1230,6 @@ NormalPADD() {
 
     # Get uptime, CPU load, temp, etc. every 5 seconds
     if [ $((now - LastCheckSystemInformation)) -ge 5 ]; then
-      . /etc/pihole/setupVars.conf
       GetSystemInformation ${padd_size}
       LastCheckSystemInformation="${now}"
     fi
