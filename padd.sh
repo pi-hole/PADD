@@ -116,7 +116,7 @@ TestAPIAvailability() {
 
     # test if http status code was 200 (OK)
     if [ "${availabilityResonse}" = 200 ]; then
-        printf "%b" "API available at: http://${URL}:${PORT}/${APIPATH}\n\n"
+        printf "%b" "API available at: http://${URL}:${PORT}/${APIPATH}\n"
     else
         echo "API not available at: http://${URL}:${PORT}/${APIPATH}"
         echo "Exiting."
@@ -307,8 +307,6 @@ GetSystemInformation() {
     cpu_percent=$(printf %.1f "$(echo "${summary}" | jq .system.cpu.load.percent[0])")
 
     # CPU temperature heatmap
-    # If we're getting close to 85°C... (https://www.raspberrypi.org/blog/introducing-turbo-mode-up-to-50-more-performance-for-free/)
-
     # Remove decimal accuracy
     cpu_temp=$(echo "${cpu_temp}" | cut -d '.' -f1)
     if [ "${cpu_temp}" -gt 80 ]; then
@@ -1023,9 +1021,24 @@ VersionConverter() {
 ########################################## MAIN FUNCTIONS ##########################################
 
 OutputJSON() {
-  GetSummaryInformation
-  echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw},\"clients\": ${clients}}"
-  exit 0
+    # Traps for graceful shutdown
+    # https://unix.stackexchange.com/a/681201
+    trap clean_exit EXIT
+    trap sig_cleanup INT QUIT TERM
+
+    # Save current terminal settings (needed for later restore after password prompt)
+    stty_orig=$(stty -g)
+    # Construct FTL's API address depending on the arguments supplied
+    ConstructAPI
+    # Test if the authentication endpoint is availabe
+    TestAPIAvailability
+    # Authenticate with the FTL server
+    printf "%b" "Establishing connection with FTL...\n"
+    Authenthication
+
+    GetSummaryInformation
+    echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today},\"clients\": ${clients}}"
+    exit 0
 }
 
 StartupRoutine(){
@@ -1209,8 +1222,8 @@ DisplayHelp() {
 :::   -p <port>               Port of your Pi-hole's API (default: 8080)
 :::   -a <api>                Path where your Pi-hole's API is hosted (default: api)
 :::   -s <secret password>    Your Pi-hole's password, required to access the API
-:::  -j                       output stats as JSON formatted string and exit
-:::  -h                       display this help text
+:::   -j                       output stats as JSON formatted string and exit
+:::   -h                       display this help text
 EOM
     exit 0
 }
