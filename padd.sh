@@ -472,8 +472,8 @@ GetVersionInformation() {
   core_version=$(pihole -v -p | awk '{print $4}' | tr -d '[:alpha:]')
   core_version_latest=$(pihole -v -p | awk '{print $(NF)}' | tr -d ')')
 
-  # if core_version is something else then x.xx set it to N/A
-  if ! echo "${core_version}" | grep -qE '^[0-9]+([.][0-9]+)?$' || [ "${core_version_latest}" = "ERROR" ]; then
+  # if core_version is something else then x.xx or x.xx.xxx set it to N/A
+  if ! echo "${core_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${core_version_latest}" = "ERROR" ]; then
     core_version="N/A"
     core_version_heatmap=${yellow_text}
   else
@@ -495,8 +495,8 @@ GetVersionInformation() {
     web_version=$(pihole -v -a | awk '{print $4}' | tr -d '[:alpha:]')
     web_version_latest=$(pihole -v -a | awk '{print $(NF)}' | tr -d ')')
 
-    # if web_version is something else then x.xx set it to N/A
-    if ! echo "${web_version}" | grep -qE '^[0-9]+([.][0-9]+)?$' || [ "${web_version_latest}" = "ERROR" ]; then
+    # if web_version is something else then x.xx or x.xx.xxx set it to N/A
+    if ! echo "${web_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${web_version_latest}" = "ERROR" ]; then
       web_version="N/A"
       web_version_heatmap=${yellow_text}
     else
@@ -522,8 +522,8 @@ GetVersionInformation() {
   ftl_version=$(pihole -v -f | awk '{print $4}' | tr -d '[:alpha:]')
   ftl_version_latest=$(pihole -v -f | awk '{print $(NF)}' | tr -d ')')
 
-  # if ftl_version is something else then x.xx set it to N/A
-  if ! echo "${ftl_version}" | grep -qE '^[0-9]+([.][0-9]+)?$' || [ "${ftl_version_latest}" = "ERROR" ]; then
+  # if ftl_version is something else then x.xx or x.xx.xxx set it to N/A
+  if ! echo "${ftl_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${ftl_version_latest}" = "ERROR" ]; then
     ftl_version="N/A"
     ftl_version_heatmap=${yellow_text}
   else
@@ -543,7 +543,7 @@ GetVersionInformation() {
   # PADD version information...
   padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
   # is PADD up-to-date?
-  if [ "${padd_version_latest}" = "" ]; then
+  if [ -z "${padd_version_latest}" ]; then
     padd_version_heatmap=${yellow_text}
   else
     if [ "$(VersionConverter ${padd_version})" -lt "$(VersionConverter "${padd_version_latest}")" ]; then
