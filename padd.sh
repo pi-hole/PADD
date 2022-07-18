@@ -166,7 +166,7 @@ DeleteSession() {
         case "${deleteResponse}" in
             "200") printf "%b" "\nA session that was not created cannot be deleted (e.g., empty API password).\n";;
             "401") printf "%b" "\nLogout attempt without a valid session. Unauthorized!\n";;
-            "410") printf "%b" "\nSession successfully deleted.\n";;
+            "410") printf "%b" "\n\nSession successfully deleted.\n";;
          esac;
     fi
 
@@ -230,7 +230,7 @@ GetSummaryInformation() {
   cache_evictions=$(echo "$cache_info" | jq .evicted)
   cache_inserts=$(echo "$cache_info"| jq .inserted)
 
-  latest_blocked=$(GetFTLData "/stats/recent_blocked&show=1" | jq --raw-output .blocked[0])
+  latest_blocked=$(GetFTLData "/stats/recent_blocked?show=1" | jq --raw-output .blocked[0])
 
   top_blocked=$(GetFTLData "/stats/top_blocked" | jq --raw-output .top_domains[0].domain)
 
@@ -344,45 +344,41 @@ GetSystemInformation() {
     memory_bar=$(BarGenerator "${memory_percent}" 10)
   fi
 
-  # Device model
-  if [ -f /sys/firmware/devicetree/base/model ]; then
-    # Get model, remove possible null byte
-    sys_model=$(tr -d '\0' < /sys/firmware/devicetree/base/model)
-  else
-    sys_model=""
-  fi
+    # Device model
+    sys_model=$(echo "${summary}" | jq --raw-output .system.model)
 }
 
 GetNetworkInformation() {
-  # Get pi IPv4 address
-  pi_ip4_addrs="$(ip addr | grep 'inet ' | grep -v '127.0.0.1/8' | awk '{print $2}' | cut -f1 -d'/' |wc -l)"
-  if [ "${pi_ip4_addrs}" -eq 0 ]; then
-    # No IPv4 address available
-    pi_ip4_addr="N/A"
-  elif [ "${pi_ip4_addrs}" -eq 1 ]; then
-    # One IPv4 address available
-    pi_ip4_addr="$(ip addr | grep 'inet ' | grep -v '127.0.0.1/8' | awk '{print $2}' | cut -f1 -d'/' | head -n 1)"
-  else
-    # More than one IPv4 address available
-    pi_ip4_addr="$(ip addr | grep 'inet ' | grep -v '127.0.0.1/8' | awk '{print $2}' | cut -f1 -d'/' | head -n 1)+"
-  fi
+    interfaces_raw=$(GetFTLData "/ftl/interfaces")
+    # Get pi IPv4 address  of the default interface
+    pi_ip4_addrs="$(echo "${interfaces_raw}" | jq --raw-output .interfaces[0].ipv4 | sed "s/127.0.0.1,//g" | tr "," " "  | wc -w)"
+    if [ "${pi_ip4_addrs}" -eq 0 ]; then
+        # No IPv4 address available
+        pi_ip4_addr="N/A"
+    elif [ "${pi_ip4_addrs}" -eq 1 ]; then
+        # One IPv4 address available
+        pi_ip4_addr="$(echo "${interfaces_raw}" | jq --raw-output .interfaces[0].ipv4 | sed "s/127.0.0.1,//g" | awk -F ','  '{printf $1}')"
+    else
+        # More than one IPv4 address available
+        pi_ip4_addr="$(echo "${interfaces_raw}" | jq --raw-output .interfaces[0].ipv4 | sed "s/127.0.0.1,//g"| awk -F ','  '{printf $1}')+"
+    fi
 
-  # Get pi IPv6 address
-  pi_ip6_addrs="$(ip addr | grep 'inet6 ' | grep -v '::1/128' | awk '{print $2}' | cut -f1 -d'/' | wc -l)"
+  # Get pi IPv6 address of the default interface
+  pi_ip6_addrs="$(echo "${interfaces_raw}" | jq --raw-output .interfaces[0].ipv6 | sed "s/::1,//g" | tr "," " "  | wc -w)"
   if [ "${pi_ip6_addrs}" -eq 0 ]; then
     # No IPv6 address available
     pi_ip6_addr="N/A"
   elif [ "${pi_ip6_addrs}" -eq 1 ]; then
     # One IPv6 address available
-    pi_ip6_addr="$(ip addr | grep 'inet6 ' | grep -v '::1/128' | awk '{print $2}' | cut -f1 -d'/' | head -n 1)"
+    pi_ip6_addr="$(echo "${interfaces_raw}" | jq --raw-output .interfaces[0].ipv6 | sed "s/::1,//g" | awk -F ','  '{printf $1}')"
   else
     # More than one IPv6 address available
-    pi_ip6_addr="$(ip addr | grep 'inet6 ' | grep -v '::1/128' | awk '{print $2}' | cut -f1 -d'/' | head -n 1)+"
+    pi_ip6_addr="$(echo "${interfaces_raw}" | jq --raw-output .interfaces[0].ipv6 | sed "s/::1,//g" | awk -F ','  '{printf $1}')+"
   fi
 
   # Get hostname and gateway
   pi_hostname=$(hostname)
-  pi_gateway=$(ip r | grep 'default' | awk '{print $3}')
+  pi_gateway=$(echo "${interfaces_raw}" | jq --raw-output .gateway.address)
 
   full_hostname=${pi_hostname}
   # does the Pi-hole have a domain set?
@@ -481,11 +477,15 @@ GetNetworkInformation() {
     conditional_forwarding_heatmap=${red_text}
   fi
 
-  #Default interface data
-  def_iface_data=$(GetFTLData "interfaces" | head -n1)
-  iface_name="$(echo "$def_iface_data" | awk '{print $1}')"
-  tx_bytes="$(echo "$def_iface_data" | awk '{print $4}')"
-  rx_bytes="$(echo "$def_iface_data" | awk '{print $5}')"
+    #Default interface data
+    iface_name="$(echo "${interfaces_raw}" | jq --raw-output .interfaces[0].name)"
+    tx_bytes="$(echo "${interfaces_raw}" | jq --raw-output .interfaces[0].tx.num)"
+    tx_bytes_unit="$(echo "${interfaces_raw}" | jq --raw-output .interfaces[0].tx.unit)"
+    tx_bytes=$(printf "%.1f %b" "${tx_bytes}" "${tx_bytes_unit}")
+
+    rx_bytes="$(echo "${interfaces_raw}" | jq --raw-output .interfaces[0].rx.num)"
+    rx_bytes_unit="$(echo "${interfaces_raw}" | jq --raw-output .interfaces[0].rx.unit)"
+    rx_bytes=$(printf "%.1f %b" "${rx_bytes}" "${rx_bytes_unit}")
 }
 
 GetPiholeInformation() {
