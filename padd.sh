@@ -546,7 +546,10 @@ GetVersionInformation() {
   if [ -z "${padd_version_latest}" ]; then
     padd_version_heatmap=${yellow_text}
   else
-    if [ "$(VersionConverter ${padd_version})" -lt "$(VersionConverter "${padd_version_latest}")" ]; then
+    padd_version_latest_converted="$(VersionConverter "${padd_version_latest}")"
+    padd_version_converted=$(VersionConverter "${padd_version}")
+
+    if [ "${padd_version_converted}" -lt "${padd_version_latest_converted}" ]; then
       padd_out_of_date_flag="true"
       padd_version_heatmap=${red_text}
     else
