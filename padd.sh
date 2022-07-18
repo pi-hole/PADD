@@ -236,7 +236,7 @@ GetSummaryInformation() {
 
   top_domain=$(GetFTLData "/stats/top_domains" | jq --raw-output .top_domains[0].domain)
 
-  top_client=$(GetFTLData "/stats/top_clients " | jq --raw-output .top_clients[0].name)
+  top_client=$(GetFTLData "/stats/top_clients" | jq --raw-output .top_clients[0].name)
 
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 10 "color")
@@ -445,9 +445,8 @@ GetNetworkInformation() {
     dhcp_check_box=${check_box_bad}
 
     # if the DHCP Router variable isn't set
-    # Issue 3: https://github.com/jpmck/PADD/issues/3
     if [ -z ${DHCP_ROUTER+x} ]; then
-      DHCP_ROUTER=$(GetFTLData "gateway" | awk '{ printf $1 }')
+      DHCP_ROUTER=$(printf %b "${interfaces_raw}" | jq --raw-output .gateway.address)
     fi
 
     dhcp_info=" Router:   ${DHCP_ROUTER}"
@@ -1241,6 +1240,9 @@ clean_exit() {
     if [ "$(stty -g)" != "${stty_orig}" ]; then
         stty "${stty_orig}"
     fi
+
+    # Turn cursor on
+    setterm -cursor on
 
     #  Delete session from FTL server
     DeleteSession
