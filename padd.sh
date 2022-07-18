@@ -697,7 +697,7 @@ PrintLogo() {
     CleanEcho "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
     CleanEcho ""
   elif [ "$1" = "tiny" ]; then
-    CleanEcho "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
+    CleanEcho "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}  Web ${web_version_heatmap}${web_version}${reset_text}  FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
     CleanPrintf "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}\e[0K\\n"
   elif [ "$1" = "slim" ]; then
     CleanEcho "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
@@ -705,13 +705,13 @@ PrintLogo() {
   # For the next two, use printf to make sure spaces aren't collapsed
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
     CleanPrintf "${padd_logo_1}\e[0K\\n"
-    CleanPrintf "${padd_logo_2}Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_2}Pi-hole® ${core_version_heatmap}${core_version}${reset_text}  Web ${web_version_heatmap}${web_version}${reset_text}  FTL ${ftl_version_heatmap}${ftl_version}${reset_text}\e[0K\\n"
     CleanPrintf "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}\e[0K\\n"
     CleanEcho ""
   # normal or not defined
   else
     CleanPrintf "${padd_logo_retro_1}\e[0K\\n"
-    CleanPrintf "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}  Web ${web_version_heatmap}${web_version}${reset_text}  FTL ${ftl_version_heatmap}${ftl_version}${reset_text}  PADD ${padd_version_heatmap}${padd_version}${reset_text}\e[0K\\n"
     CleanPrintf "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}\e[0K\\n"
 
     CleanEcho ""
