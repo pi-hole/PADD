@@ -543,77 +543,83 @@ GetPiholeInformation() {
 }
 
 GetVersionInformation() {
-  # Check if version status has been saved
-  core_version=$(pihole -v -p | awk '{print $4}' | tr -d '[:alpha:]')
-  core_version_latest=$(pihole -v -p | awk '{print $(NF)}' | tr -d ')')
 
-  # if core_version is something else then x.xx or x.xx.xxx set it to N/A
-  if ! echo "${core_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${core_version_latest}" = "ERROR" ]; then
-    core_version="N/A"
-    core_version_heatmap=${yellow_text}
-  else
-    # remove the leading "v" from core_version_latest
-    core_version_latest=$(echo "${core_version_latest}" | tr -d '\r\n[:alpha:]')
-    # is core up-to-date?
-    if [ "${core_version}" != "${core_version_latest}" ]; then
-      out_of_date_flag="true"
-      core_version_heatmap=${red_text}
+    versions_raw=$(GetFTLData "/version")
+
+    # Check if core version
+    core_branch="$(echo "${versions_raw}" | jq --raw-output .core.branch)"
+    core_version=$(echo "${versions_raw}" | jq --raw-output .core.tag | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')
+    core_version_latest=$(pihole -v -p | awk '{print $(NF)}' | tr -d ')')
+
+    # if core_version is something else then x.xx or x.xx.xxx or branch not master set it to N/A
+    if ! echo "${core_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ ! "${core_branch}" = "master" ]; then
+        core_version="N/A"
+        core_version_heatmap=${yellow_text}
     else
-      core_version_heatmap=${green_text}
+        # remove the leading "v" from core_version_latest
+        core_version_latest=$(echo "${core_version_latest}" | tr -d '\r\n[:alpha:]')
+        # is core up-to-date?
+        if [ "${core_version}" != "${core_version_latest}" ]; then
+            out_of_date_flag="true"
+            core_version_heatmap=${red_text}
+        else
+            core_version_heatmap=${green_text}
+        fi
+        # add leading "v" to version number
+        core_version="v${core_version}"
     fi
+
+    # Gather web version information...
+    if [ "$INSTALL_WEB_INTERFACE" = true ]; then
+        web_branch="$(echo "${versions_raw}" | jq --raw-output .web.branch)"
+        web_version=$(echo "${versions_raw}" | jq --raw-output .web.tag | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')
+        web_version_latest=$(pihole -v -a | awk '{print $(NF)}' | tr -d ')')
+
+        # if web_version is something else then x.xx or x.xx.xxx or branch not master set it to N/A
+        if ! echo "${web_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ ! "${web_branch}" = "master" ]; then
+            web_version="N/A"
+            web_version_heatmap=${yellow_text}
+        else
+            # remove the leading "v" from web_version_latest
+            web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
+        # is web up-to-date?
+        if [ "${web_version}" != "${web_version_latest}" ]; then
+            out_of_date_flag="true"
+            web_version_heatmap=${red_text}
+        else
+            web_version_heatmap=${green_text}
+        fi
+        # add leading "v" to version number
+        web_version="v${web_version}"
+        fi
+    else
+        # Web interface not installed
+        web_version="N/A"
+        web_version_heatmap=${yellow_text}
+    fi
+
+    # Gather FTL version information...
+    ftl_branch="$(echo "${versions_raw}" | jq --raw-output .ftl.branch)"
+    ftl_version=$(echo "${versions_raw}" | jq --raw-output .ftl.tag | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')
+    ftl_version_latest=$(pihole -v -f | awk '{print $(NF)}' | tr -d ')')
+
+    # if ftl_version is something else then x.xx or x.xx.xxx or branch not master set it to N/A
+    if ! echo "${ftl_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ ! "${ftl_branch}" = "master" ]; then
+        ftl_version="N/A"
+        ftl_version_heatmap=${yellow_text}
+    else
+        # remove the leading "v" from ftl_version_latest
+        ftl_version_latest=$(echo "${ftl_version_latest}" | tr -d '\r\n[:alpha:]')
+        # is ftl up-to-date?
+        if [ "${ftl_version}" != "${ftl_version_latest}" ]; then
+            out_of_date_flag="true"
+            ftl_version_heatmap=${red_text}
+        else
+            ftl_version_heatmap=${green_text}
+        fi
     # add leading "v" to version number
-    core_version="v${core_version}"
-  fi
-
-  # Gather web version information...
-  if [ "$INSTALL_WEB_INTERFACE" = true ]; then
-    web_version=$(pihole -v -a | awk '{print $4}' | tr -d '[:alpha:]')
-    web_version_latest=$(pihole -v -a | awk '{print $(NF)}' | tr -d ')')
-
-    # if web_version is something else then x.xx or x.xx.xxx set it to N/A
-    if ! echo "${web_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${web_version_latest}" = "ERROR" ]; then
-      web_version="N/A"
-      web_version_heatmap=${yellow_text}
-    else
-      # remove the leading "v" from web_version_latest
-      web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
-      # is web up-to-date?
-      if [ "${web_version}" != "${web_version_latest}" ]; then
-        out_of_date_flag="true"
-        web_version_heatmap=${red_text}
-      else
-        web_version_heatmap=${green_text}
-      fi
-      # add leading "v" to version number
-      web_version="v${web_version}"
+    ftl_version="v${ftl_version}"
     fi
-  else
-    # Web interface not installed
-    web_version="N/A"
-    web_version_heatmap=${yellow_text}
-  fi
-
-  # Gather FTL version information...
-  ftl_version=$(pihole -v -f | awk '{print $4}' | tr -d '[:alpha:]')
-  ftl_version_latest=$(pihole -v -f | awk '{print $(NF)}' | tr -d ')')
-
-  # if ftl_version is something else then x.xx or x.xx.xxx set it to N/A
-  if ! echo "${ftl_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${ftl_version_latest}" = "ERROR" ]; then
-    ftl_version="N/A"
-    ftl_version_heatmap=${yellow_text}
-  else
-    # remove the leading "v" from ftl_version_latest
-    ftl_version_latest=$(echo "${ftl_version_latest}" | tr -d '\r\n[:alpha:]')
-    # is ftl up-to-date?
-    if [ "${ftl_version}" != "${ftl_version_latest}" ]; then
-      out_of_date_flag="true"
-      ftl_version_heatmap=${red_text}
-    else
-      ftl_version_heatmap=${green_text}
-    fi
-  # add leading "v" to version number
-  ftl_version="v${ftl_version}"
-  fi
 
   # PADD version information...
   padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
