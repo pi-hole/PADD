@@ -618,23 +618,23 @@ GetVersionInformation() {
     ftl_version="v${ftl_version}"
     fi
 
-  # PADD version information...
-  padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
-  # is PADD up-to-date?
-  if [ -z "${padd_version_latest}" ]; then
-    padd_version_heatmap=${yellow_text}
-  else
-    padd_version_latest_converted="$(VersionConverter "${padd_version_latest}")"
-    padd_version_converted=$(VersionConverter "${padd_version}")
-
-    if [ "${padd_version_converted}" -lt "${padd_version_latest_converted}" ]; then
-      padd_out_of_date_flag="true"
-      padd_version_heatmap=${red_text}
+    # PADD version information...
+    padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
+    # is PADD up-to-date?
+    if [ -z "${padd_version_latest}" ]; then
+        padd_version_heatmap=${yellow_text}
     else
-      # local and remote PADD version match or local is newer
-      padd_version_heatmap=${green_text}
+        padd_version_latest_converted="$(VersionConverter "${padd_version_latest}")"
+        padd_version_converted=$(VersionConverter "${padd_version}")
+
+        if [ "${padd_version_converted}" -lt "${padd_version_latest_converted}" ]; then
+            padd_out_of_date_flag="true"
+            padd_version_heatmap=${red_text}
+        else
+            # local and remote PADD version match or local is newer
+            padd_version_heatmap=${green_text}
+        fi
     fi
-  fi
 
   # was any portion of Pi-hole out-of-date?
   # yes, pi-hole is out of date
