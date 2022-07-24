@@ -9,6 +9,6 @@ jobs:
       name: editorconfig-checker
       runs-on: ubuntu-20.04
       steps:
-        - uses: actions/checkout@v3
-        - uses: editorconfig-checker/action-editorconfig-checker@main
+        - uses: actions/checkout@v3.0.0
+        - uses: editorconfig-checker/action-editorconfig-checker@v1.0.0
         - run: editorconfig-checker
