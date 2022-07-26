@@ -11,34 +11,20 @@
 LC_ALL=C
 LC_NUMERIC=C
 
-# creates a new local temp directory /tmp/padd_uid
-tmpdir=$(dirname "$(mktemp -u)")
-mkdir -p "$tmpdir/padd_$(id -u)/"
-
-# change into the newly created directory
-oldpath=$(pwd)
-cd "$tmpdir/padd_$(id -u)/" > /dev/null || {
-    EC=$?
-    echo >&2 "Could not chdir to the temp directory (exit code $EC)"
-    exit $EC
-}
-
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.7.1"
+padd_version="v3.8.0"
 
-# DATE
-today=$(date +%Y%m%d)
+# LastChecks
+LastCheckVersionInformation=$(date +%s)
+LastCheckNetworkInformation=$(date +%s)
+LastCheckSummaryInformation=$(date +%s)
+LastCheckPiholeInformation=$(date +%s)
+LastCheckSystemInformation=$(date +%s)
 
 # CORES
-core_count=1
-core_count=$(cat /sys/devices/system/cpu/kernel_max 2> /dev/null)+1
-
-# Get Config variables
-. /etc/pihole/setupVars.conf
-
-piHoleVersion_file="./piHoleVersion"
+core_count=$(nproc --all 2> /dev/null)
 
 # COLORS
 CSI="$(printf '\033')["
@@ -100,6 +86,7 @@ mega_status_unknown="${check_box_question} Unable to determine Pi-hole status."
 # TINY STATUS
 tiny_status_ok="${check_box_good} System is healthy."
 tiny_status_update="${check_box_info} Updates are available."
+tiny_status_hot="${check_box_bad} System is hot!"
 tiny_status_off="${check_box_bad} Pi-hole is offline"
 tiny_status_ftl_down="${check_box_info} FTL is down!"
 tiny_status_dns_down="${check_box_bad} DNS is off!"
@@ -244,8 +231,9 @@ GetSystemInformation() {
   if [ ${cpu} -gt 80000 ]; then
     temp_heatmap=${blinking_text}${red_text}
     pico_status="${pico_status_hot}"
-    mini_status_="${mini_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-    full_status_="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+    mini_status="${mini_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+    tiny_status="${tiny_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+    full_status="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
     mega_status="${mega_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
   elif [ ${cpu} -gt 70000 ]; then
     temp_heatmap=${magenta_text}
@@ -269,6 +257,14 @@ GetSystemInformation() {
   else
     cpu_bar=$(BarGenerator "${cpu_percent}" 10)
     memory_bar=$(BarGenerator "${memory_percent}" 10)
+  fi
+
+  # Device model
+  if [ -f /sys/firmware/devicetree/base/model ]; then
+    # Get model, remove possible null byte
+    sys_model=$(tr -d '\0' < /sys/firmware/devicetree/base/model)
+  else
+    sys_model=""
   fi
 }
 
@@ -370,7 +366,7 @@ GetNetworkInformation() {
     # if the DHCP Router variable isn't set
     # Issue 3: https://github.com/jpmck/PADD/issues/3
     if [ -z ${DHCP_ROUTER+x} ]; then
-      DHCP_ROUTER=$(/sbin/ip route | awk '/default/ { printf "%s\t", $3 }')
+      DHCP_ROUTER=$(GetFTLData "gateway" | awk '{ printf $1 }')
     fi
 
     dhcp_info=" Router:   ${DHCP_ROUTER}"
@@ -399,6 +395,12 @@ GetNetworkInformation() {
     conditional_forwarding_status="Disabled"
     conditional_forwarding_heatmap=${red_text}
   fi
+
+  #Default interface data
+  def_iface_data=$(GetFTLData "interfaces" | head -n1)
+  iface_name="$(echo "$def_iface_data" | awk '{print $1}')"
+  tx_bytes="$(echo "$def_iface_data" | awk '{print $4}')"
+  rx_bytes="$(echo "$def_iface_data" | awk '{print $5}')"
 }
 
 GetPiholeInformation() {
@@ -410,9 +412,9 @@ GetPiholeInformation() {
     ftl_heatmap=${yellow_text}
     ftl_check_box=${check_box_info}
     pico_status=${pico_status_ftl_down}
-    mini_status_=${mini_status_ftl_down}
-    tiny_status_=${tiny_status_ftl_down}
-    full_status_=${full_status_ftl_down}
+    mini_status=${mini_status_ftl_down}
+    tiny_status=${tiny_status_ftl_down}
+    full_status=${full_status_ftl_down}
     mega_status=${mega_status_ftl_down}
   else
     ftl_status="Running"
@@ -431,9 +433,9 @@ GetPiholeInformation() {
     pihole_heatmap=${red_text}
     pihole_check_box=${check_box_bad}
     pico_status=${pico_status_dns_down}
-    mini_status_=${mini_status_dns_down}
-    tiny_status_=${tiny_status_dns_down}
-    full_status_=${full_status_dns_down}
+    mini_status=${mini_status_dns_down}
+    tiny_status=${tiny_status_dns_down}
+    full_status=${full_status_dns_down}
     mega_status=${mega_status_dns_down}
   else
     if [ "${blocking_status}" = "enabled" ]; then
@@ -446,9 +448,9 @@ GetPiholeInformation() {
       pihole_heatmap=${red_text}
       pihole_check_box=${check_box_bad}
       pico_status=${pico_status_off}
-      mini_status_=${mini_status_off}
-      tiny_status_=${tiny_status_off}
-      full_status_=${full_status_off}
+      mini_status=${mini_status_off}
+      tiny_status=${tiny_status_off}
+      full_status=${full_status_off}
       mega_status=${mega_status_off}
     fi
     if [ "${blocking_status}" = "unknown" ]; then
@@ -456,9 +458,9 @@ GetPiholeInformation() {
       pihole_heatmap=${yellow_text}
       pihole_check_box=${check_box_question}
       pico_status=${pico_status_unknown}
-      mini_status_=${mini_status_unknown}
-      tiny_status_=${tiny_status_unknown}
-      full_status_=${full_status_unknown}
+      mini_status=${mini_status_unknown}
+      tiny_status=${tiny_status_unknown}
+      full_status=${full_status_unknown}
       mega_status=${mega_status_unknown}
     fi
   fi
@@ -467,159 +469,123 @@ GetPiholeInformation() {
 
 GetVersionInformation() {
   # Check if version status has been saved
-  if [ -f "$piHoleVersion_file" ]; then # the file exists...
-    # the file exits, use it
-    # shellcheck source=./piHoleVersion
-    . "$piHoleVersion_file"
+  core_version=$(pihole -v -p | awk '{print $4}' | tr -d '[:alpha:]')
+  core_version_latest=$(pihole -v -p | awk '{print $(NF)}' | tr -d ')')
 
-    # Today is
-    today=$(date +%Y%m%d)
-
-    # was the last check today?
-    # last_check is read from ./piHoleVersion
-    # shellcheck disable=SC2154
-    if [ "${today}" != "${last_check}" ]; then # no, it wasn't today
-      # Remove the Pi-hole version file...
-      rm -f "$piHoleVersion_file"
-    fi
-
-  else # the file doesn't exist, create it...
-    # Gather core version information...
-    core_version=$(pihole -v -p | awk '{print $4}' | tr -d '[:alpha:]')
-    core_version_latest=$(pihole -v -p | awk '{print $6}' | tr -d ')')
-
-    if [ "${core_version_latest}" = "ERROR" ]; then
-      core_version_heatmap=${yellow_text}
+  # if core_version is something else then x.xx or x.xx.xxx set it to N/A
+  if ! echo "${core_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${core_version_latest}" = "ERROR" ]; then
+    core_version="N/A"
+    core_version_heatmap=${yellow_text}
+  else
+    # remove the leading "v" from core_version_latest
+    core_version_latest=$(echo "${core_version_latest}" | tr -d '\r\n[:alpha:]')
+    # is core up-to-date?
+    if [ "${core_version}" != "${core_version_latest}" ]; then
+      out_of_date_flag="true"
+      core_version_heatmap=${red_text}
     else
-      core_version_latest=$(echo "${core_version_latest}" | tr -d '\r\n[:alpha:]')
-      # is core up-to-date?
-      if [ "${core_version}" != "${core_version_latest}" ]; then
+      core_version_heatmap=${green_text}
+    fi
+    # add leading "v" to version number
+    core_version="v${core_version}"
+  fi
+
+  # Gather web version information...
+  if [ "$INSTALL_WEB_INTERFACE" = true ]; then
+    web_version=$(pihole -v -a | awk '{print $4}' | tr -d '[:alpha:]')
+    web_version_latest=$(pihole -v -a | awk '{print $(NF)}' | tr -d ')')
+
+    # if web_version is something else then x.xx or x.xx.xxx set it to N/A
+    if ! echo "${web_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${web_version_latest}" = "ERROR" ]; then
+      web_version="N/A"
+      web_version_heatmap=${yellow_text}
+    else
+      # remove the leading "v" from web_version_latest
+      web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
+      # is web up-to-date?
+      if [ "${web_version}" != "${web_version_latest}" ]; then
         out_of_date_flag="true"
-        core_version_heatmap=${red_text}
+        web_version_heatmap=${red_text}
       else
-        core_version_heatmap=${green_text}
+        web_version_heatmap=${green_text}
       fi
+      # add leading "v" to version number
+      web_version="v${web_version}"
     fi
+  else
+    # Web interface not installed
+    web_version="N/A"
+    web_version_heatmap=${yellow_text}
+  fi
 
-    # Gather web version information...
-    if [ "$INSTALL_WEB_INTERFACE" = true ]; then
-      web_version=$(pihole -v -a | awk '{print $4}' | tr -d '[:alpha:]')
-      web_version_latest=$(pihole -v -a | awk '{print $6}' | tr -d ')')
-      if [ "${web_version_latest}" = "ERROR" ]; then
-        web_version_heatmap=${yellow_text}
-      else
-        web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
-        # is web up-to-date?
-        if [ "${web_version}" != "${web_version_latest}" ]; then
-          out_of_date_flag="true"
-          web_version_heatmap=${red_text}
-        else
-          web_version_heatmap=${green_text}
-        fi
-      fi
+  # Gather FTL version information...
+  ftl_version=$(pihole -v -f | awk '{print $4}' | tr -d '[:alpha:]')
+  ftl_version_latest=$(pihole -v -f | awk '{print $(NF)}' | tr -d ')')
+
+  # if ftl_version is something else then x.xx or x.xx.xxx set it to N/A
+  if ! echo "${ftl_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${ftl_version_latest}" = "ERROR" ]; then
+    ftl_version="N/A"
+    ftl_version_heatmap=${yellow_text}
+  else
+    # remove the leading "v" from ftl_version_latest
+    ftl_version_latest=$(echo "${ftl_version_latest}" | tr -d '\r\n[:alpha:]')
+    # is ftl up-to-date?
+    if [ "${ftl_version}" != "${ftl_version_latest}" ]; then
+      out_of_date_flag="true"
+      ftl_version_heatmap=${red_text}
     else
-      # Web interface not installed
-      web_version_heatmap=${red_text}
-      web_version="$(printf '\x08')"  # Hex 0x08 is for backspace, to delete the leading 'v'
-      web_version="${web_version}N/A" # N/A = Not Available
+      ftl_version_heatmap=${green_text}
     fi
+  # add leading "v" to version number
+  ftl_version="v${ftl_version}"
+  fi
 
-    # Gather FTL version information...
-    ftl_version=$(pihole -v -f | awk '{print $4}' | tr -d '[:alpha:]')
-    ftl_version_latest=$(pihole -v -f | awk '{print $6}' | tr -d ')')
-    if [ "${ftl_version_latest}" = "ERROR" ]; then
-      ftl_version_heatmap=${yellow_text}
+  # PADD version information...
+  padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
+  # is PADD up-to-date?
+  if [ -z "${padd_version_latest}" ]; then
+    padd_version_heatmap=${yellow_text}
+  else
+    padd_version_latest_converted="$(VersionConverter "${padd_version_latest}")"
+    padd_version_converted=$(VersionConverter "${padd_version}")
+
+    if [ "${padd_version_converted}" -lt "${padd_version_latest_converted}" ]; then
+      padd_out_of_date_flag="true"
+      padd_version_heatmap=${red_text}
     else
-      ftl_version_latest=$(echo "${ftl_version_latest}" | tr -d '\r\n[:alpha:]')
-      # is ftl up-to-date?
-      if [ "${ftl_version}" != "${ftl_version_latest}" ]; then
-        out_of_date_flag="true"
-        ftl_version_heatmap=${red_text}
-      else
-        ftl_version_heatmap=${green_text}
-      fi
+      # local and remote PADD version match or local is newer
+      padd_version_heatmap=${green_text}
     fi
+  fi
 
-    # PADD version information...
-    padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
-    # is PADD up-to-date?
-    if [ "${padd_version_latest}" = "" ]; then
-      padd_version_heatmap=${yellow_text}
-    else
-      if [ "${padd_version}" != "${padd_version_latest}" ]; then
-        padd_out_of_date_flag="true"
-        padd_version_heatmap=${red_text}
-      else
-        padd_version_heatmap=${green_text}
-      fi
-    fi
 
-    # was any portion of Pi-hole out-of-date?
-    # yes, pi-hole is out of date
-    if [ "${out_of_date_flag}" = "true" ]; then
-      version_status="Pi-hole is out-of-date!"
-      version_heatmap=${red_text}
-      version_check_box=${check_box_bad}
+  # was any portion of Pi-hole out-of-date?
+  # yes, pi-hole is out of date
+  if [ "${out_of_date_flag}" = "true" ]; then
+    version_status="Pi-hole is out-of-date!"
+    pico_status=${pico_status_update}
+    mini_status=${mini_status_update}
+    tiny_status=${tiny_status_update}
+    full_status=${full_status_update}
+    mega_status=${mega_status_update}
+  else
+    # but is PADD out-of-date?
+    if [ "${padd_out_of_date_flag}" = "true" ]; then
+      version_status="PADD is out-of-date!"
       pico_status=${pico_status_update}
-      mini_status_=${mini_status_update}
-      tiny_status_=${tiny_status_update}
-      full_status_=${full_status_update}
+      mini_status=${mini_status_update}
+      tiny_status=${tiny_status_update}
+      full_status=${full_status_update}
       mega_status=${mega_status_update}
+    # else, everything is good!
     else
-      # but is PADD out-of-date?
-      if [ "${padd_out_of_date_flag}" = "true" ]; then
-        version_status="PADD is out-of-date!"
-        version_heatmap=${red_text}
-        version_check_box=${check_box_bad}
-        pico_status=${pico_status_update}
-        mini_status_=${mini_status_update}
-        tiny_status_=${tiny_status_update}
-        full_status_=${full_status_update}
-        mega_status=${mega_status_update}
-      # else, everything is good!
-      else
-        version_status="Pi-hole is up-to-date!"
-        version_heatmap=${green_text}
-        version_check_box=${check_box_good}
-        pico_status=${pico_status_ok}
-        mini_status_=${mini_status_ok}
-        tiny_status_=${tiny_status_ok}
-        full_status_=${full_status_ok}
-        mega_status=${mega_status_ok}
-      fi
+      version_status="Pi-hole is up-to-date!"
+      pico_status=${pico_status_ok}
+      mini_status=${mini_status_ok}
+      tiny_status=${tiny_status_ok}
+      full_status=${full_status_ok}
+      mega_status=${mega_status_ok}
     fi
-
-    # write it all to the file
-    echo "last_check=${today}" > "$piHoleVersion_file"
-    {
-      echo "core_version=$core_version"
-      echo "core_version_latest=$core_version_latest"
-      echo "core_version_heatmap=$core_version_heatmap"
-
-      echo "web_version=$web_version"
-      echo "web_version_latest=$web_version_latest"
-      echo "web_version_heatmap=$web_version_heatmap"
-
-      echo "ftl_version=$ftl_version"
-      echo "ftl_version_latest=$ftl_version_latest"
-      echo "ftl_version_heatmap=$ftl_version_heatmap"
-
-      echo "padd_version=$padd_version"
-      echo "padd_version_latest=$padd_version_latest"
-      echo "padd_version_heatmap=$padd_version_heatmap"
-
-      echo "version_status=\"$version_status\""
-      echo "version_heatmap=$version_heatmap"
-      echo "version_check_box=\"$version_check_box\""
-
-      echo "pico_status=\"$pico_status\""
-      echo "mini_status_=\"$mini_status_\""
-      echo "tiny_status_=\"$tiny_status_\""
-      echo "full_status_=\"$full_status_\""
-      echo "mega_status=\"$mega_status\""
-    } >> "$piHoleVersion_file"
-
-    # there's a file now
   fi
 }
 
@@ -646,29 +612,29 @@ PrintLogo() {
   if [ "$1" = "pico" ]; then
     CleanEcho "p${padd_text} ${pico_status}"
   elif [ "$1" = "nano" ]; then
-    CleanEcho "n${padd_text} ${mini_status_}"
+    CleanEcho "n${padd_text} ${mini_status}"
   elif [ "$1" = "micro" ]; then
-    CleanEcho "µ${padd_text}     ${mini_status_}"
+    CleanEcho "µ${padd_text}     ${mini_status}"
     CleanEcho ""
   elif [ "$1" = "mini" ]; then
-    CleanEcho "${padd_text}${dim_text}mini${reset_text}  ${mini_status_}"
+    CleanEcho "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
     CleanEcho ""
   elif [ "$1" = "tiny" ]; then
-    CleanEcho "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}"
-    CleanPrintf "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status_}${reset_text}\e[0K\\n"
+    CleanEcho "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
+    CleanPrintf "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}\e[0K\\n"
   elif [ "$1" = "slim" ]; then
-    CleanEcho "${padd_text}${dim_text}slim${reset_text}   ${full_status_}"
+    CleanEcho "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
     CleanEcho ""
   # For the next two, use printf to make sure spaces aren't collapsed
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
     CleanPrintf "${padd_logo_1}\e[0K\\n"
-    CleanPrintf "${padd_logo_2}Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}\e[0K\\n"
-    CleanPrintf "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status_}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_2}Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}\e[0K\\n"
     CleanEcho ""
   # normal or not defined
   else
     CleanPrintf "${padd_logo_retro_1}\e[0K\\n"
-    CleanPrintf "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}v${core_version}${reset_text}, Web ${web_version_heatmap}v${web_version}${reset_text}, FTL ${ftl_version_heatmap}v${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}\e[0K\\n"
+    CleanPrintf "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}\e[0K\\n"
     CleanPrintf "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}\e[0K\\n"
 
     CleanEcho ""
@@ -695,6 +661,7 @@ PrintNetworkInformation() {
     CleanEcho "${bold_text}NETWORK ================================${reset_text}"
     CleanPrintf " %-9s%-19s\e[0K\\n" "Host:" "${full_hostname}"
     CleanPrintf " %-9s%-19s\e[0K\\n" "IP:"   "${pi_ip4_addr}"
+    CleanPrintf " %-9s%-8s %-4s%-5s %-4s%-5s\e[0K\\n" "Iface:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
     CleanPrintf " %-9s%-10s\e[0K\\n" "DNS:" "${dns_information}"
 
     if [ "${DHCP_ACTIVE}" = "true" ]; then
@@ -703,7 +670,8 @@ PrintNetworkInformation() {
   elif [ "$1" = "tiny" ]; then
     CleanEcho "${bold_text}NETWORK ============================================${reset_text}"
     CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "Hostname:" "${full_hostname}" "IP:  " "${pi_ip4_addr}"
-    CleanPrintf " %-6s%-39s\e[0K\\n" "IPv6:" "${pi_ip6_addr}"
+    CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "IPv6:" "${pi_ip6_addr}"
+    CleanPrintf " %-10s%-16s %-4s%-5s %-4s%-5s\e[0K\\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
     CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
 
     if [ "${DHCP_ACTIVE}" = "true" ]; then
@@ -713,7 +681,8 @@ PrintNetworkInformation() {
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
     CleanEcho "${bold_text}NETWORK ===================================================${reset_text}"
     CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "Hostname:" "${full_hostname}" "IP:" "${pi_ip4_addr}"
-    CleanPrintf " %-6s%-19s\e[0K\\n" "IPv6:" "${pi_ip6_addr}"
+    CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "IPv6:" "${pi_ip6_addr}"
+    CleanPrintf " %-10s%-19s %-4s%-5s %-4s%-5s\e[0K\\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
     CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
 
     if [ "${DHCP_ACTIVE}" = "true" ]; then
@@ -723,6 +692,7 @@ PrintNetworkInformation() {
   else
     CleanEcho "${bold_text}NETWORK =======================================================================${reset_text}"
     CleanPrintf " %-10s%-19s\e[0K\\n" "Hostname:" "${full_hostname}"
+    CleanPrintf " %-11s%-14s %-4s%-9s %-4s%-9s\e[0K\\n" "Interface:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
     CleanPrintf " %-6s%-19s %-10s%-29s\e[0K\\n" "IPv4:" "${pi_ip4_addr}" "IPv6:" "${pi_ip6_addr}"
     CleanEcho "DNS ==========================================================================="
     CleanPrintf " %-10s%-39s\e[0K\\n" "Servers:" "${dns_information}"
@@ -844,6 +814,8 @@ PrintSystemInformation() {
   # else we're not
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
     CleanEcho "${bold_text}SYSTEM ====================================================${reset_text}"
+    # Device
+    CleanPrintf " %-10s%-39s\e[0K\\n" "Device:" "${sys_model}"
     # Uptime
     CleanPrintf " %-10s%-39s\e[0K\\n" "Uptime:" "${system_uptime}"
 
@@ -855,6 +827,9 @@ PrintSystemInformation() {
     CleanPrintf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
   else
     CleanEcho "${bold_text}SYSTEM ========================================================================${reset_text}"
+    # Device
+    CleanPrintf " %-10s%-39s\e[0K\\n" "Device:" "${sys_model}"
+
     # Uptime and memory
     CleanPrintf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s\\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
 
@@ -1022,15 +997,23 @@ CheckConnectivity() {
   fi
 }
 
+# converts a given version string e.g. v3.7.1 to 3007001000 to allow for easier comparison of multi digit version numbers
+# credits https://apple.stackexchange.com/a/123408
+VersionConverter() {
+  echo "$@" | tr -d '[:alpha:]' | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
+}
+
 ########################################## MAIN FUNCTIONS ##########################################
 
 OutputJSON() {
   GetSummaryInformation
   echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw},\"clients\": ${clients}}"
-  cd "$oldpath" > /dev/null || exit
 }
 
 StartupRoutine(){
+    # Get config variables
+  . /etc/pihole/setupVars.conf
+
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     PrintLogo "$1"
     printf "%b" "START-UP ===========\n"
@@ -1042,12 +1025,7 @@ StartupRoutine(){
 
     # Check for updates
     printf "%b" " [■■········]  20%\\r"
-    if [ -f "$piHoleVersion_file" ]; then
-      rm -f "$piHoleVersion_file"
-      printf "%b" " [■■■·······]  30%\\r"
-    else
-      printf "%b" " [■■■·······]  30%\\r"
-    fi
+    printf "%b" " [■■■·······]  30%\\r"
 
     # Get our information for the first time
     printf "%b" " [■■■■······]  40%\\r"
@@ -1071,26 +1049,18 @@ StartupRoutine(){
 
     echo "Starting PADD."
 
-    # Check for updates
-    echo "- Checking for version file."
-    if [ -f "$piHoleVersion_file" ]; then
-      echo "  - Found and deleted."
-      rm -f "$piHoleVersion_file"
-    else
-      echo "  - Not found."
-    fi
-
     # Get our information for the first time
     echo "- Gathering system info."
     GetSystemInformation "mini"
     echo "- Gathering Pi-hole info."
+    GetPiholeInformation "mini"
     GetSummaryInformation "mini"
     echo "- Gathering network info."
     GetNetworkInformation "mini"
     echo "- Gathering version info."
     GetVersionInformation "mini"
-    echo "  - Core v$core_version, Web v$web_version"
-    echo "  - FTL v$ftl_version, PADD $padd_version"
+    echo "  - Core $core_version, Web $web_version"
+    echo "  - FTL $ftl_version, PADD $padd_version"
     echo "  - $version_status"
 
   else
@@ -1106,15 +1076,6 @@ StartupRoutine(){
     printf "%b" "- Checking internet connection...\n"
     CheckConnectivity "$1"
 
-    # Check for updates
-    echo "- Checking for PADD version file..."
-    if [ -f "$piHoleVersion_file" ]; then
-      echo "  - PADD version file found... deleting."
-      rm -f "$piHoleVersion_file"
-    else
-      echo "  - PADD version file not found."
-    fi
-
     # Get our information for the first time
     echo "- Gathering system information..."
     GetSystemInformation "$1"
@@ -1125,9 +1086,9 @@ StartupRoutine(){
     GetNetworkInformation "$1"
     echo "- Gathering version information..."
     GetVersionInformation "$1"
-    echo "  - Pi-hole Core v$core_version"
-    echo "  - Web Admin v$web_version"
-    echo "  - FTL v$ftl_version"
+    echo "  - Pi-hole Core $core_version"
+    echo "  - Web Admin $web_version"
+    echo "  - FTL $ftl_version"
     echo "  - PADD $padd_version"
     echo "  - $version_status"
   fi
@@ -1164,18 +1125,48 @@ NormalPADD() {
     tput ed
 
     pico_status=${pico_status_ok}
-    mini_status_=${mini_status_ok}
-    tiny_status_=${tiny_status_ok}
-
-    # Start getting our information
-    GetVersionInformation ${padd_size}
-    GetSummaryInformation ${padd_size}
-    GetPiholeInformation ${padd_size}
-    GetNetworkInformation ${padd_size}
-    GetSystemInformation ${padd_size}
+    mini_status=${mini_status_ok}
+    tiny_status=${tiny_status_ok}
+    full_status=${full_status_ok}
+    mega_status=${mega_status_ok}
 
     # Sleep for 5 seconds
     sleep 5
+
+    # Start getting our information for next round
+    now=$(date +%s)
+
+    # Get uptime, CPU load, temp, etc. every 5 seconds
+    if [ $((now - LastCheckSystemInformation)) -ge 5 ]; then
+      . /etc/pihole/setupVars.conf
+      GetSystemInformation ${padd_size}
+      LastCheckSystemInformation="${now}"
+    fi
+
+    # Get cache info, last ad domain, blocking percentage, etc. every 5 seconds
+    if [ $((now - LastCheckSummaryInformation)) -ge 5 ]; then
+      GetSummaryInformation ${padd_size}
+      LastCheckSummaryInformation="${now}"
+    fi
+
+    # Get FTL status every 5 seconds
+    if [ $((now - LastCheckPiholeInformation)) -ge 5 ]; then
+      GetPiholeInformation ${padd_size}
+      LastCheckPiholeInformation="${now}"
+    fi
+
+    # Get IPv4 address, DNS servers, DNSSEC, hostname, DHCP status, interface traffic, etc. every 30 seconds
+    if [ $((now - LastCheckNetworkInformation)) -ge 30 ]; then
+      GetNetworkInformation ${padd_size}
+      LastCheckNetworkInformation="${now}"
+    fi
+
+    # Get Pi-hole components and PADD version information once every 24 hours
+    if [ $((now - LastCheckVersionInformation)) -ge 86400 ]; then
+      GetVersionInformation ${padd_size}
+      LastCheckVersionInformation="${now}"
+    fi
+
   done
 }
 
@@ -1210,7 +1201,6 @@ if [ $# = 0 ]; then
   # Run PADD
   clear
   NormalPADD
-  cd "$oldpath" > /dev/null || exit
 fi
 
 for var in "$@"; do
