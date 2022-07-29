@@ -110,7 +110,8 @@ GetFTLData() {
     ftl_port=$(cat /run/pihole-FTL.port 2> /dev/null)
     if [ -n "$ftl_port" ]; then
       # Send command to FTL and ask to quit when finished
-      echo ">$1 >quit" | nc 127.0.0.1 "${ftl_port}"
+      data="$(echo ">$1 >quit" | nc 127.0.0.1 "${ftl_port}")"
+      echo "${data}"
     else
       echo "0"
     fi
