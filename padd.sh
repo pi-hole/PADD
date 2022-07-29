@@ -107,6 +107,7 @@ padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${gre
 ############################################# GETTERS ##############################################
 
 GetFTLData() {
+    local ftl_port data
     ftl_port=$(cat /run/pihole-FTL.port 2> /dev/null)
     if [ -n "$ftl_port" ]; then
       # Send command to FTL and ask to quit when finished
