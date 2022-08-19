@@ -605,23 +605,23 @@ PrintLogo() {
   elif [ "$1" = "nano" ]; then
     printf "%s${clear_line}\n" "n${padd_text} ${mini_status}"
   elif [ "$1" = "micro" ]; then
-    printf "%s${clear_line}\n\n" "µ${padd_text}     ${mini_status}"
+    printf "%s${clear_line}\n${clear_line}\n" "µ${padd_text}     ${mini_status}"
   elif [ "$1" = "mini" ]; then
-    printf "%s${clear_line}\n\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
+    printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
   elif [ "$1" = "tiny" ]; then
     printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
     printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
   elif [ "$1" = "slim" ]; then
-    printf "%s${clear_line}\n\n" "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
+    printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
     printf "%s${clear_line}\n" "${padd_logo_1}"
     printf "%s${clear_line}\n" "${padd_logo_2}Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
-    printf "%s${clear_line}\n\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
+    printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
   # normal or not defined
   else
     printf "%s${clear_line}\n" "${padd_logo_retro_1}"
     printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
-    printf "%s${clear_line}\n\n" "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
+    printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
   fi
 }
 
@@ -1118,6 +1118,9 @@ NormalPADD() {
 
     # Sizing Checks
     SizeChecker
+
+    # Clear to end of screen (below the drawn dashboard)
+    tput ed
 
     # Move the cursor to top left of console to redraw
     tput cup 0 0
