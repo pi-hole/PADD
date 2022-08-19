@@ -14,3 +14,5 @@ jobs:
     -
       name: Spell-Checking
       uses: codespell-project/actions-codespell@master
+      with:
+        ignore_words_file: .codespellignore
