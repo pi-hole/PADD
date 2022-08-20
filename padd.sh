@@ -31,7 +31,7 @@ LastCheckSystemInformation=$(date +%s)
 core_count=$(nproc --all 2> /dev/null)
 
 # COLORS
-CSI="$(printf '\033')["
+CSI="$(printf '\033')["  # Control Sequence Introducer
 red_text="${CSI}91m"     # Red
 green_text="${CSI}92m"   # Green
 yellow_text="${CSI}93m"  # Yellow
@@ -685,8 +685,7 @@ PrintDashboard() {
             printf " %-9s%-29s${clear_line}\n" "Top Ad:" "${top_blocked}"
         fi
         printf "%s${clear_line}\n" "${bold_text}NETWORK ================================${reset_text}"
-        printf " %-9s%-19s${clear_line}\n" "Host:" "${full_hostname}"
-        printf " %-9s%-19s${clear_line}\n" "IP:"   "${pi_ip4_addr}"
+        printf " %-9s%-15s%-4s%-11s${clear_line}\n" "Host:" "${full_hostname}" "IP:"   "${pi_ip4_addr}"
         printf " %-9s%-8s %-4s%-5s %-4s%-5s${clear_line}\n" "Iface:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
         printf " %-9s%-10s${clear_line}\n" "DNS:" "${dns_information}"
         if [ "${DHCP_ACTIVE}" = "true" ]; then
