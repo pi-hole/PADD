@@ -713,7 +713,6 @@ PrintDashboard() {
         fi
         printf "%s${clear_line}\n" "${bold_text}NETWORK ============================================${reset_text}"
         printf " %-10s%-16s %-8s%-16s${clear_line}\n" "Hostname:" "${full_hostname}" "IP:  " "${pi_ip4_addr}"
-        printf " %-10s%-16s${clear_line}\n" "IPv6:" "${pi_ip6_addr}"
         printf " %-10s%-16s %-4s%-5s %-4s%-5s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
         printf " %-10s%-16s %-8s%-16s${clear_line}\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
         if [ "${DHCP_ACTIVE}" = "true" ]; then
