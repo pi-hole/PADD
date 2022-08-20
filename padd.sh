@@ -297,9 +297,11 @@ GetNetworkInformation() {
   elif [ "${pi_ip6_addrs}" -eq 1 ]; then
     # One IPv6 address available
     pi_ip6_addr="$(ip addr | grep 'inet6 ' | grep -v '::1/128' | awk '{print $2}' | cut -f1 -d'/' | head -n 1)"
+    ipv6_check_box=${check_box_bad}
   else
     # More than one IPv6 address available
     pi_ip6_addr="$(ip addr | grep 'inet6 ' | grep -v '::1/128' | awk '{print $2}' | cut -f1 -d'/' | head -n 1)+"
+    ipv6_check_box=${check_box_good}
   fi
 
   # Get hostname and gateway
@@ -748,19 +750,16 @@ PrintDashboard() {
             printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
         fi
         printf "%s${clear_line}\n" "${bold_text}NETWORK ===================================================${reset_text}"
-        printf " %-10s%-19s %-10s%-19s${clear_line}\n" "Hostname:" "${full_hostname}" "IP:" "${pi_ip4_addr}"
-        printf " %-10s%-19s${clear_line}\n" "IPv6:" "${pi_ip6_addr}"
-        printf " %-10s%-19s %-4s%-5s %-4s%-5s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
-        printf " %-10s%-19s %-10s%-19s${clear_line}\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
+        printf " %-10s%-15s %-4s%-17s%-6s%s${clear_line}\n" "Hostname:" "${full_hostname}" "IP:" "${pi_ip4_addr}" "IPv6:" "${ipv6_check_box}"
+        printf " %-10s%-15s %-4s%-5s %-4s%-5s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
+        printf " %-10s%-15s %-10s%-19s${clear_line}\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
         if [ "${DHCP_ACTIVE}" = "true" ]; then
-            printf " %-10s${dhcp_heatmap}%-19s${reset_text} %-10s${dhcp_ipv6_heatmap}%-19s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
+            printf " %-10s${dhcp_heatmap}%-15s${reset_text} %-10s${dhcp_ipv6_heatmap}%-19s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
             printf "%s${clear_line}\n" "${dhcp_info}"
         fi
         printf "%s${clear_line}\n" "${bold_text}SYSTEM ====================================================${reset_text}"
-        printf " %-10s%-39s${clear_line}\n" "Device:" "${sys_model}"
         printf " %-10s%-39s${clear_line}\n" "Uptime:" "${system_uptime}"
-        printf " %-10s${temp_heatmap}%-20s${reset_text}${clear_line}" "CPU Temp:" "${temperature}"
-        printf " %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
+        printf " %-10s${temp_heatmap}%-21s${reset_text}%-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
         printf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
     else # ${padd_size} = mega
          # mega is a screen with at least 80 columns and 26 lines
@@ -775,19 +774,17 @@ PrintDashboard() {
         printf " %-10s%-39s${clear_line}\n" "Top Ad:" "${top_blocked}"
         printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
         printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
-        printf "%s${clear_line}\n" "FTL ==========================================================================="
+        printf "%s${clear_line}\n" "${bold_text}FTL ===========================================================================${reset_text}"
         printf " %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}%" "Mem. Use:" "${ftl_mem_percentage}%"
         printf " %-10s%-69s${clear_line}\n" "DNSCache:" "${cache_inserts} insertions, ${cache_deletes} deletions, ${cache_size} total entries"
         printf "%s${clear_line}\n" "${bold_text}NETWORK =======================================================================${reset_text}"
         printf " %-10s%-19s${clear_line}\n" "Hostname:" "${full_hostname}"
-        printf " %-11s%-14s %-4s%-9s %-4s%-9s${clear_line}\n" "Interface:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
+        printf " %-10s%-15s %-4s%-9s %-4s%-9s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
         printf " %-6s%-19s %-10s%-29s${clear_line}\n" "IPv4:" "${pi_ip4_addr}" "IPv6:" "${pi_ip6_addr}"
-        printf "%s${clear_line}\n" "DNS ==========================================================================="
-        printf " %-10s%-39s${clear_line}\n" "Servers:" "${dns_information}"
-        printf " %-10s${dnssec_heatmap}%-19s${reset_text} %-20s${conditional_forwarding_heatmap}%-9s${reset_text}${clear_line}\n" "DNSSEC:" "${dnssec_status}" "Conditional Fwding:" "${conditional_forwarding_status}"
-        printf "%s${clear_line}\n" "DHCP =========================================================================="
-        printf " %-10s${dhcp_heatmap}%-19s${reset_text} %-10s${dhcp_ipv6_heatmap}%-9s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6 Spt:" "${dhcp_ipv6_status}"
-        printf "%s${clear_line}\n" "${dhcp_info}"
+        printf "%s${clear_line}\n" "${bold_text}DNS ==========================DHCP=============================================${reset_text}"
+        printf " %-10s%-19s %-6s${dhcp_heatmap}%-19s${clear_line}\n" "Servers:" "${dns_information}" "DHCP:" "${dhcp_status}"
+        printf " %-10s${dnssec_heatmap}%-19s${reset_text} %-10s${conditional_forwarding_heatmap}%-9s${reset_text}${clear_line}\n" "DNSSEC:" "${dnssec_status}" "IPv6 Spt:" "${dhcp_ipv6_status}"
+        printf " %-10s${conditional_forwarding_heatmap}%-19s${reset_text}%s${clear_line}\n" "CdFwding:" "${conditional_forwarding_status}" "${dhcp_info}"
         printf "%s${clear_line}\n" "${bold_text}SYSTEM ========================================================================${reset_text}"
         printf " %-10s%-39s${clear_line}\n" "Device:" "${sys_model}"
         printf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
