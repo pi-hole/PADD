@@ -112,7 +112,7 @@ padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${gre
 
 GetFTLData() {
     local ftl_port data
-    ftl_port=$(cat /run/pihole-FTL.port 2> /dev/null)
+    ftl_port=$(getFTLAPIPort)
     if [ -n "$ftl_port" ]; then
       # Send command to FTL and ask to quit when finished
       data="$(echo ">$1 >quit" | nc 127.0.0.1 "${ftl_port}")"
@@ -1009,6 +1009,28 @@ CheckConnectivity() {
 # credits https://apple.stackexchange.com/a/123408
 VersionConverter() {
   echo "$@" | tr -d '[:alpha:]' | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
+}
+
+# get the Telnet API Port FTL is using by parsing `pihole-FTL.conf`
+# same implementation as https://github.com/pi-hole/pi-hole/pull/4945
+getFTLAPIPort(){
+    local FTLCONFFILE="/etc/pihole/pihole-FTL.conf"
+    local DEFAULT_FTL_PORT=4711
+    local ftl_api_port
+
+    if [ -s "$FTLCONFFILE" ]; then
+        # if FTLPORT is not set in pihole-FTL.conf, use the default port
+        ftl_api_port="$({ grep '^FTLPORT=' "${FTLCONFFILE}" || echo "${DEFAULT_FTL_PORT}"; } | cut -d'=' -f2-)"
+        # Exploit prevention: set the port to the default port if there is malicious (non-numeric)
+        # content set in pihole-FTL.conf
+        expr "${ftl_api_port}" : "[^[:digit:]]" > /dev/null && ftl_api_port="${DEFAULT_FTL_PORT}"
+    else
+        # if there is no pihole-FTL.conf, use the default port
+        ftl_api_port="${DEFAULT_FTL_PORT}"
+    fi
+
+    echo "${ftl_api_port}"
+
 }
 
 ########################################## MAIN FUNCTIONS ##########################################
