@@ -294,10 +294,11 @@ GetNetworkInformation() {
   if [ "${pi_ip6_addrs}" -eq 0 ]; then
     # No IPv6 address available
     pi_ip6_addr="N/A"
+    ipv6_check_box=${check_box_bad}
   elif [ "${pi_ip6_addrs}" -eq 1 ]; then
     # One IPv6 address available
     pi_ip6_addr="$(ip addr | grep 'inet6 ' | grep -v '::1/128' | awk '{print $2}' | cut -f1 -d'/' | head -n 1)"
-    ipv6_check_box=${check_box_bad}
+    ipv6_check_box=${check_box_good}
   else
     # More than one IPv6 address available
     pi_ip6_addr="$(ip addr | grep 'inet6 ' | grep -v '::1/128' | awk '{print $2}' | cut -f1 -d'/' | head -n 1)+"
