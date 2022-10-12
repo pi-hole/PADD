@@ -1,6 +1,10 @@
 #!/usr/bin/env sh
 # shellcheck disable=SC1091
 
+# Ignore warning about `local` being undefinded in POSIX
+# shellcheck disable=SC3043
+# https://github.com/koalaman/shellcheck/wiki/SC3043#exceptions
+
 # PADD
 # A more advanced version of the chronometer provided with Pihole
 
@@ -14,7 +18,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.8.0"
+padd_version="v3.8.1"
 
 # LastChecks
 LastCheckVersionInformation=$(date +%s)
@@ -27,7 +31,7 @@ LastCheckSystemInformation=$(date +%s)
 core_count=$(nproc --all 2> /dev/null)
 
 # COLORS
-CSI="$(printf '\033')["
+CSI="$(printf '\033')["  # Control Sequence Introducer
 red_text="${CSI}91m"     # Red
 green_text="${CSI}92m"   # Green
 yellow_text="${CSI}93m"  # Yellow
@@ -35,6 +39,7 @@ blue_text="${CSI}94m"    # Blue
 magenta_text="${CSI}95m" # Magenta
 cyan_text="${CSI}96m"    # Cyan
 reset_text="${CSI}0m"    # Reset to default
+clear_line="${CSI}0K"    # Clear the current line to the right to wipe any artifacts remaining from last print
 
 # STYLES
 bold_text="${CSI}1m"
@@ -107,10 +112,12 @@ padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${gre
 ############################################# GETTERS ##############################################
 
 GetFTLData() {
-    ftl_port=$(cat /run/pihole-FTL.port 2> /dev/null)
+    local ftl_port data
+    ftl_port=$(getFTLAPIPort)
     if [ -n "$ftl_port" ]; then
       # Send command to FTL and ask to quit when finished
-      echo ">$1 >quit" | nc 127.0.0.1 "${ftl_port}"
+      data="$(echo ">$1 >quit" | nc 127.0.0.1 "${ftl_port}")"
+      echo "${data}"
     else
       echo "0"
     fi
@@ -287,12 +294,15 @@ GetNetworkInformation() {
   if [ "${pi_ip6_addrs}" -eq 0 ]; then
     # No IPv6 address available
     pi_ip6_addr="N/A"
+    ipv6_check_box=${check_box_bad}
   elif [ "${pi_ip6_addrs}" -eq 1 ]; then
     # One IPv6 address available
     pi_ip6_addr="$(ip addr | grep 'inet6 ' | grep -v '::1/128' | awk '{print $2}' | cut -f1 -d'/' | head -n 1)"
+    ipv6_check_box=${check_box_good}
   else
     # More than one IPv6 address available
     pi_ip6_addr="$(ip addr | grep 'inet6 ' | grep -v '::1/128' | awk '{print $2}' | cut -f1 -d'/' | head -n 1)+"
+    ipv6_check_box=${check_box_good}
   fi
 
   # Get hostname and gateway
@@ -591,251 +601,196 @@ GetVersionInformation() {
 
 ############################################# PRINTERS #############################################
 
-# terminfo clr_eol (clears to end of line to erase artifacts after resizing smaller)
-ceol=$(tput el)
-
-# wrapper - echo with a clear eol afterwards to wipe any artifacts remaining from last print
-CleanEcho() {
-  echo "${ceol}$1"
-}
-
-# wrapper - printf
-CleanPrintf() {
-# tput el
-# disabling shellcheck here because we pass formatting instructions within `"${@}"`
-# shellcheck disable=SC2059
-  printf "$@"
-}
-
 PrintLogo() {
   # Screen size checks
   if [ "$1" = "pico" ]; then
-    CleanEcho "p${padd_text} ${pico_status}"
+    printf "%s${clear_line}\n" "p${padd_text} ${pico_status}"
   elif [ "$1" = "nano" ]; then
-    CleanEcho "n${padd_text} ${mini_status}"
+    printf "%s${clear_line}\n" "n${padd_text} ${mini_status}"
   elif [ "$1" = "micro" ]; then
-    CleanEcho "µ${padd_text}     ${mini_status}"
-    CleanEcho ""
+    printf "%s${clear_line}\n${clear_line}\n" "µ${padd_text}     ${mini_status}"
   elif [ "$1" = "mini" ]; then
-    CleanEcho "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
-    CleanEcho ""
+    printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
   elif [ "$1" = "tiny" ]; then
-    CleanEcho "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
-    CleanPrintf "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}\e[0K\\n"
+    printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
+    printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
   elif [ "$1" = "slim" ]; then
-    CleanEcho "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
-    CleanEcho ""
-  # For the next two, use printf to make sure spaces aren't collapsed
+    printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
-    CleanPrintf "${padd_logo_1}\e[0K\\n"
-    CleanPrintf "${padd_logo_2}Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}\e[0K\\n"
-    CleanPrintf "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}\e[0K\\n"
-    CleanEcho ""
+    printf "%s${clear_line}\n" "${padd_logo_1}"
+    printf "%s${clear_line}\n" "${padd_logo_2}Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
+    printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
   # normal or not defined
   else
-    CleanPrintf "${padd_logo_retro_1}\e[0K\\n"
-    CleanPrintf "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}\e[0K\\n"
-    CleanPrintf "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}\e[0K\\n"
-
-    CleanEcho ""
+    printf "%s${clear_line}\n" "${padd_logo_retro_1}"
+    printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
+    printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
   fi
 }
 
-PrintNetworkInformation() {
-  if [ "$1" = "pico" ]; then
-    CleanEcho "${bold_text}NETWORK ============${reset_text}"
-    CleanEcho " Hst: ${pi_hostname}"
-    CleanEcho " IP:  ${pi_ip4_addr}"
-    CleanEcho " DHCP ${dhcp_check_box} IPv6 ${dhcp_ipv6_check_box}"
-  elif [ "$1" = "nano" ]; then
-    CleanEcho "${bold_text}NETWORK ================${reset_text}"
-    CleanEcho " Host: ${pi_hostname}"
-    CleanEcho " IP:  ${pi_ip4_addr}"
-    CleanEcho " DHCP: ${dhcp_check_box}    IPv6: ${dhcp_ipv6_check_box}"
-  elif [ "$1" = "micro" ]; then
-    CleanEcho "${bold_text}NETWORK ======================${reset_text}"
-    CleanEcho " Host:    ${full_hostname}"
-    CleanEcho " IP:      ${pi_ip4_addr}"
-    CleanEcho " DHCP:    ${dhcp_check_box}     IPv6:  ${dhcp_ipv6_check_box}"
-  elif [ "$1" = "mini" ]; then
-    CleanEcho "${bold_text}NETWORK ================================${reset_text}"
-    CleanPrintf " %-9s%-19s\e[0K\\n" "Host:" "${full_hostname}"
-    CleanPrintf " %-9s%-19s\e[0K\\n" "IP:"   "${pi_ip4_addr}"
-    CleanPrintf " %-9s%-8s %-4s%-5s %-4s%-5s\e[0K\\n" "Iface:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
-    CleanPrintf " %-9s%-10s\e[0K\\n" "DNS:" "${dns_information}"
-
-    if [ "${DHCP_ACTIVE}" = "true" ]; then
-      CleanPrintf " %-9s${dhcp_heatmap}%-10s${reset_text} %-9s${dhcp_ipv6_heatmap}%-10s${reset_text}\e[0K\\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
+PrintDashboard() {
+    if [ "$1" = "pico" ]; then
+        # pico is a screen at least 20x10 (columns x lines)
+        printf "%s${clear_line}\n" "p${padd_text} ${pico_status}"
+        printf "%s${clear_line}\n" "${bold_text}PI-HOLE ============${reset_text}"
+        printf "%s${clear_line}\n" " [${ads_blocked_bar}] ${ads_percentage_today}%"
+        printf "%s${clear_line}\n" " ${ads_blocked_today} / ${dns_queries_today}"
+        printf "%s${clear_line}\n" "${bold_text}NETWORK ============${reset_text}"
+        printf "%s${clear_line}\n" " Hst: ${pi_hostname}"
+        printf "%s${clear_line}\n" " IP:  ${pi_ip4_addr}"
+        printf "%s${clear_line}\n" " DHCP ${dhcp_check_box} IPv6 ${dhcp_ipv6_check_box}"
+        printf "%s${clear_line}\n" "${bold_text}CPU ================${reset_text}"
+        printf "%s${clear_line}" " [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
+    elif [ "$1" = "nano" ]; then
+        # nano is a screen at least 24x12 (columns x lines)
+        printf "%s${clear_line}\n" "n${padd_text} ${mini_status}"
+        printf "%s${clear_line}\n" "${bold_text}PI-HOLE ================${reset_text}"
+        printf "%s${clear_line}\n" " Up:  ${pihole_check_box}      FTL: ${ftl_check_box}"
+        printf "%s${clear_line}\n" " Blk: [${ads_blocked_bar}] ${ads_percentage_today}%"
+        printf "%s${clear_line}\n" " Blk: ${ads_blocked_today} / ${dns_queries_today}"
+        printf "%s${clear_line}\n" "${bold_text}NETWORK ================${reset_text}"
+        printf "%s${clear_line}\n" " Host: ${pi_hostname}"
+        printf "%s${clear_line}\n" " IP:   ${pi_ip4_addr}"
+        printf "%s${clear_line}\n" " DHCP: ${dhcp_check_box}    IPv6: ${dhcp_ipv6_check_box}"
+        printf "%s${clear_line}\n" "${bold_text}SYSTEM =================${reset_text}"
+        printf "%s${clear_line}\n" " Up:  ${system_uptime}"
+        printf "%s${clear_line}"  " CPU: [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
+    elif [ "$1" = "micro" ]; then
+        # micro is a screen at least 30x16 (columns x lines)
+        printf "%s${clear_line}\n" "µ${padd_text}     ${mini_status}"
+        printf "%s${clear_line}\n" ""
+        printf "%s${clear_line}\n" "${bold_text}PI-HOLE ======================${reset_text}"
+        printf "%s${clear_line}\n" " Status:  ${pihole_check_box}      FTL:  ${ftl_check_box}"
+        printf "%s${clear_line}\n" "${bold_text}STATS ========================${reset_text}"
+        printf "%s${clear_line}\n" " Blckng:  ${domains_being_blocked} domains"
+        printf "%s${clear_line}\n" " Piholed: [${ads_blocked_bar}] ${ads_percentage_today}%"
+        printf "%s${clear_line}\n" " Piholed: ${ads_blocked_today} / ${dns_queries_today}"
+        printf "%s${clear_line}\n" "${bold_text}NETWORK ======================${reset_text}"
+        printf "%s${clear_line}\n" " Host:    ${full_hostname}"
+        printf "%s${clear_line}\n" " IP:      ${pi_ip4_addr}"
+        printf "%s${clear_line}\n" " DHCP:    ${dhcp_check_box}     IPv6:  ${dhcp_ipv6_check_box}"
+        printf "%s${clear_line}\n" "${bold_text}SYSTEM =======================${reset_text}"
+        printf "%s${clear_line}\n" " Uptime:  ${system_uptime}"
+        printf "%s${clear_line}\n" " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
+        printf "%s${clear_line}" " Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
+    elif [ "$1" = "mini" ]; then
+        # mini is a screen at least 40x18 (columns x lines)
+        printf "%s${clear_line}\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
+        printf "%s${clear_line}\n" ""
+        printf "%s${clear_line}\n" "${bold_text}PI-HOLE ================================${reset_text}"
+        printf " %-9s${pihole_heatmap}%-10s${reset_text} %-9s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+        printf "%s${clear_line}\n" "${bold_text}STATS ==================================${reset_text}"
+        printf " %-9s%-29s${clear_line}\n" "Blckng:" "${domains_being_blocked} domains"
+        printf " %-9s[%-20s] %-5s${clear_line}\n" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+        printf " %-9s%-29s${clear_line}\n" "Piholed:" "${ads_blocked_today} out of ${dns_queries_today}"
+        printf " %-9s%-29s${clear_line}\n" "Latest:" "${latest_blocked}"
+        if [ "${DHCP_ACTIVE}" != "true" ]; then
+            printf " %-9s%-29s${clear_line}\n" "Top Ad:" "${top_blocked}"
+        fi
+        printf "%s${clear_line}\n" "${bold_text}NETWORK ================================${reset_text}"
+        printf " %-9s%-15s%-4s%-11s${clear_line}\n" "Host:" "${full_hostname}" "IP:"   "${pi_ip4_addr}"
+        printf " %-9s%-8s %-4s%-5s %-4s%-5s${clear_line}\n" "Iface:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
+        printf " %-9s%-10s${clear_line}\n" "DNS:" "${dns_information}"
+        if [ "${DHCP_ACTIVE}" = "true" ]; then
+            printf " %-9s${dhcp_heatmap}%-10s${reset_text} %-9s${dhcp_ipv6_heatmap}%-10s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
+        fi
+        printf "%s${clear_line}\n" "${bold_text}SYSTEM =================================${reset_text}"
+        printf " %-9s%-29s${clear_line}\n" "Uptime:" "${system_uptime}"
+        printf "%s${clear_line}\n" " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
+        printf "%s${clear_line}" " Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
+    elif [ "$1" = "tiny" ]; then
+         # tiny is a screen at least 53x20 (columns x lines)
+        printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
+        printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
+        printf "%s${clear_line}\n" "${bold_text}PI-HOLE ============================================${reset_text}"
+        printf " %-10s${pihole_heatmap}%-16s${reset_text} %-8s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+        printf "%s${clear_line}\n" "${bold_text}STATS ==============================================${reset_text}"
+        printf " %-10s%-29s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains"
+        printf " %-10s[%-30s] %-5s${clear_line}\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+        printf " %-10s%-39s${clear_line}\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today}"
+        printf " %-10s%-39s${clear_line}\n" "Latest:" "${latest_blocked}"
+        printf " %-10s%-39s${clear_line}\n" "Top Ad:" "${top_blocked}"
+        if [ "${DHCP_ACTIVE}" != "true" ]; then
+            printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
+            printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
+        fi
+        printf "%s${clear_line}\n" "${bold_text}NETWORK ============================================${reset_text}"
+        printf " %-10s%-16s %-8s%-16s${clear_line}\n" "Hostname:" "${full_hostname}" "IP:  " "${pi_ip4_addr}"
+        printf " %-10s%-16s %-4s%-5s %-4s%-5s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
+        printf " %-10s%-16s %-8s${dnssec_heatmap}%-16s${reset_text}${clear_line}\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_status}"
+        if [ "${DHCP_ACTIVE}" = "true" ]; then
+            printf " %-10s${dhcp_heatmap}%-16s${reset_text} %-8s${dhcp_ipv6_heatmap}%-10s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
+            printf "%s${clear_line}\n" "${dhcp_info}"
+        fi
+        printf "%s${clear_line}\n" "${bold_text}SYSTEM =============================================${reset_text}"
+        printf " %-10s%-29s${clear_line}\n" "Uptime:" "${system_uptime}"
+        printf " %-10s${temp_heatmap}%-17s${reset_text} %-8s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
+        printf " %-10s[${memory_heatmap}%-7s${reset_text}] %-6s %-8s[${cpu_load_1_heatmap}%-7s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU:" "${cpu_bar}" "${cpu_percent}%"
+    elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
+        # slim is a screen with at least 60 columns and exactly 21 lines
+        # regular is a screen at least 60x22 (columns x lines)
+        if [ "$1" = "slim" ]; then
+           printf "%s${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
+           printf "%s${clear_line}\n" ""
+        else
+            printf "%s${clear_line}\n" "${padd_logo_1}"
+            printf "%s${clear_line}\n" "${padd_logo_2}Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
+            printf "%s${clear_line}\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
+            printf "%s${clear_line}\n" ""
+        fi
+        printf "%s${clear_line}\n" "${bold_text}PI-HOLE ===================================================${reset_text}"
+        printf " %-10s${pihole_heatmap}%-19s${reset_text} %-10s${ftl_heatmap}%-19s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+        printf "%s${clear_line}\n" "${bold_text}STATS =====================================================${reset_text}"
+        printf " %-10s%-49s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains"
+        printf " %-10s[%-40s] %-5s${clear_line}\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+        printf " %-10s%-49s${clear_line}\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today} queries"
+        printf " %-10s%-39s${clear_line}\n" "Latest:" "${latest_blocked}"
+        printf " %-10s%-39s${clear_line}\n" "Top Ad:" "${top_blocked}"
+        if [ "${DHCP_ACTIVE}" != "true" ]; then
+            printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
+            printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
+        fi
+        printf "%s${clear_line}\n" "${bold_text}NETWORK ===================================================${reset_text}"
+        printf " %-10s%-15s %-4s%-17s%-6s%s${clear_line}\n" "Hostname:" "${full_hostname}" "IP:" "${pi_ip4_addr}" "IPv6:" "${ipv6_check_box}"
+        printf " %-10s%-15s %-4s%-5s %-4s%-5s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
+        printf " %-10s%-15s %-10s${dnssec_heatmap}%-19s${reset_text}${clear_line}\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_status}"
+        if [ "${DHCP_ACTIVE}" = "true" ]; then
+            printf " %-10s${dhcp_heatmap}%-15s${reset_text} %-10s${dhcp_ipv6_heatmap}%-19s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
+            printf "%s${clear_line}\n" "${dhcp_info}"
+        fi
+        printf "%s${clear_line}\n" "${bold_text}SYSTEM ====================================================${reset_text}"
+        printf " %-10s%-39s${clear_line}\n" "Uptime:" "${system_uptime}"
+        printf " %-10s${temp_heatmap}%-21s${reset_text}%-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
+        printf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
+    else # ${padd_size} = mega
+         # mega is a screen with at least 80 columns and 26 lines
+        printf "%s${clear_line}\n" "${padd_logo_retro_1}"
+        printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
+        printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
+        printf "%s${clear_line}\n" ""
+        printf "%s${clear_line}\n" "${bold_text}STATS =========================================================================${reset_text}"
+        printf " %-10s%-19s %-10s[%-40s] %-5s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+        printf " %-10s%-30s%-29s${clear_line}\n" "Clients:" "${clients}" " ${ads_blocked_today} out of ${dns_queries_today} queries"
+        printf " %-10s%-39s${clear_line}\n" "Latest:" "${latest_blocked}"
+        printf " %-10s%-39s${clear_line}\n" "Top Ad:" "${top_blocked}"
+        printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
+        printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
+        printf "%s${clear_line}\n" "${bold_text}FTL ===========================================================================${reset_text}"
+        printf " %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}%" "Mem. Use:" "${ftl_mem_percentage}%"
+        printf " %-10s%-69s${clear_line}\n" "DNSCache:" "${cache_inserts} insertions, ${cache_deletes} deletions, ${cache_size} total entries"
+        printf "%s${clear_line}\n" "${bold_text}NETWORK =======================================================================${reset_text}"
+        printf " %-10s%-19s${clear_line}\n" "Hostname:" "${full_hostname}"
+        printf " %-10s%-15s %-4s%-9s %-4s%-9s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
+        printf " %-6s%-19s %-10s%-29s${clear_line}\n" "IPv4:" "${pi_ip4_addr}" "IPv6:" "${pi_ip6_addr}"
+        printf "%s${clear_line}\n" "${bold_text}DNS ==========================DHCP=============================================${reset_text}"
+        printf " %-10s%-19s %-6s${dhcp_heatmap}%-19s${reset_text}${clear_line}\n" "Servers:" "${dns_information}" "DHCP:" "${dhcp_status}"
+        printf " %-10s${dnssec_heatmap}%-19s${reset_text} %-10s${conditional_forwarding_heatmap}%-9s${reset_text}${clear_line}\n" "DNSSEC:" "${dnssec_status}" "IPv6 Spt:" "${dhcp_ipv6_status}"
+        printf " %-10s${conditional_forwarding_heatmap}%-19s${reset_text}%s${clear_line}\n" "CdFwding:" "${conditional_forwarding_status}" "${dhcp_info}"
+        printf "%s${clear_line}\n" "${bold_text}SYSTEM ========================================================================${reset_text}"
+        printf " %-10s%-39s${clear_line}\n" "Device:" "${sys_model}"
+        printf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
+        printf " %-10s${temp_heatmap}%-10s${reset_text} %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-7s${reset_text} %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
     fi
-  elif [ "$1" = "tiny" ]; then
-    CleanEcho "${bold_text}NETWORK ============================================${reset_text}"
-    CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "Hostname:" "${full_hostname}" "IP:  " "${pi_ip4_addr}"
-    CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "IPv6:" "${pi_ip6_addr}"
-    CleanPrintf " %-10s%-16s %-4s%-5s %-4s%-5s\e[0K\\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
-    CleanPrintf " %-10s%-16s %-8s%-16s\e[0K\\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
-
-    if [ "${DHCP_ACTIVE}" = "true" ]; then
-      CleanPrintf " %-10s${dhcp_heatmap}%-16s${reset_text} %-8s${dhcp_ipv6_heatmap}%-10s${reset_text}\e[0K\\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
-      CleanPrintf "%s\e[0K\\n" "${dhcp_info}"
-    fi
-  elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
-    CleanEcho "${bold_text}NETWORK ===================================================${reset_text}"
-    CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "Hostname:" "${full_hostname}" "IP:" "${pi_ip4_addr}"
-    CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "IPv6:" "${pi_ip6_addr}"
-    CleanPrintf " %-10s%-19s %-4s%-5s %-4s%-5s\e[0K\\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
-    CleanPrintf " %-10s%-19s %-10s%-19s\e[0K\\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_heatmap}${dnssec_status}${reset_text}"
-
-    if [ "${DHCP_ACTIVE}" = "true" ]; then
-      CleanPrintf " %-10s${dhcp_heatmap}%-19s${reset_text} %-10s${dhcp_ipv6_heatmap}%-19s${reset_text}\e[0K\\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
-      CleanPrintf "%s\e[0K\\n" "${dhcp_info}"
-    fi
-  else
-    CleanEcho "${bold_text}NETWORK =======================================================================${reset_text}"
-    CleanPrintf " %-10s%-19s\e[0K\\n" "Hostname:" "${full_hostname}"
-    CleanPrintf " %-11s%-14s %-4s%-9s %-4s%-9s\e[0K\\n" "Interface:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
-    CleanPrintf " %-6s%-19s %-10s%-29s\e[0K\\n" "IPv4:" "${pi_ip4_addr}" "IPv6:" "${pi_ip6_addr}"
-    CleanEcho "DNS ==========================================================================="
-    CleanPrintf " %-10s%-39s\e[0K\\n" "Servers:" "${dns_information}"
-    CleanPrintf " %-10s${dnssec_heatmap}%-19s${reset_text} %-20s${conditional_forwarding_heatmap}%-9s${reset_text}\e[0K\\n" "DNSSEC:" "${dnssec_status}" "Conditional Fwding:" "${conditional_forwarding_status}"
-
-    CleanEcho "DHCP =========================================================================="
-    CleanPrintf " %-10s${dhcp_heatmap}%-19s${reset_text} %-10s${dhcp_ipv6_heatmap}%-9s${reset_text}\e[0K\\n" "DHCP:" "${dhcp_status}" "IPv6 Spt:" "${dhcp_ipv6_status}"
-    CleanPrintf "%s\e[0K\\n" "${dhcp_info}"
-  fi
-}
-
-PrintPiholeInformation() {
-  # size checks
-  if [ "$1" = "pico" ]; then
-    :
-  elif [ "$1" = "nano" ]; then
-    CleanEcho "${bold_text}PI-HOLE ================${reset_text}"
-    CleanEcho " Up:  ${pihole_check_box}      FTL: ${ftl_check_box}"
-  elif [ "$1" = "micro" ]; then
-    CleanEcho "${bold_text}PI-HOLE ======================${reset_text}"
-    CleanEcho " Status:  ${pihole_check_box}      FTL:  ${ftl_check_box}"
-  elif [ "$1" = "mini" ]; then
-    CleanEcho "${bold_text}PI-HOLE ================================${reset_text}"
-    CleanPrintf " %-9s${pihole_heatmap}%-10s${reset_text} %-9s${ftl_heatmap}%-10s${reset_text}\e[0K\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
-  elif [ "$1" = "tiny" ]; then
-    CleanEcho "${bold_text}PI-HOLE ============================================${reset_text}"
-    CleanPrintf " %-10s${pihole_heatmap}%-16s${reset_text} %-8s${ftl_heatmap}%-10s${reset_text}\e[0K\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
-  elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
-    CleanEcho "${bold_text}PI-HOLE ===================================================${reset_text}"
-    CleanPrintf " %-10s${pihole_heatmap}%-19s${reset_text} %-10s${ftl_heatmap}%-19s${reset_text}\e[0K\\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
-  else
-    return
-  fi
-}
-
-PrintPiholeStats() {
-  # are we on a reduced screen size?
-  if [ "$1" = "pico" ]; then
-    CleanEcho "${bold_text}PI-HOLE ============${reset_text}"
-    CleanEcho " [${ads_blocked_bar}] ${ads_percentage_today}%"
-    CleanEcho " ${ads_blocked_today} / ${dns_queries_today}"
-  elif [ "$1" = "nano" ]; then
-    CleanEcho " Blk: [${ads_blocked_bar}] ${ads_percentage_today}%"
-    CleanEcho " Blk: ${ads_blocked_today} / ${dns_queries_today}"
-  elif [ "$1" = "micro" ]; then
-    CleanEcho "${bold_text}STATS ========================${reset_text}"
-    CleanEcho " Blckng:  ${domains_being_blocked} domains"
-    CleanEcho " Piholed: [${ads_blocked_bar}] ${ads_percentage_today}%"
-    CleanEcho " Piholed: ${ads_blocked_today} / ${dns_queries_today}"
-  elif [ "$1" = "mini" ]; then
-    CleanEcho "${bold_text}STATS ==================================${reset_text}"
-    CleanPrintf " %-9s%-29s\e[0K\\n" "Blckng:" "${domains_being_blocked} domains"
-    CleanPrintf " %-9s[%-20s] %-5s\e[0K\\n" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
-    CleanPrintf " %-9s%-29s\e[0K\\n" "Piholed:" "${ads_blocked_today} out of ${dns_queries_today}"
-    CleanPrintf " %-9s%-29s\e[0K\\n" "Latest:" "${latest_blocked}"
-    if [ "${DHCP_ACTIVE}" != "true" ]; then
-      CleanPrintf " %-9s%-29s\\n" "Top Ad:" "${top_blocked}"
-    fi
-  elif [ "$1" = "tiny" ]; then
-    CleanEcho "${bold_text}STATS ==============================================${reset_text}"
-    CleanPrintf " %-10s%-29s\e[0K\\n" "Blocking:" "${domains_being_blocked} domains"
-    CleanPrintf " %-10s[%-30s] %-5s\e[0K\\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
-    CleanPrintf " %-10s%-39s\e[0K\\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today}"
-    CleanPrintf " %-10s%-39s\e[0K\\n" "Latest:" "${latest_blocked}"
-    CleanPrintf " %-10s%-39s\e[0K\\n" "Top Ad:" "${top_blocked}"
-    if [ "${DHCP_ACTIVE}" != "true" ]; then
-      CleanPrintf " %-10s%-39s\e[0K\\n" "Top Dmn:" "${top_domain}"
-      CleanPrintf " %-10s%-39s\e[0K\\n" "Top Clnt:" "${top_client}"
-    fi
-  elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
-    CleanEcho "${bold_text}STATS =====================================================${reset_text}"
-    CleanPrintf " %-10s%-49s\e[0K\\n" "Blocking:" "${domains_being_blocked} domains"
-    CleanPrintf " %-10s[%-40s] %-5s\e[0K\\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
-    CleanPrintf " %-10s%-49s\e[0K\\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today} queries"
-    CleanPrintf " %-10s%-39s\e[0K\\n" "Latest:" "${latest_blocked}"
-    CleanPrintf " %-10s%-39s\e[0K\\n" "Top Ad:" "${top_blocked}"
-    if [ "${DHCP_ACTIVE}" != "true" ]; then
-      CleanPrintf " %-10s%-39s\e[0K\\n" "Top Dmn:" "${top_domain}"
-      CleanPrintf " %-10s%-39s\e[0K\\n" "Top Clnt:" "${top_client}"
-    fi
-  else
-    CleanEcho "${bold_text}STATS =========================================================================${reset_text}"
-    CleanPrintf " %-10s%-19s %-10s[%-40s] %-5s\e[0K\\n" "Blocking:" "${domains_being_blocked} domains" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
-    CleanPrintf " %-10s%-30s%-29s\e[0K\\n" "Clients:" "${clients}" " ${ads_blocked_today} out of ${dns_queries_today} queries"
-    CleanPrintf " %-10s%-39s\e[0K\\n" "Latest:" "${latest_blocked}"
-    CleanPrintf " %-10s%-39s\e[0K\\n" "Top Ad:" "${top_blocked}"
-    CleanPrintf " %-10s%-39s\e[0K\\n" "Top Dmn:" "${top_domain}"
-    CleanPrintf " %-10s%-39s\e[0K\\n" "Top Clnt:" "${top_client}"
-    CleanEcho "FTL ==========================================================================="
-    CleanPrintf " %-10s%-9s %-10s%-9s %-10s%-9s\e[0K\\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}%" "Mem. Use:" "${ftl_mem_percentage}%"
-    CleanPrintf " %-10s%-69s\e[0K\\n" "DNSCache:" "${cache_inserts} insertions, ${cache_deletes} deletions, ${cache_size} total entries"
-  fi
-}
-
-PrintSystemInformation() {
-  if [ "$1" = "pico" ]; then
-    CleanEcho "${bold_text}CPU ================${reset_text}"
-    printf "%b" "${ceol} [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
-  elif [ "$1" = "nano" ]; then
-    CleanEcho "${ceol}${bold_text}SYSTEM =================${reset_text}"
-    CleanEcho " Up:  ${system_uptime}"
-    printf "%b"  "${ceol} CPU: [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
-  elif [ "$1" = "micro" ]; then
-    CleanEcho "${bold_text}SYSTEM =======================${reset_text}"
-    CleanEcho " Uptime:  ${system_uptime}"
-    CleanEcho " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
-    printf "%b" "${ceol} Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
-  elif [ "$1" = "mini" ]; then
-    CleanEcho "${bold_text}SYSTEM =================================${reset_text}"
-    CleanPrintf " %-9s%-29s\\n" "Uptime:" "${system_uptime}"
-    CleanEcho " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
-    printf "%b" "${ceol} Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
-  elif [ "$1" = "tiny" ]; then
-    CleanEcho "${bold_text}SYSTEM =============================================${reset_text}"
-    CleanPrintf " %-10s%-29s\e[0K\\n" "Uptime:" "${system_uptime}"
-    CleanPrintf " %-10s${temp_heatmap}%-17s${reset_text} %-8s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}\e[0K\\n" "CPU Temp:" "${temperature}" "Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
-    # Memory and CPU bar
-    CleanPrintf " %-10s[${memory_heatmap}%-7s${reset_text}] %-6s %-8s[${cpu_load_1_heatmap}%-7s${reset_text}] %-5s" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU:" "${cpu_bar}" "${cpu_percent}%"
-  # else we're not
-  elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
-    CleanEcho "${bold_text}SYSTEM ====================================================${reset_text}"
-    # Device
-    CleanPrintf " %-10s%-39s\e[0K\\n" "Device:" "${sys_model}"
-    # Uptime
-    CleanPrintf " %-10s%-39s\e[0K\\n" "Uptime:" "${system_uptime}"
-
-    # Temp and Loads
-    CleanPrintf " %-10s${temp_heatmap}%-20s${reset_text}" "CPU Temp:" "${temperature}"
-    CleanPrintf " %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}\e[0K\\n" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
-
-    # Memory and CPU bar
-    CleanPrintf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
-  else
-    CleanEcho "${bold_text}SYSTEM ========================================================================${reset_text}"
-    # Device
-    CleanPrintf " %-10s%-39s\e[0K\\n" "Device:" "${sys_model}"
-
-    # Uptime and memory
-    CleanPrintf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s\\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
-
-    # CPU temp, load, percentage
-    CleanPrintf " %-10s${temp_heatmap}%-10s${reset_text} %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-7s${reset_text} %-10s[${memory_heatmap}%-10s${reset_text}] %-6s" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
-  fi
 }
 
 ############################################# HELPERS ##############################################
@@ -905,7 +860,7 @@ SizeChecker(){
   if [ "$console_width" -lt "20" ] || [ "$console_height" -lt "10" ]; then
     # Nothing is this small, sorry
     clear
-    printf "%b" "${check_box_bad} Error!\\n    PADD isn't\\n    for ants!\n"
+    printf "%b" "${check_box_bad} Error!\n    PADD isn't\n    for ants!\n"
     exit 1
   # Below Nano. Gives you Pico.
   elif [ "$console_width" -lt "24" ] || [ "$console_height" -lt "12" ]; then
@@ -936,71 +891,95 @@ SizeChecker(){
 }
 
 CheckConnectivity() {
-  connectivity="false"
-  connection_attempts=1
-  wait_timer=1
+    local connectivity connection_attempts wait_timer
 
-  while [ $connection_attempts -lt 9 ]; do
+    connectivity="false"
+    connection_attempts=1
+    wait_timer=1
 
-    if nc -zw1 google.com 443 2>/dev/null; then
-      if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-        echo "Attempt #${connection_attempts} passed..."
-      elif [ "$1" = "mini" ]; then
-        echo "Attempt ${connection_attempts} passed."
-      else
-        echo "  - Attempt ${connection_attempts} passed...                                     "
-      fi
+    while [ $connection_attempts -lt 9 ]; do
 
-      connectivity="true"
-      connection_attempts=11
-    else
-      connection_attempts=$((connection_attempts+1))
+        if nc -zw1 google.com 443 2>/dev/null; then
+            if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
+                echo "Attempt #${connection_attempts} passed..."
+            elif [ "$1" = "mini" ]; then
+                echo "Attempt ${connection_attempts} passed."
+            else
+                echo "  - Attempt ${connection_attempts} passed...                                     "
+            fi
 
-      inner_wait_timer=$((wait_timer*1))
-
-      # echo "$wait_timer = $inner_wait_timer"
-      while [ $inner_wait_timer -gt 0 ]; do
-        if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-          printf "%b" "Attempt #${connection_attempts} failed...\\r"
-        elif [ "$1" = "mini" ] || [ "$1" = "tiny" ]; then
-          printf "%b" "- Attempt ${connection_attempts} failed, wait ${inner_wait_timer}  \\r"
+            connectivity="true"
+            connection_attempts=11
         else
-          printf "%b" "  - Attempt ${connection_attempts} failed... waiting ${inner_wait_timer} seconds...  \\r"
+            connection_attempts=$((connection_attempts+1))
+            local inner_wait_timer
+            inner_wait_timer=$((wait_timer*1))
+
+            # echo "$wait_timer = $inner_wait_timer"
+            while [ $inner_wait_timer -gt 0 ]; do
+                if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
+                    printf "%b" "Attempt #${connection_attempts} failed...\r"
+                elif [ "$1" = "mini" ] || [ "$1" = "tiny" ]; then
+                    printf "%b" "- Attempt ${connection_attempts} failed, wait ${inner_wait_timer}  \r"
+                else
+                    printf "%b" "  - Attempt ${connection_attempts} failed... waiting ${inner_wait_timer} seconds...  \r"
+                fi
+                sleep 1
+                inner_wait_timer=$((inner_wait_timer-1))
+            done
+
+            # echo -ne "Attempt $connection_attempts failed... waiting $wait_timer seconds...\r"
+            # sleep $wait_timer
+            wait_timer=$((wait_timer*2))
         fi
-        sleep 1
-        inner_wait_timer=$((inner_wait_timer-1))
-      done
 
-      # echo -ne "Attempt $connection_attempts failed... waiting $wait_timer seconds...\\r"
-      # sleep $wait_timer
-      wait_timer=$((wait_timer*2))
-    fi
+    done
 
-  done
-
-  if [ "$connectivity" = "false" ]; then
-    if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-      echo "Check failed..."
-    elif [ "$1" = "mini" ] || [ "$1" = "tiny" ]; then
-      echo "- Connectivity check failed."
+    if [ "$connectivity" = "false" ]; then
+        if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
+            echo "Check failed..."
+        elif [ "$1" = "mini" ] || [ "$1" = "tiny" ]; then
+            echo "- Connectivity check failed."
+        else
+            echo "  - Connectivity check failed..."
+        fi
     else
-      echo "  - Connectivity check failed..."
+        if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
+            echo "Check passed..."
+        elif [ "$1" = "mini" ] || [ "$1" = "tiny" ]; then
+            echo "- Connectivity check passed."
+        else
+            echo "  - Connectivity check passed..."
+        fi
     fi
-  else
-    if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-      echo "Check passed..."
-    elif [ "$1" = "mini" ] || [ "$1" = "tiny" ]; then
-      echo "- Connectivity check passed."
-    else
-      echo "  - Connectivity check passed..."
-    fi
-  fi
 }
 
 # converts a given version string e.g. v3.7.1 to 3007001000 to allow for easier comparison of multi digit version numbers
 # credits https://apple.stackexchange.com/a/123408
 VersionConverter() {
   echo "$@" | tr -d '[:alpha:]' | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
+}
+
+# get the Telnet API Port FTL is using by parsing `pihole-FTL.conf`
+# same implementation as https://github.com/pi-hole/pi-hole/pull/4945
+getFTLAPIPort(){
+    local FTLCONFFILE="/etc/pihole/pihole-FTL.conf"
+    local DEFAULT_FTL_PORT=4711
+    local ftl_api_port
+
+    if [ -s "$FTLCONFFILE" ]; then
+        # if FTLPORT is not set in pihole-FTL.conf, use the default port
+        ftl_api_port="$({ grep '^FTLPORT=' "${FTLCONFFILE}" || echo "${DEFAULT_FTL_PORT}"; } | cut -d'=' -f2-)"
+        # Exploit prevention: set the port to the default port if there is malicious (non-numeric)
+        # content set in pihole-FTL.conf
+        expr "${ftl_api_port}" : "[^[:digit:]]" > /dev/null && ftl_api_port="${DEFAULT_FTL_PORT}"
+    else
+        # if there is no pihole-FTL.conf, use the default port
+        ftl_api_port="${DEFAULT_FTL_PORT}"
+    fi
+
+    echo "${ftl_api_port}"
+
 }
 
 ########################################## MAIN FUNCTIONS ##########################################
@@ -1021,25 +1000,25 @@ StartupRoutine(){
     CheckConnectivity "$1"
     printf "%b" "Starting PADD...\n"
 
-    printf "%b" " [■·········]  10%\\r"
+    printf "%b" " [■·········]  10%\r"
 
     # Check for updates
-    printf "%b" " [■■········]  20%\\r"
-    printf "%b" " [■■■·······]  30%\\r"
+    printf "%b" " [■■········]  20%\r"
+    printf "%b" " [■■■·······]  30%\r"
 
     # Get our information for the first time
-    printf "%b" " [■■■■······]  40%\\r"
+    printf "%b" " [■■■■······]  40%\r"
     GetSystemInformation "$1"
-    printf "%b" " [■■■■■·····]  50%\\r"
+    printf "%b" " [■■■■■·····]  50%\r"
     GetSummaryInformation "$1"
-    printf "%b" " [■■■■■■····]  60%\\r"
+    printf "%b" " [■■■■■■····]  60%\r"
     GetPiholeInformation "$1"
-    printf "%b" " [■■■■■■■···]  70%\\r"
+    printf "%b" " [■■■■■■■···]  70%\r"
     GetNetworkInformation "$1"
-    printf "%b" " [■■■■■■■■··]  80%\\r"
+    printf "%b" " [■■■■■■■■··]  80%\r"
     GetVersionInformation "$1"
-    printf "%b" " [■■■■■■■■■·]  90%\\r"
-    printf "%b" " [■■■■■■■■■■] 100%\\n"
+    printf "%b" " [■■■■■■■■■·]  90%\r"
+    printf "%b" " [■■■■■■■■■■] 100%\n"
 
   elif [ "$1" = "mini" ]; then
     PrintLogo "$1"
@@ -1111,19 +1090,19 @@ NormalPADD() {
     # Sizing Checks
     SizeChecker
 
+    # Clear to end of screen (below the drawn dashboard)
+    tput ed
+
     # Move the cursor to top left of console to redraw
     tput cup 0 0
 
     # Output everything to the screen
-    PrintLogo ${padd_size}
-    PrintPiholeInformation ${padd_size}
-    PrintPiholeStats ${padd_size}
-    PrintNetworkInformation ${padd_size}
-    PrintSystemInformation ${padd_size}
+    PrintDashboard ${padd_size}
 
     # Clear to end of screen (below the drawn dashboard)
     tput ed
 
+    # Reset status indicator (can be overwritten by one of the GetXXXXInformation)
     pico_status=${pico_status_ok}
     mini_status=${mini_status_ok}
     tiny_status=${tiny_status_ok}
