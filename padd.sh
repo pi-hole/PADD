@@ -206,7 +206,9 @@ GetSystemInformation() {
   fi
 
   # CPU temperature
-  if [ -f /sys/class/thermal/thermal_zone0/temp ]; then
+  if [ -d "/sys/devices/platform/coretemp.0/hwmon/" ]; then
+    cpu=$(cat "$(find /sys/devices/platform/coretemp.0/hwmon/ -maxdepth 2 -name "temp1_input" 2>/dev/null | head -1)")
+  elif [ -f /sys/class/thermal/thermal_zone0/temp ]; then
     cpu=$(cat /sys/class/thermal/thermal_zone0/temp)
   elif [ -f /sys/class/hwmon/hwmon0/temp1_input ]; then
     cpu=$(cat /sys/class/hwmon/hwmon0/temp1_input)
@@ -267,11 +269,55 @@ GetSystemInformation() {
   fi
 
   # Device model
-  if [ -f /sys/firmware/devicetree/base/model ]; then
+  if [ -f /sys/devices/virtual/dmi/id/product_name ] || [ -f /sys/devices/virtual/dmi/id/product_family ]; then
     # Get model, remove possible null byte
+    product_name=$(tr -d '\0' < /sys/devices/virtual/dmi/id/product_name)
+    product_family=$(tr -d '\0' < /sys/devices/virtual/dmi/id/product_family)
+    sys_model="$(echo "$product_name" | grep "$product_family")"
+
+    # If product_family is not contained in product_name, both are shown
+    if [ -z "$sys_model" ]; then
+      sys_model="${product_family} ${product_name}"
+    fi
+  elif [ -f /sys/firmware/devicetree/base/model ]; then
     sys_model=$(tr -d '\0' < /sys/firmware/devicetree/base/model)
-  else
-    sys_model=""
+  elif [ -f /sys/devices/virtual/dmi/id/board_vendor ] || [ -f /sys/devices/virtual/dmi/id/board_name ]; then
+    sys_model=$(tr -d '\0' < /sys/devices/virtual/dmi/id/board_vendor)
+    sys_model="$sys_model $(tr -d '\0' < /sys/devices/virtual/dmi/id/board_name)"
+  elif [ -f /tmp/sysinfo/model ]; then
+    sys_model=$(tr -d '\0' < /tmp/sysinfo/model)
+  fi
+
+  # Cleaning device model from useless OEM information
+  sys_model=${sys_model#"To be filled by O.E.M."}
+	sys_model=${sys_model%"To be filled by O.E.M."}
+  sys_model=${sys_model#"To Be Filled*"}
+  sys_model=${sys_model%"To Be Filled*"}
+  sys_model=${sys_model#"OEM*"}
+  sys_model=${sys_model%"OEM*"}
+  sys_model=${sys_model#"Not Applicable"}
+  sys_model=${sys_model%"Not Applicable"}
+  sys_model=${sys_model#"System Product Name"}
+  sys_model=${sys_model%"System Product Name"}
+  sys_model=${sys_model#"System Version"}
+  sys_model=${sys_model%"System Version"}
+  sys_model=${sys_model#"Undefined"}
+  sys_model=${sys_model%"Undefined"}
+  sys_model=${sys_model#"Default string"}
+  sys_model=${sys_model%"Default string"}
+  sys_model=${sys_model#"Not Specified"}
+  sys_model=${sys_model%"Not Specified"}
+  sys_model=${sys_model#"Type1ProductConfigId"}
+  sys_model=${sys_model%"Type1ProductConfigId"}
+  sys_model=${sys_model#"INVALID"}
+  sys_model=${sys_model%"INVALID"}
+  sys_model=${sys_model#"All Series"}
+  sys_model=${sys_model%"All Series"}
+  sys_model=${sys_model#"�"}
+  sys_model=${sys_model%"�"}
+
+  if [  -z "$sys_model" ]; then
+    sys_model="Unknown"
   fi
 }
 
@@ -1166,7 +1212,7 @@ if [ $# = 0 ]; then
   # Turns off the cursor
   # (From Pull request #8 https://github.com/jpmck/PADD/pull/8)
   setterm -cursor off
-  trap "{ setterm -cursor on ; echo "" ; exit 0 ; }" INT TERM EXIT
+  trap '{ setterm -cursor on ; echo "" ; exit 0 ; }' INT TERM EXIT
 
   clear
 
