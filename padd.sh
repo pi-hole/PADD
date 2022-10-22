@@ -1068,6 +1068,13 @@ NormalPADD() {
     # Move the cursor to top left of console to redraw
     tput cup 0 0
 
+    # add yOffset-times a blank line
+    # this works better than tput cup $yOffset 0 as it does not
+    # produce "fragments" in the empty area when shrinking the terminal window
+    if [ "${yOffset}" -gt 0 ]; then
+        printf "${clear_line}\n%.0s" $(seq 1 "${yOffset}")
+    fi
+
     # Output everything to the screen
     PrintDashboard ${padd_size}
 
@@ -1137,8 +1144,6 @@ EOM
 }
 
 setOffset(){
-  xOffset=0
-  yOffset=0
   i=1;
   j=$#;
   while [ $i -le $j ]
@@ -1177,7 +1182,10 @@ main(){
 }
 
 if [ $# = 0 ]; then
-  main
+    # the offsets have not been set by setOffset(), so set them to zero
+    xOffset=0;
+    yOffset=0;
+    main
 fi
 
 for var in "$@"; do
