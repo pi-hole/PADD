@@ -1128,13 +1128,35 @@ DisplayHelp() {
 ::: Note: If no option is passed, then stats are displayed on screen, updated every 5 seconds
 :::
 ::: Options:
+:::  -x-off [num]  set the x-offset, reference is the upper left corner
+:::  -y-off [num]  set the y-offset, reference is the upper left corner
 :::  -j, --json    output stats as JSON formatted string
 :::  -h, --help    display this help text
 EOM
     exit 0
 }
 
-if [ $# = 0 ]; then
+setOffset(){
+  xOffset=0
+  yOffset=0
+  i=1;
+  j=$#;
+  while [ $i -le $j ]
+  do
+    case "$1" in
+      "-x-off"  ) xOffset="$2";;
+      "-y-off"  ) yOffset="$2";;
+    esac
+    i=$((i + 1));
+    shift 1;
+  done
+
+  # start PADD
+  main
+
+}
+
+main(){
   # Turns off the cursor
   # (From Pull request #8 https://github.com/jpmck/PADD/pull/8)
   setterm -cursor off
@@ -1152,12 +1174,17 @@ if [ $# = 0 ]; then
   # Run PADD
   clear
   NormalPADD
+}
+
+if [ $# = 0 ]; then
+  main
 fi
 
 for var in "$@"; do
   case "$var" in
-    "-j" | "--json"  ) OutputJSON;;
-    "-h" | "--help"  ) DisplayHelp;;
-    *                ) exit 1;;
+    "-j" | "--json"     ) OutputJSON;;
+    "-h" | "--help"     ) DisplayHelp;;
+    "-x-off" | "-y-off" ) setOffset "$@";;
+    *                   ) exit 1;;
   esac
 done
