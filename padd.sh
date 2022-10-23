@@ -159,51 +159,11 @@ GetSummaryInformation() {
   else
     top_client="${top_client_raw}"
   fi
-
-  if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 10 "color")
-  elif [ "$1" = "mini" ]; then
-    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 20 "color")
-
-    if [ ${#latest_blocked} -gt 30 ]; then
-      latest_blocked=$(echo "$latest_blocked" | cut -c1-27)"..."
-    fi
-
-    if [ ${#top_blocked} -gt 30 ]; then
-      top_blocked=$(echo "$top_blocked" | cut -c1-27)"..."
-    fi
-  elif [ "$1" = "tiny" ]; then
-    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
-
-    if [ ${#latest_blocked} -gt 38 ]; then
-      latest_blocked=$(echo "$latest_blocked" | cut -c1-38)"..."
-    fi
-
-    if [ ${#top_blocked} -gt 38 ]; then
-      top_blocked=$(echo "$top_blocked" | cut -c1-38)"..."
-    fi
-
-    if [ ${#top_domain} -gt 38 ]; then
-      top_domain=$(echo "$top_domain" | cut -c1-38)"..."
-    fi
-
-    if [ ${#top_client} -gt 38 ]; then
-      top_client=$(echo "$top_client" | cut -c1-38)"..."
-    fi
-  elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
-    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 40 "color")
-  else
-    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
-  fi
 }
 
 GetSystemInformation() {
   # System uptime
-  if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-    system_uptime=$(uptime | awk -F'( |,|:)+' '{if ($7=="min") m=$6; else {if ($7~/^day/){if ($9=="min") {d=$6;m=$8} else {d=$6;h=$8;m=$9}} else {h=$6;m=$7}}} {print d+0,"days,",h+0,"hours"}')
-  else
-    system_uptime=$(uptime | awk -F'( |,|:)+' '{if ($7=="min") m=$6; else {if ($7~/^day/){if ($9=="min") {d=$6;m=$8} else {d=$6;h=$8;m=$9}} else {h=$6;m=$7}}} {print d+0,"days,",h+0,"hours,",m+0,"minutes"}')
-  fi
+    system_uptime_raw=$(uptime)
 
   # CPU temperature
   if [ -d "/sys/devices/platform/coretemp.0/hwmon/" ]; then
@@ -221,7 +181,6 @@ GetSystemInformation() {
     temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 * 9 / 5000 + 32}')")°F"
   elif [ "${TEMPERATUREUNIT}" = "K" ]; then
     temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 / 1000 + 273.15}')")°K"
-  # Addresses Issue 1: https://github.com/jpmck/PAD/issues/1
   else
     temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 / 1000}')")°C"
   fi
@@ -255,18 +214,6 @@ GetSystemInformation() {
   # Memory use, heatmap and bar
   memory_percent=$(awk '/MemTotal:/{total=$2} /MemFree:/{free=$2} /Buffers:/{buffers=$2} /^Cached:/{cached=$2} END {printf "%.1f", (total-free-buffers-cached)*100/total}' '/proc/meminfo')
   memory_heatmap=$(HeatmapGenerator "${memory_percent}")
-
-  #  Bar generations
-  if [ "$1" = "mini" ]; then
-    cpu_bar=$(BarGenerator "${cpu_percent}" 20)
-    memory_bar=$(BarGenerator "${memory_percent}" 20)
-  elif [ "$1" = "tiny" ]; then
-    cpu_bar=$(BarGenerator "${cpu_percent}" 7)
-    memory_bar=$(BarGenerator "${memory_percent}" 7)
-  else
-    cpu_bar=$(BarGenerator "${cpu_percent}" 10)
-    memory_bar=$(BarGenerator "${memory_percent}" 10)
-  fi
 
   # Device model
   if [ -f /sys/devices/virtual/dmi/id/product_name ] || [ -f /sys/devices/virtual/dmi/id/product_family ]; then
@@ -420,7 +367,6 @@ GetNetworkInformation() {
     dhcp_check_box=${check_box_bad}
 
     # if the DHCP Router variable isn't set
-    # Issue 3: https://github.com/jpmck/PADD/issues/3
     if [ -z ${DHCP_ROUTER+x} ]; then
       DHCP_ROUTER=$(GetFTLData "gateway" | awk '{ printf $1 }')
     fi
@@ -645,6 +591,63 @@ GetVersionInformation() {
   fi
 }
 
+GenerateSizeDependendOutput() {
+  if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
+    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 10 "color")
+  elif [ "$1" = "mini" ]; then
+    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 20 "color")
+
+    if [ ${#latest_blocked} -gt 30 ]; then
+      latest_blocked=$(echo "$latest_blocked" | cut -c1-27)"..."
+    fi
+
+    if [ ${#top_blocked} -gt 30 ]; then
+      top_blocked=$(echo "$top_blocked" | cut -c1-27)"..."
+    fi
+  elif [ "$1" = "tiny" ]; then
+    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
+
+    if [ ${#latest_blocked} -gt 38 ]; then
+      latest_blocked=$(echo "$latest_blocked" | cut -c1-38)"..."
+    fi
+
+    if [ ${#top_blocked} -gt 38 ]; then
+      top_blocked=$(echo "$top_blocked" | cut -c1-38)"..."
+    fi
+
+    if [ ${#top_domain} -gt 38 ]; then
+      top_domain=$(echo "$top_domain" | cut -c1-38)"..."
+    fi
+
+    if [ ${#top_client} -gt 38 ]; then
+      top_client=$(echo "$top_client" | cut -c1-38)"..."
+    fi
+  elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
+    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 40 "color")
+  else
+    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
+  fi
+
+  # System uptime
+  if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
+    system_uptime=$(echo "${system_uptime_raw}" | awk -F'( |,|:)+' '{if ($7=="min") m=$6; else {if ($7~/^day/){if ($9=="min") {d=$6;m=$8} else {d=$6;h=$8;m=$9}} else {h=$6;m=$7}}} {print d+0,"days,",h+0,"hours"}')
+  else
+    system_uptime=$(echo "${system_uptime_raw}" | awk -F'( |,|:)+' '{if ($7=="min") m=$6; else {if ($7~/^day/){if ($9=="min") {d=$6;m=$8} else {d=$6;h=$8;m=$9}} else {h=$6;m=$7}}} {print d+0,"days,",h+0,"hours,",m+0,"minutes"}')
+  fi
+
+  #  Bar generations
+  if [ "$1" = "mini" ]; then
+    cpu_bar=$(BarGenerator "${cpu_percent}" 20)
+    memory_bar=$(BarGenerator "${memory_percent}" 20)
+  elif [ "$1" = "tiny" ]; then
+    cpu_bar=$(BarGenerator "${cpu_percent}" 7)
+    memory_bar=$(BarGenerator "${memory_percent}" 7)
+  else
+    cpu_bar=$(BarGenerator "${cpu_percent}" 10)
+    memory_bar=$(BarGenerator "${memory_percent}" 10)
+  fi
+}
+
 ############################################# PRINTERS #############################################
 
 PrintLogo() {
@@ -675,6 +678,24 @@ PrintLogo() {
 }
 
 PrintDashboard() {
+    # Clear the screen and move cursor to (0,0).
+    # This mimics the 'clear' command.
+    # https://vt100.net/docs/vt510-rm/ED.html
+    # https://vt100.net/docs/vt510-rm/CUP.html
+    # E3 extension `\e[3J` to clear the scrollback buffer (see 'man clear')
+
+    printf '\e[H\e[2J\e[3J'
+
+    # moves the cursor yOffset-times down
+    # https://vt100.net/docs/vt510-rm/CUD.html
+    # this needs to be guarded, becaue if the amount is 0, it is adjusted to 1
+    # https://terminalguide.namepad.de/seq/csi_cb/
+
+    if [ "${yOffset}" -gt 0 ]; then
+        printf '\e[%sB' "${yOffset}"
+    fi
+
+
     if [ "$1" = "pico" ]; then
         # pico is a screen at least 20x10 (columns x lines)
         printf "%s${clear_line}\n" "p${padd_text} ${pico_status}"
@@ -837,6 +858,10 @@ PrintDashboard() {
         printf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
         printf " %-10s${temp_heatmap}%-10s${reset_text} %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-7s${reset_text} %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
     fi
+
+    # Clear to end of screen (below the drawn dashboard)
+    # https://vt100.net/docs/vt510-rm/ED.html
+    printf '\e[0J'
 }
 
 ############################################# HELPERS ##############################################
@@ -902,10 +927,12 @@ BarGenerator() {
 
 # Checks the size of the screen and sets the value of padd_size
 SizeChecker(){
+    console_height=$(stty size | awk '{ print $1 }')
+    console_width=$(stty size | awk '{ print $2 }')
+
   # Below Pico. Gives you nothing...
   if [ "$console_width" -lt "20" ] || [ "$console_height" -lt "10" ]; then
     # Nothing is this small, sorry
-    clear
     printf "%b" "${check_box_bad} Error!\n    PADD isn't\n    for ants!\n"
     exit 1
   # Below Nano. Gives you Pico.
@@ -974,6 +1001,22 @@ OutputJSON() {
 StartupRoutine(){
     # Get config variables
   . /etc/pihole/setupVars.conf
+
+    # Clear the screen and move cursor to (0,0).
+    # This mimics the 'clear' command.
+    # https://vt100.net/docs/vt510-rm/ED.html
+    # https://vt100.net/docs/vt510-rm/CUP.html
+    # E3 extension `\e[3J` to clear the scrollback buffer see 'man clear'
+    printf '\e[H\e[2J\e[3J'
+
+    # moves the cursor yOffset-times down
+    # https://vt100.net/docs/vt510-rm/CUD.html
+    # this needs to be guarded, becaue if the amount is 0, it is adjusted to 1
+    # https://terminalguide.namepad.de/seq/csi_cb/
+
+    if [ "${yOffset}" -gt 0 ]; then
+        printf '\e[%sB' "${yOffset}"
+    fi
 
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     PrintLogo "$1"
@@ -1054,42 +1097,23 @@ StartupRoutine(){
 }
 
 NormalPADD() {
+
+  # Trap the window resize signal (handle window resize events).
+  trap 'TerminalResize' WINCH
+
   while true; do
 
-    console_width=$(tput cols)
-    console_height=$(tput lines)
-
-    # Sizing Checks
-    SizeChecker
-
-    # Clear to end of screen (below the drawn dashboard)
-    tput ed
-
-    # Move the cursor to top left of console to redraw
-    tput cup 0 0
-
-    # add yOffset-times a blank line
-    # this works better than tput cup $yOffset 0 as it does not
-    # produce "fragments" in the empty area when shrinking the terminal window
-    if [ "${yOffset}" -gt 0 ]; then
-        printf "${clear_line}\n%.0s" $(seq 1 "${yOffset}")
-    fi
+    # Generate output that depends on the terminal size
+    # e.g. Heatmap and barchart
+    GenerateSizeDependendOutput ${padd_size}
 
     # Output everything to the screen
     PrintDashboard ${padd_size}
 
-    # Clear to end of screen (below the drawn dashboard)
-    tput ed
-
-    # Reset status indicator (can be overwritten by one of the GetXXXXInformation)
-    pico_status=${pico_status_ok}
-    mini_status=${mini_status_ok}
-    tiny_status=${tiny_status_ok}
-    full_status=${full_status_ok}
-    mega_status=${mega_status_ok}
-
     # Sleep for 5 seconds
-    sleep 5
+    sleep 5 &
+    wait
+
 
     # Start getting our information for next round
     now=$(date +%s)
@@ -1097,31 +1121,31 @@ NormalPADD() {
     # Get uptime, CPU load, temp, etc. every 5 seconds
     if [ $((now - LastCheckSystemInformation)) -ge 5 ]; then
       . /etc/pihole/setupVars.conf
-      GetSystemInformation ${padd_size}
+      GetSystemInformation
       LastCheckSystemInformation="${now}"
     fi
 
     # Get cache info, last ad domain, blocking percentage, etc. every 5 seconds
     if [ $((now - LastCheckSummaryInformation)) -ge 5 ]; then
-      GetSummaryInformation ${padd_size}
+      GetSummaryInformation
       LastCheckSummaryInformation="${now}"
     fi
 
     # Get FTL status every 5 seconds
     if [ $((now - LastCheckPiholeInformation)) -ge 5 ]; then
-      GetPiholeInformation ${padd_size}
+      GetPiholeInformation
       LastCheckPiholeInformation="${now}"
     fi
 
     # Get IPv4 address, DNS servers, DNSSEC, hostname, DHCP status, interface traffic, etc. every 30 seconds
     if [ $((now - LastCheckNetworkInformation)) -ge 30 ]; then
-      GetNetworkInformation ${padd_size}
+      GetNetworkInformation
       LastCheckNetworkInformation="${now}"
     fi
 
     # Get Pi-hole components and PADD version information once every 24 hours
     if [ $((now - LastCheckVersionInformation)) -ge 86400 ]; then
-      GetVersionInformation ${padd_size}
+      GetVersionInformation
       LastCheckVersionInformation="${now}"
     fi
 
@@ -1135,56 +1159,75 @@ DisplayHelp() {
 ::: Note: If no option is passed, then stats are displayed on screen, updated every 5 seconds
 :::
 ::: Options:
-:::  -x-off [num]  set the x-offset, reference is the upper left corner
-:::  -y-off [num]  set the y-offset, reference is the upper left corner
+:::  -xoff [num]  set the x-offset, reference is the upper left corner
+:::  -yoff [num]  set the y-offset, reference is the upper left corner
 :::  -j, --json    output stats as JSON formatted string
 :::  -h, --help    display this help text
 EOM
     exit 0
 }
 
-setOffset(){
-  i=1;
-  j=$#;
-  while [ $i -le $j ]
-  do
-    case "$1" in
-      "-x-off"  ) xOffset="$2";;
-      "-y-off"  ) yOffset="$2";;
-    esac
-    i=$((i + 1));
-    shift 1;
-  done
+setOffsets(){
+    # sets x/y-offsets (for shifting the Dashboard within the screen) if CLI arguments were passed
+    i=1;
+    j=$#;
+    while [ $i -le $j ]
+    do
+        case "$1" in
+            "-xoff"  ) xOffset="$2";;
+            "-yoff"  ) yOffset="$2";;
+        esac
+        i=$((i + 1));
+        shift 1;
+    done
+}
 
-  # start PADD
-  main
+CleanExit(){
+    # save the return code of the script
+    err=$?
+    #clear the line
+    printf '\e[0K\n'
 
+    # Show the cursor
+    # https://vt100.net/docs/vt510-rm/DECTCEM.html
+    printf '\e[?25h'
+
+    exit $err # exit the script with saved $?
+}
+
+TerminalResize(){
+    # if a terminal resize is trapped, check the new size and immediately print a new Dashboard
+    SizeChecker
+    GenerateSizeDependendOutput ${padd_size}
+    PrintDashboard ${padd_size}
 }
 
 main(){
-  # Turns off the cursor
-  # (From Pull request #8 https://github.com/jpmck/PADD/pull/8)
-  setterm -cursor off
-  trap '{ setterm -cursor on ; echo "" ; exit 0 ; }' INT TERM EXIT
+    # if the offsets have not been set by setOffset(), set them to zero
+    if [ -z "${xOffset}" ]; then
+        xOffset=0;
+    fi
+    if [ -z "${yOffset}" ]; then
+        yOffset=0;
+    fi
 
-  clear
+    # Hiding the cursor.
+    # https://vt100.net/docs/vt510-rm/DECTCEM.html
+    printf '\e[?25l'
 
-  console_width=$(tput cols)
-  console_height=$(tput lines)
+    # Trap on exit
+    trap 'CleanExit' INT TERM EXIT
 
-  SizeChecker
+    SizeChecker
 
-  StartupRoutine ${padd_size}
+    StartupRoutine ${padd_size}
 
-  # Run PADD
-  clear
-  NormalPADD
+    # Run PADD
+    NormalPADD
 }
 
 if [ $# = 0 ]; then
-    # the offsets have not been set by setOffset(), so set them to zero
-    xOffset=0;
-    yOffset=0;
+    # no option supplied, start immediately
     main
 fi
 
@@ -1192,7 +1235,8 @@ for var in "$@"; do
   case "$var" in
     "-j" | "--json"     ) OutputJSON;;
     "-h" | "--help"     ) DisplayHelp;;
-    "-x-off" | "-y-off" ) setOffset "$@";;
-    *                   ) exit 1;;
+    "-xoff" | "-yoff"   ) setOffsets "$@"
+                          main;;
+    *                   ) DisplayHelp;;
   esac
 done
