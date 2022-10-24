@@ -686,177 +686,170 @@ PrintDashboard() {
 
     printf '\e[H\e[2J\e[3J'
 
-    # moves the cursor yOffset-times down
-    # https://vt100.net/docs/vt510-rm/CUD.html
-    # this needs to be guarded, becaue if the amount is 0, it is adjusted to 1
-    # https://terminalguide.namepad.de/seq/csi_cb/
-
-    if [ "${yOffset}" -gt 0 ]; then
-        printf '\e[%sB' "${yOffset}"
-    fi
-
+    # adds the y-offset
+    moveYOffset
 
     if [ "$1" = "pico" ]; then
         # pico is a screen at least 20x10 (columns x lines)
-        printf "%s${clear_line}\n" "p${padd_text} ${pico_status}"
-        printf "%s${clear_line}\n" "${bold_text}PI-HOLE ============${reset_text}"
-        printf "%s${clear_line}\n" " [${ads_blocked_bar}] ${ads_percentage_today}%"
-        printf "%s${clear_line}\n" " ${ads_blocked_today} / ${dns_queries_today}"
-        printf "%s${clear_line}\n" "${bold_text}NETWORK ============${reset_text}"
-        printf "%s${clear_line}\n" " Hst: ${pi_hostname}"
-        printf "%s${clear_line}\n" " IP:  ${pi_ip4_addr}"
-        printf "%s${clear_line}\n" " DHCP ${dhcp_check_box} IPv6 ${dhcp_ipv6_check_box}"
-        printf "%s${clear_line}\n" "${bold_text}CPU ================${reset_text}"
-        printf "%s${clear_line}" " [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
+        moveXOffset; printf "%s${clear_line}\n" "p${padd_text} ${pico_status}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ============${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" " [${ads_blocked_bar}] ${ads_percentage_today}%"
+        moveXOffset; printf "%s${clear_line}\n" " ${ads_blocked_today} / ${dns_queries_today}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ============${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" " Hst: ${pi_hostname}"
+        moveXOffset; printf "%s${clear_line}\n" " IP:  ${pi_ip4_addr}"
+        moveXOffset; printf "%s${clear_line}\n" " DHCP ${dhcp_check_box} IPv6 ${dhcp_ipv6_check_box}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}CPU ================${reset_text}"
+        moveXOffset; printf "%s${clear_line}" " [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
     elif [ "$1" = "nano" ]; then
         # nano is a screen at least 24x12 (columns x lines)
-        printf "%s${clear_line}\n" "n${padd_text} ${mini_status}"
-        printf "%s${clear_line}\n" "${bold_text}PI-HOLE ================${reset_text}"
-        printf "%s${clear_line}\n" " Up:  ${pihole_check_box}      FTL: ${ftl_check_box}"
-        printf "%s${clear_line}\n" " Blk: [${ads_blocked_bar}] ${ads_percentage_today}%"
-        printf "%s${clear_line}\n" " Blk: ${ads_blocked_today} / ${dns_queries_today}"
-        printf "%s${clear_line}\n" "${bold_text}NETWORK ================${reset_text}"
-        printf "%s${clear_line}\n" " Host: ${pi_hostname}"
-        printf "%s${clear_line}\n" " IP:   ${pi_ip4_addr}"
-        printf "%s${clear_line}\n" " DHCP: ${dhcp_check_box}    IPv6: ${dhcp_ipv6_check_box}"
-        printf "%s${clear_line}\n" "${bold_text}SYSTEM =================${reset_text}"
-        printf "%s${clear_line}\n" " Up:  ${system_uptime}"
-        printf "%s${clear_line}"  " CPU: [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
+        moveXOffset; printf "%s${clear_line}\n" "n${padd_text} ${mini_status}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" " Up:  ${pihole_check_box}      FTL: ${ftl_check_box}"
+        moveXOffset; printf "%s${clear_line}\n" " Blk: [${ads_blocked_bar}] ${ads_percentage_today}%"
+        moveXOffset; printf "%s${clear_line}\n" " Blk: ${ads_blocked_today} / ${dns_queries_today}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" " Host: ${pi_hostname}"
+        moveXOffset; printf "%s${clear_line}\n" " IP:   ${pi_ip4_addr}"
+        moveXOffset; printf "%s${clear_line}\n" " DHCP: ${dhcp_check_box}    IPv6: ${dhcp_ipv6_check_box}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" " Up:  ${system_uptime}"
+        moveXOffset; printf "%s${clear_line}"  " CPU: [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
     elif [ "$1" = "micro" ]; then
         # micro is a screen at least 30x16 (columns x lines)
-        printf "%s${clear_line}\n" "µ${padd_text}     ${mini_status}"
-        printf "%s${clear_line}\n" ""
-        printf "%s${clear_line}\n" "${bold_text}PI-HOLE ======================${reset_text}"
-        printf "%s${clear_line}\n" " Status:  ${pihole_check_box}      FTL:  ${ftl_check_box}"
-        printf "%s${clear_line}\n" "${bold_text}STATS ========================${reset_text}"
-        printf "%s${clear_line}\n" " Blckng:  ${domains_being_blocked} domains"
-        printf "%s${clear_line}\n" " Piholed: [${ads_blocked_bar}] ${ads_percentage_today}%"
-        printf "%s${clear_line}\n" " Piholed: ${ads_blocked_today} / ${dns_queries_today}"
-        printf "%s${clear_line}\n" "${bold_text}NETWORK ======================${reset_text}"
-        printf "%s${clear_line}\n" " Host:    ${full_hostname}"
-        printf "%s${clear_line}\n" " IP:      ${pi_ip4_addr}"
-        printf "%s${clear_line}\n" " DHCP:    ${dhcp_check_box}     IPv6:  ${dhcp_ipv6_check_box}"
-        printf "%s${clear_line}\n" "${bold_text}SYSTEM =======================${reset_text}"
-        printf "%s${clear_line}\n" " Uptime:  ${system_uptime}"
-        printf "%s${clear_line}\n" " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
-        printf "%s${clear_line}" " Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
+        moveXOffset; printf "%s${clear_line}\n" "µ${padd_text}     ${mini_status}"
+        moveXOffset; printf "%s${clear_line}\n" ""
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ======================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" " Status:  ${pihole_check_box}      FTL:  ${ftl_check_box}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ========================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" " Blckng:  ${domains_being_blocked} domains"
+        moveXOffset; printf "%s${clear_line}\n" " Piholed: [${ads_blocked_bar}] ${ads_percentage_today}%"
+        moveXOffset; printf "%s${clear_line}\n" " Piholed: ${ads_blocked_today} / ${dns_queries_today}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ======================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" " Host:    ${full_hostname}"
+        moveXOffset; printf "%s${clear_line}\n" " IP:      ${pi_ip4_addr}"
+        moveXOffset; printf "%s${clear_line}\n" " DHCP:    ${dhcp_check_box}     IPv6:  ${dhcp_ipv6_check_box}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =======================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" " Uptime:  ${system_uptime}"
+        moveXOffset; printf "%s${clear_line}\n" " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
+        moveXOffset; printf "%s${clear_line}" " Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
     elif [ "$1" = "mini" ]; then
         # mini is a screen at least 40x18 (columns x lines)
-        printf "%s${clear_line}\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
-        printf "%s${clear_line}\n" ""
-        printf "%s${clear_line}\n" "${bold_text}PI-HOLE ================================${reset_text}"
-        printf " %-9s${pihole_heatmap}%-10s${reset_text} %-9s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
-        printf "%s${clear_line}\n" "${bold_text}STATS ==================================${reset_text}"
-        printf " %-9s%-29s${clear_line}\n" "Blckng:" "${domains_being_blocked} domains"
-        printf " %-9s[%-20s] %-5s${clear_line}\n" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
-        printf " %-9s%-29s${clear_line}\n" "Piholed:" "${ads_blocked_today} out of ${dns_queries_today}"
-        printf " %-9s%-29s${clear_line}\n" "Latest:" "${latest_blocked}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
+        moveXOffset; printf "%s${clear_line}\n" ""
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ================================${reset_text}"
+        moveXOffset; printf " %-9s${pihole_heatmap}%-10s${reset_text} %-9s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ==================================${reset_text}"
+        moveXOffset; printf " %-9s%-29s${clear_line}\n" "Blckng:" "${domains_being_blocked} domains"
+        moveXOffset; printf " %-9s[%-20s] %-5s${clear_line}\n" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+        moveXOffset; printf " %-9s%-29s${clear_line}\n" "Piholed:" "${ads_blocked_today} out of ${dns_queries_today}"
+        moveXOffset; printf " %-9s%-29s${clear_line}\n" "Latest:" "${latest_blocked}"
         if [ "${DHCP_ACTIVE}" != "true" ]; then
-            printf " %-9s%-29s${clear_line}\n" "Top Ad:" "${top_blocked}"
+            moveXOffset; printf " %-9s%-29s${clear_line}\n" "Top Ad:" "${top_blocked}"
         fi
-        printf "%s${clear_line}\n" "${bold_text}NETWORK ================================${reset_text}"
-        printf " %-9s%-15s%-4s%-11s${clear_line}\n" "Host:" "${full_hostname}" "IP:"   "${pi_ip4_addr}"
-        printf " %-9s%-8s %-4s%-5s %-4s%-5s${clear_line}\n" "Iface:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
-        printf " %-9s%-10s${clear_line}\n" "DNS:" "${dns_information}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ================================${reset_text}"
+        moveXOffset; printf " %-9s%-15s%-4s%-11s${clear_line}\n" "Host:" "${full_hostname}" "IP:"   "${pi_ip4_addr}"
+        moveXOffset; printf " %-9s%-8s %-4s%-5s %-4s%-5s${clear_line}\n" "Iface:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
+        moveXOffset; printf " %-9s%-10s${clear_line}\n" "DNS:" "${dns_information}"
         if [ "${DHCP_ACTIVE}" = "true" ]; then
-            printf " %-9s${dhcp_heatmap}%-10s${reset_text} %-9s${dhcp_ipv6_heatmap}%-10s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
+            moveXOffset; printf " %-9s${dhcp_heatmap}%-10s${reset_text} %-9s${dhcp_ipv6_heatmap}%-10s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
         fi
-        printf "%s${clear_line}\n" "${bold_text}SYSTEM =================================${reset_text}"
-        printf " %-9s%-29s${clear_line}\n" "Uptime:" "${system_uptime}"
-        printf "%s${clear_line}\n" " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
-        printf "%s${clear_line}" " Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =================================${reset_text}"
+        moveXOffset; printf " %-9s%-29s${clear_line}\n" "Uptime:" "${system_uptime}"
+        moveXOffset; printf "%s${clear_line}\n" " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
+        moveXOffset; printf "%s${clear_line}" " Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
     elif [ "$1" = "tiny" ]; then
          # tiny is a screen at least 53x20 (columns x lines)
-        printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
-        printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
-        printf "%s${clear_line}\n" "${bold_text}PI-HOLE ============================================${reset_text}"
-        printf " %-10s${pihole_heatmap}%-16s${reset_text} %-8s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
-        printf "%s${clear_line}\n" "${bold_text}STATS ==============================================${reset_text}"
-        printf " %-10s%-29s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains"
-        printf " %-10s[%-30s] %-5s${clear_line}\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
-        printf " %-10s%-39s${clear_line}\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today}"
-        printf " %-10s%-39s${clear_line}\n" "Latest:" "${latest_blocked}"
-        printf " %-10s%-39s${clear_line}\n" "Top Ad:" "${top_blocked}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ============================================${reset_text}"
+        moveXOffset; printf " %-10s${pihole_heatmap}%-16s${reset_text} %-8s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ==============================================${reset_text}"
+        moveXOffset; printf " %-10s%-29s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains"
+        moveXOffset; printf " %-10s[%-30s] %-5s${clear_line}\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+        moveXOffset; printf " %-10s%-39s${clear_line}\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today}"
+        moveXOffset; printf " %-10s%-39s${clear_line}\n" "Latest:" "${latest_blocked}"
+        moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Ad:" "${top_blocked}"
         if [ "${DHCP_ACTIVE}" != "true" ]; then
-            printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
-            printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
+            moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
+            moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
         fi
-        printf "%s${clear_line}\n" "${bold_text}NETWORK ============================================${reset_text}"
-        printf " %-10s%-16s %-8s%-16s${clear_line}\n" "Hostname:" "${full_hostname}" "IP:  " "${pi_ip4_addr}"
-        printf " %-10s%-16s %-4s%-5s %-4s%-5s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
-        printf " %-10s%-16s %-8s${dnssec_heatmap}%-16s${reset_text}${clear_line}\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_status}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ============================================${reset_text}"
+        moveXOffset; printf " %-10s%-16s %-8s%-16s${clear_line}\n" "Hostname:" "${full_hostname}" "IP:  " "${pi_ip4_addr}"
+        moveXOffset; printf " %-10s%-16s %-4s%-5s %-4s%-5s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
+        moveXOffset; printf " %-10s%-16s %-8s${dnssec_heatmap}%-16s${reset_text}${clear_line}\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_status}"
         if [ "${DHCP_ACTIVE}" = "true" ]; then
-            printf " %-10s${dhcp_heatmap}%-16s${reset_text} %-8s${dhcp_ipv6_heatmap}%-10s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
-            printf "%s${clear_line}\n" "${dhcp_info}"
+            pmoveXOffset; rintf " %-10s${dhcp_heatmap}%-16s${reset_text} %-8s${dhcp_ipv6_heatmap}%-10s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
+            moveXOffset; printf "%s${clear_line}\n" "${dhcp_info}"
         fi
-        printf "%s${clear_line}\n" "${bold_text}SYSTEM =============================================${reset_text}"
-        printf " %-10s%-29s${clear_line}\n" "Uptime:" "${system_uptime}"
-        printf " %-10s${temp_heatmap}%-17s${reset_text} %-8s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
-        printf " %-10s[${memory_heatmap}%-7s${reset_text}] %-6s %-8s[${cpu_load_1_heatmap}%-7s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU:" "${cpu_bar}" "${cpu_percent}%"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =============================================${reset_text}"
+        moveXOffset; printf " %-10s%-29s${clear_line}\n" "Uptime:" "${system_uptime}"
+        moveXOffset; printf " %-10s${temp_heatmap}%-17s${reset_text} %-8s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
+        moveXOffset; printf " %-10s[${memory_heatmap}%-7s${reset_text}] %-6s %-8s[${cpu_load_1_heatmap}%-7s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU:" "${cpu_bar}" "${cpu_percent}%"
     elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
         # slim is a screen with at least 60 columns and exactly 21 lines
         # regular is a screen at least 60x22 (columns x lines)
         if [ "$1" = "slim" ]; then
-           printf "%s${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
-           printf "%s${clear_line}\n" ""
+           moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
+           moveXOffset; printf "%s${clear_line}\n" ""
         else
-            printf "%s${clear_line}\n" "${padd_logo_1}"
-            printf "%s${clear_line}\n" "${padd_logo_2}Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
-            printf "%s${clear_line}\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
-            printf "%s${clear_line}\n" ""
+            moveXOffset; printf "%s${clear_line}\n" "${padd_logo_1}"
+            moveXOffset; printf "%s${clear_line}\n" "${padd_logo_2}Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
+            moveXOffset; printf "%s${clear_line}\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
+            moveXOffset; printf "%s${clear_line}\n" ""
         fi
-        printf "%s${clear_line}\n" "${bold_text}PI-HOLE ===================================================${reset_text}"
-        printf " %-10s${pihole_heatmap}%-19s${reset_text} %-10s${ftl_heatmap}%-19s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
-        printf "%s${clear_line}\n" "${bold_text}STATS =====================================================${reset_text}"
-        printf " %-10s%-49s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains"
-        printf " %-10s[%-40s] %-5s${clear_line}\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
-        printf " %-10s%-49s${clear_line}\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today} queries"
-        printf " %-10s%-39s${clear_line}\n" "Latest:" "${latest_blocked}"
-        printf " %-10s%-39s${clear_line}\n" "Top Ad:" "${top_blocked}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ===================================================${reset_text}"
+        moveXOffset; printf " %-10s${pihole_heatmap}%-19s${reset_text} %-10s${ftl_heatmap}%-19s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS =====================================================${reset_text}"
+        moveXOffset; printf " %-10s%-49s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains"
+        moveXOffset; printf " %-10s[%-40s] %-5s${clear_line}\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+        moveXOffset; printf " %-10s%-49s${clear_line}\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today} queries"
+        moveXOffset; printf " %-10s%-39s${clear_line}\n" "Latest:" "${latest_blocked}"
+        moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Ad:" "${top_blocked}"
         if [ "${DHCP_ACTIVE}" != "true" ]; then
-            printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
-            printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
+            moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
+            moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
         fi
-        printf "%s${clear_line}\n" "${bold_text}NETWORK ===================================================${reset_text}"
-        printf " %-10s%-15s %-4s%-17s%-6s%s${clear_line}\n" "Hostname:" "${full_hostname}" "IP:" "${pi_ip4_addr}" "IPv6:" "${ipv6_check_box}"
-        printf " %-10s%-15s %-4s%-5s %-4s%-5s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
-        printf " %-10s%-15s %-10s${dnssec_heatmap}%-19s${reset_text}${clear_line}\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_status}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ===================================================${reset_text}"
+        moveXOffset; printf " %-10s%-15s %-4s%-17s%-6s%s${clear_line}\n" "Hostname:" "${full_hostname}" "IP:" "${pi_ip4_addr}" "IPv6:" "${ipv6_check_box}"
+        moveXOffset; printf " %-10s%-15s %-4s%-5s %-4s%-5s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
+        moveXOffset; printf " %-10s%-15s %-10s${dnssec_heatmap}%-19s${reset_text}${clear_line}\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_status}"
         if [ "${DHCP_ACTIVE}" = "true" ]; then
-            printf " %-10s${dhcp_heatmap}%-15s${reset_text} %-10s${dhcp_ipv6_heatmap}%-19s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
-            printf "%s${clear_line}\n" "${dhcp_info}"
+            moveXOffset; printf " %-10s${dhcp_heatmap}%-15s${reset_text} %-10s${dhcp_ipv6_heatmap}%-19s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
+            moveXOffset; printf "%s${clear_line}\n" "${dhcp_info}"
         fi
-        printf "%s${clear_line}\n" "${bold_text}SYSTEM ====================================================${reset_text}"
-        printf " %-10s%-39s${clear_line}\n" "Uptime:" "${system_uptime}"
-        printf " %-10s${temp_heatmap}%-21s${reset_text}%-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
-        printf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM ====================================================${reset_text}"
+        moveXOffset; printf " %-10s%-39s${clear_line}\n" "Uptime:" "${system_uptime}"
+        moveXOffset; printf " %-10s${temp_heatmap}%-21s${reset_text}%-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
+        moveXOffset; printf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
     else # ${padd_size} = mega
          # mega is a screen with at least 80 columns and 26 lines
-        printf "%s${clear_line}\n" "${padd_logo_retro_1}"
-        printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
-        printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
-        printf "%s${clear_line}\n" ""
-        printf "%s${clear_line}\n" "${bold_text}STATS =========================================================================${reset_text}"
-        printf " %-10s%-19s %-10s[%-40s] %-5s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
-        printf " %-10s%-30s%-29s${clear_line}\n" "Clients:" "${clients}" " ${ads_blocked_today} out of ${dns_queries_today} queries"
-        printf " %-10s%-39s${clear_line}\n" "Latest:" "${latest_blocked}"
-        printf " %-10s%-39s${clear_line}\n" "Top Ad:" "${top_blocked}"
-        printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
-        printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
-        printf "%s${clear_line}\n" "${bold_text}FTL ===========================================================================${reset_text}"
-        printf " %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}%" "Mem. Use:" "${ftl_mem_percentage}%"
-        printf " %-10s%-69s${clear_line}\n" "DNSCache:" "${cache_inserts} insertions, ${cache_deletes} deletions, ${cache_size} total entries"
-        printf "%s${clear_line}\n" "${bold_text}NETWORK =======================================================================${reset_text}"
-        printf " %-10s%-19s${clear_line}\n" "Hostname:" "${full_hostname}"
-        printf " %-10s%-15s %-4s%-9s %-4s%-9s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
-        printf " %-6s%-19s %-10s%-29s${clear_line}\n" "IPv4:" "${pi_ip4_addr}" "IPv6:" "${pi_ip6_addr}"
-        printf "%s${clear_line}\n" "${bold_text}DNS ==========================DHCP=============================================${reset_text}"
-        printf " %-10s%-19s %-6s${dhcp_heatmap}%-19s${reset_text}${clear_line}\n" "Servers:" "${dns_information}" "DHCP:" "${dhcp_status}"
-        printf " %-10s${dnssec_heatmap}%-19s${reset_text} %-10s${conditional_forwarding_heatmap}%-9s${reset_text}${clear_line}\n" "DNSSEC:" "${dnssec_status}" "IPv6 Spt:" "${dhcp_ipv6_status}"
-        printf " %-10s${conditional_forwarding_heatmap}%-19s${reset_text}%s${clear_line}\n" "CdFwding:" "${conditional_forwarding_status}" "${dhcp_info}"
-        printf "%s${clear_line}\n" "${bold_text}SYSTEM ========================================================================${reset_text}"
-        printf " %-10s%-39s${clear_line}\n" "Device:" "${sys_model}"
-        printf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
-        printf " %-10s${temp_heatmap}%-10s${reset_text} %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-7s${reset_text} %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_1}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" ""
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS =========================================================================${reset_text}"
+        moveXOffset; printf " %-10s%-19s %-10s[%-40s] %-5s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
+        moveXOffset; printf " %-10s%-30s%-29s${clear_line}\n" "Clients:" "${clients}" " ${ads_blocked_today} out of ${dns_queries_today} queries"
+        moveXOffset; printf " %-10s%-39s${clear_line}\n" "Latest:" "${latest_blocked}"
+        moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Ad:" "${top_blocked}"
+        moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
+        moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}FTL ===========================================================================${reset_text}"
+        moveXOffset; printf " %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}%" "Mem. Use:" "${ftl_mem_percentage}%"
+        moveXOffset; printf " %-10s%-69s${clear_line}\n" "DNSCache:" "${cache_inserts} insertions, ${cache_deletes} deletions, ${cache_size} total entries"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK =======================================================================${reset_text}"
+        moveXOffset; printf " %-10s%-19s${clear_line}\n" "Hostname:" "${full_hostname}"
+        moveXOffset; printf " %-10s%-15s %-4s%-9s %-4s%-9s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
+        moveXOffset; printf " %-6s%-19s %-10s%-29s${clear_line}\n" "IPv4:" "${pi_ip4_addr}" "IPv6:" "${pi_ip6_addr}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}DNS ==========================DHCP=============================================${reset_text}"
+        moveXOffset; printf " %-10s%-19s %-6s${dhcp_heatmap}%-19s${reset_text}${clear_line}\n" "Servers:" "${dns_information}" "DHCP:" "${dhcp_status}"
+        moveXOffset; printf " %-10s${dnssec_heatmap}%-19s${reset_text} %-10s${conditional_forwarding_heatmap}%-9s${reset_text}${clear_line}\n" "DNSSEC:" "${dnssec_status}" "IPv6 Spt:" "${dhcp_ipv6_status}"
+        moveXOffset; printf " %-10s${conditional_forwarding_heatmap}%-19s${reset_text}%s${clear_line}\n" "CdFwding:" "${conditional_forwarding_status}" "${dhcp_info}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM ========================================================================${reset_text}"
+        moveXOffset; printf " %-10s%-39s${clear_line}\n" "Device:" "${sys_model}"
+        moveXOffset; printf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
+        moveXOffset; printf " %-10s${temp_heatmap}%-10s${reset_text} %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-7s${reset_text} %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
     fi
 
     # Clear to end of screen (below the drawn dashboard)
@@ -991,6 +984,27 @@ getFTLAPIPort(){
 
 }
 
+moveYOffset(){
+    # moves the cursor yOffset-times down
+    # https://vt100.net/docs/vt510-rm/CUD.html
+    # this needs to be guarded, becaue if the amount is 0, it is adjusted to 1
+    # https://terminalguide.namepad.de/seq/csi_cb/
+
+    if [ "${yOffset}" -gt 0 ]; then
+        printf '\e[%sB' "${yOffset}"
+    fi
+}
+
+moveXOffset(){
+    # moves the cursor xOffset-times to the right
+    # https://vt100.net/docs/vt510-rm/CUF.html
+    # this needs to be guarded, becaue if the amount is 0, it is adjusted to 1
+    # https://terminalguide.namepad.de/seq/csi_cb/
+
+    if [ "${xOffset}" -gt 0 ]; then
+        printf '\e[%sC' "${xOffset}"
+    fi
+}
 ########################################## MAIN FUNCTIONS ##########################################
 
 OutputJSON() {
@@ -1009,86 +1023,79 @@ StartupRoutine(){
     # E3 extension `\e[3J` to clear the scrollback buffer see 'man clear'
     printf '\e[H\e[2J\e[3J'
 
-    # moves the cursor yOffset-times down
-    # https://vt100.net/docs/vt510-rm/CUD.html
-    # this needs to be guarded, becaue if the amount is 0, it is adjusted to 1
-    # https://terminalguide.namepad.de/seq/csi_cb/
-
-    if [ "${yOffset}" -gt 0 ]; then
-        printf '\e[%sB' "${yOffset}"
-    fi
+  # adds the y-offset
+  moveYOffset
 
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-    PrintLogo "$1"
-    printf "%b" "START-UP ===========\n"
+    moveXOffset; PrintLogo "$1"
+    moveXOffset; printf "%b" "START-UP ===========\n"
 
-    printf "%b" " [■·········]  10%\r"
+    moveXOffset; printf "%b" " [■·········]  10%\r"
 
     # Check for updates
-    printf "%b" " [■■········]  20%\r"
-    printf "%b" " [■■■·······]  30%\r"
+    moveXOffset; printf "%b" " [■■········]  20%\r"
+    moveXOffset; printf "%b" " [■■■·······]  30%\r"
 
     # Get our information for the first time
-    printf "%b" " [■■■■······]  40%\r"
-    GetSystemInformation "$1"
-    printf "%b" " [■■■■■·····]  50%\r"
-    GetSummaryInformation "$1"
-    printf "%b" " [■■■■■■····]  60%\r"
-    GetPiholeInformation "$1"
-    printf "%b" " [■■■■■■■···]  70%\r"
-    GetNetworkInformation "$1"
-    printf "%b" " [■■■■■■■■··]  80%\r"
-    GetVersionInformation "$1"
-    printf "%b" " [■■■■■■■■■·]  90%\r"
-    printf "%b" " [■■■■■■■■■■] 100%\n"
+    moveXOffset; printf "%b" " [■■■■······]  40%\r"
+    GetSystemInformation
+    moveXOffset; printf "%b" " [■■■■■·····]  50%\r"
+    GetSummaryInformation
+    moveXOffset; printf "%b" " [■■■■■■····]  60%\r"
+    GetPiholeInformation
+    moveXOffset; printf "%b" " [■■■■■■■···]  70%\r"
+    GetNetworkInformation
+    moveXOffset; printf "%b" " [■■■■■■■■··]  80%\r"
+    GetVersionInformation
+    moveXOffset; printf "%b" " [■■■■■■■■■·]  90%\r"
+    moveXOffset; printf "%b" " [■■■■■■■■■■] 100%\n"
 
   elif [ "$1" = "mini" ]; then
     PrintLogo "$1"
-    echo "START UP ====================="
+    moveXOffset; echo "START UP ====================="
 
     # Get our information for the first time
-    echo "- Gathering system info."
-    GetSystemInformation "mini"
-    echo "- Gathering Pi-hole info."
-    GetPiholeInformation "mini"
-    GetSummaryInformation "mini"
-    echo "- Gathering network info."
-    GetNetworkInformation "mini"
-    echo "- Gathering version info."
-    GetVersionInformation "mini"
-    echo "  - Core $core_version, Web $web_version"
-    echo "  - FTL $ftl_version, PADD $padd_version"
-    echo "  - $version_status"
+    moveXOffset; echo "- Gathering system info."
+    moveXOffset; GetSystemInformation
+    moveXOffset; echo "- Gathering Pi-hole info."
+    moveXOffset; GetPiholeInformation
+    moveXOffset; GetSummaryInformation
+    moveXOffset; echo "- Gathering network info."
+    GetNetworkInformation
+    moveXOffset; echo "- Gathering version info."
+    GetVersionInformation
+    moveXOffset; echo "  - Core $core_version, Web $web_version"
+    moveXOffset; echo "  - FTL $ftl_version, PADD $padd_version"
+    moveXOffset; echo "  - $version_status"
 
   else
-    printf "%b" "${padd_logo_retro_1}\n"
-    printf "%b" "${padd_logo_retro_2}Pi-hole® Ad Detection Display\n"
-    printf "%b" "${padd_logo_retro_3}A client for Pi-hole\n\n"
+    moveXOffset; printf "%b" "${padd_logo_retro_1}\n"
+    moveXOffset; printf "%b" "${padd_logo_retro_2}Pi-hole® Ad Detection Display\n"
+    moveXOffset; printf "%b" "${padd_logo_retro_3}A client for Pi-hole\n\n"
     if [ "$1" = "tiny" ]; then
-      echo "START UP ============================================"
+      moveXOffset; echo "START UP ============================================"
     else
-      echo "START UP ==================================================="
+      moveXOffset; echo "START UP ==================================================="
     fi
 
     # Get our information for the first time
-    echo "- Gathering system information..."
-    GetSystemInformation "$1"
-    echo "- Gathering Pi-hole information..."
-    GetSummaryInformation "$1"
-    GetPiholeInformation "$1"
-    echo "- Gathering network information..."
-    GetNetworkInformation "$1"
-    echo "- Gathering version information..."
-    GetVersionInformation "$1"
-    echo "  - Pi-hole Core $core_version"
-    echo "  - Web Admin $web_version"
-    echo "  - FTL $ftl_version"
-    echo "  - PADD $padd_version"
-    echo "  - $version_status"
+    moveXOffset; echo "- Gathering system information..."
+    GetSystemInformation
+    moveXOffset; echo "- Gathering Pi-hole information..."
+    GetSummaryInformation
+    GetPiholeInformation
+    moveXOffset; echo "- Gathering network information..."
+    GetNetworkInformation
+    moveXOffset; echo "- Gathering version information..."
+    GetVersionInformation
+    moveXOffset; echo "  - Pi-hole Core $core_version"
+    moveXOffset; echo "  - Web Admin $web_version"
+    moveXOffset; echo "  - FTL $ftl_version"
+    moveXOffset; echo "  - PADD $padd_version"
+    moveXOffset; echo "  - $version_status"
   fi
 
-  printf "%s" "- Starting in "
-
+  moveXOffset; printf "%s" "- Starting in "
   for i in 3 2 1
   do
     printf "%s..." "$i"
