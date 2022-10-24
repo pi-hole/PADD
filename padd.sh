@@ -918,8 +918,13 @@ BarGenerator() {
   echo "$out"
 }
 
-# Checks the size of the screen and sets the value of padd_size
+# Checks the size of the screen and sets the value of $padd_size
 SizeChecker(){
+    # adding a tiny delay here to to give the kernel a bit time to
+    # report new sizes correctly after a terminal resize
+    # this reduces "flickering" of GenerateSizeDependendOutput() items
+    # after a terminal re-size
+    sleep 0.1
     console_height=$(stty size | awk '{ print $1 }')
     console_width=$(stty size | awk '{ print $2 }')
 
@@ -987,7 +992,7 @@ getFTLAPIPort(){
 moveYOffset(){
     # moves the cursor yOffset-times down
     # https://vt100.net/docs/vt510-rm/CUD.html
-    # this needs to be guarded, becaue if the amount is 0, it is adjusted to 1
+    # this needs to be guarded, because if the amount is 0, it is adjusted to 1
     # https://terminalguide.namepad.de/seq/csi_cb/
 
     if [ "${yOffset}" -gt 0 ]; then
@@ -998,7 +1003,7 @@ moveYOffset(){
 moveXOffset(){
     # moves the cursor xOffset-times to the right
     # https://vt100.net/docs/vt510-rm/CUF.html
-    # this needs to be guarded, becaue if the amount is 0, it is adjusted to 1
+    # this needs to be guarded, because if the amount is 0, it is adjusted to 1
     # https://terminalguide.namepad.de/seq/csi_cb/
 
     if [ "${xOffset}" -gt 0 ]; then
@@ -1119,11 +1124,11 @@ NormalPADD() {
 
     # Sleep for 5 seconds
     # sending sleep in the background and wait for it
-    # this way the TerminalResize trap can re-draw the dashboard even when
-    # sleep is running
+    # this way the TerminalResize trap can kill the sleep
+    # and force a instant re-draw of the dashboard
     # https://stackoverflow.com/questions/32041674/linux-how-to-kill-sleep
     #
-    # saving the PID of the background sleep process to kill it on exit
+    # saving the PID of the background sleep process to kill it on exit and resize
     sleep 5 &
     sleepPID=$!
     wait $!
@@ -1207,18 +1212,17 @@ CleanExit(){
 
     # if background sleep is running, kill it
     # http://mywiki.wooledge.org/SignalTrap#When_is_the_signal_handled.3F
-    if [ -n "${sleepPID}" ]; then
-        kill "${sleepPID}"
-    fi
+    kill $sleepPID > /dev/null 2>&1
 
     exit $err # exit the script with saved $?
 }
 
 TerminalResize(){
-    # if a terminal resize is trapped, check the new size and immediately print a new Dashboard
+    # if a terminal resize is trapped, check the new terminal size and
+    # kill the sleep function within NormalPADD() to trigger redrawing
+    # of the Dashboard
     SizeChecker
-    GenerateSizeDependendOutput ${padd_size}
-    PrintDashboard ${padd_size}
+    kill $sleepPID > /dev/null 2>&1
 }
 
 main(){
