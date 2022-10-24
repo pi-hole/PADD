@@ -1056,10 +1056,10 @@ StartupRoutine(){
 
     # Get our information for the first time
     moveXOffset; echo "- Gathering system info."
-    moveXOffset; GetSystemInformation
+    GetSystemInformation
     moveXOffset; echo "- Gathering Pi-hole info."
-    moveXOffset; GetPiholeInformation
-    moveXOffset; GetSummaryInformation
+    GetPiholeInformation
+    GetSummaryInformation
     moveXOffset; echo "- Gathering network info."
     GetNetworkInformation
     moveXOffset; echo "- Gathering version info."
@@ -1105,10 +1105,10 @@ StartupRoutine(){
 
 NormalPADD() {
 
-  # Trap the window resize signal (handle window resize events).
-  trap 'TerminalResize' WINCH
+    # Trap the window resize signal (handle window resize events)
+    trap 'TerminalResize' WINCH
 
-  while true; do
+    while true; do
 
     # Generate output that depends on the terminal size
     # e.g. Heatmap and barchart
@@ -1118,9 +1118,15 @@ NormalPADD() {
     PrintDashboard ${padd_size}
 
     # Sleep for 5 seconds
+    # sending sleep in the background and wait for it
+    # this way the TerminalResize trap can re-draw the dashboard even when
+    # sleep is running
+    # https://stackoverflow.com/questions/32041674/linux-how-to-kill-sleep
+    #
+    # saving the PID of the background sleep process to kill it on exit
     sleep 5 &
-    wait
-
+    sleepPID=$!
+    wait $!
 
     # Start getting our information for next round
     now=$(date +%s)
@@ -1198,6 +1204,12 @@ CleanExit(){
     # Show the cursor
     # https://vt100.net/docs/vt510-rm/DECTCEM.html
     printf '\e[?25h'
+
+    # if background sleep is running, kill it
+    # http://mywiki.wooledge.org/SignalTrap#When_is_the_signal_handled.3F
+    if [ -n "${sleepPID}" ]; then
+        kill "${sleepPID}"
+    fi
 
     exit $err # exit the script with saved $?
 }
