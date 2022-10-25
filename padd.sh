@@ -936,70 +936,6 @@ SizeChecker(){
   fi
 }
 
-CheckConnectivity() {
-    local connectivity connection_attempts wait_timer
-
-    connectivity="false"
-    connection_attempts=1
-    wait_timer=1
-
-    while [ $connection_attempts -lt 9 ]; do
-
-        if nc -zw1 google.com 443 2>/dev/null; then
-            if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-                echo "Attempt #${connection_attempts} passed..."
-            elif [ "$1" = "mini" ]; then
-                echo "Attempt ${connection_attempts} passed."
-            else
-                echo "  - Attempt ${connection_attempts} passed...                                     "
-            fi
-
-            connectivity="true"
-            connection_attempts=11
-        else
-            connection_attempts=$((connection_attempts+1))
-            local inner_wait_timer
-            inner_wait_timer=$((wait_timer*1))
-
-            # echo "$wait_timer = $inner_wait_timer"
-            while [ $inner_wait_timer -gt 0 ]; do
-                if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-                    printf "%b" "Attempt #${connection_attempts} failed...\r"
-                elif [ "$1" = "mini" ] || [ "$1" = "tiny" ]; then
-                    printf "%b" "- Attempt ${connection_attempts} failed, wait ${inner_wait_timer}  \r"
-                else
-                    printf "%b" "  - Attempt ${connection_attempts} failed... waiting ${inner_wait_timer} seconds...  \r"
-                fi
-                sleep 1
-                inner_wait_timer=$((inner_wait_timer-1))
-            done
-
-            # echo -ne "Attempt $connection_attempts failed... waiting $wait_timer seconds...\r"
-            # sleep $wait_timer
-            wait_timer=$((wait_timer*2))
-        fi
-
-    done
-
-    if [ "$connectivity" = "false" ]; then
-        if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-            echo "Check failed..."
-        elif [ "$1" = "mini" ] || [ "$1" = "tiny" ]; then
-            echo "- Connectivity check failed."
-        else
-            echo "  - Connectivity check failed..."
-        fi
-    else
-        if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-            echo "Check passed..."
-        elif [ "$1" = "mini" ] || [ "$1" = "tiny" ]; then
-            echo "- Connectivity check passed."
-        else
-            echo "  - Connectivity check passed..."
-        fi
-    fi
-}
-
 # converts a given version string e.g. v3.7.1 to 3007001000 to allow for easier comparison of multi digit version numbers
 # credits https://apple.stackexchange.com/a/123408
 VersionConverter() {
@@ -1042,9 +978,6 @@ StartupRoutine(){
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     PrintLogo "$1"
     printf "%b" "START-UP ===========\n"
-    printf "%b" "Checking connection.\n"
-    CheckConnectivity "$1"
-    printf "%b" "Starting PADD...\n"
 
     printf "%b" " [■·········]  10%\r"
 
@@ -1069,10 +1002,6 @@ StartupRoutine(){
   elif [ "$1" = "mini" ]; then
     PrintLogo "$1"
     echo "START UP ====================="
-    echo "Checking connectivity."
-    CheckConnectivity "$1"
-
-    echo "Starting PADD."
 
     # Get our information for the first time
     echo "- Gathering system info."
@@ -1097,9 +1026,6 @@ StartupRoutine(){
     else
       echo "START UP ==================================================="
     fi
-
-    printf "%b" "- Checking internet connection...\n"
-    CheckConnectivity "$1"
 
     # Get our information for the first time
     echo "- Gathering system information..."
