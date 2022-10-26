@@ -748,8 +748,8 @@ PrintDashboard() {
             moveXOffset; printf " %-9s%-29s${clear_line}\n" "Top Ad:" "${top_blocked}"
         fi
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ================================${reset_text}"
-        moveXOffset; printf " %-9s%-15s%-4s%-11s${clear_line}\n" "Host:" "${full_hostname}" "IP:"   "${pi_ip4_addr}"
-        moveXOffset; printf " %-9s%-8s %-4s%-5s %-4s%-5s${clear_line}\n" "Iface:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
+        moveXOffset; printf " %-9s%-19s${clear_line}\n" "Host:" "${full_hostname}"
+        moveXOffset; printf " %-9s%-19s${clear_line}\n" "IP:" "${pi_ip4_addr}"
         moveXOffset; printf " %-9s%-10s${clear_line}\n" "DNS:" "${dns_information}"
         if [ "${DHCP_ACTIVE}" = "true" ]; then
             moveXOffset; printf " %-9s${dhcp_heatmap}%-10s${reset_text} %-9s${dhcp_ipv6_heatmap}%-10s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
