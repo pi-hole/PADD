@@ -462,16 +462,18 @@ GetPiholeInformation() {
 
 GetVersionInformation() {
   # Check if version status has been saved
-  core_version=$(pihole -v -p | awk '{print $4}' | tr -d '[:alpha:]')
-  core_version_latest=$(pihole -v -p | awk '{print $(NF)}' | tr -d ')')
+  # all info is sourced from /etc/pihole/versions
+
+  # remove the leading "v"
+  # shellcheck disable=SC2153
+  core_version=$(echo "${CORE_VERSION}" | tr -d '[:alpha:]')
+  core_version_latest=$(echo "${GITHUB_CORE_VERSION}" | tr -d '[:alpha:]')
 
   # if core_version is something else then x.xx or x.xx.xxx set it to N/A
   if ! echo "${core_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${core_version_latest}" = "ERROR" ]; then
     core_version="N/A"
     core_version_heatmap=${yellow_text}
   else
-    # remove the leading "v" from core_version_latest
-    core_version_latest=$(echo "${core_version_latest}" | tr -d '\r\n[:alpha:]')
     # is core up-to-date?
     if [ "${core_version}" != "${core_version_latest}" ]; then
       out_of_date_flag="true"
@@ -485,16 +487,16 @@ GetVersionInformation() {
 
   # Gather web version information...
   if [ "$INSTALL_WEB_INTERFACE" = true ]; then
-    web_version=$(pihole -v -a | awk '{print $4}' | tr -d '[:alpha:]')
-    web_version_latest=$(pihole -v -a | awk '{print $(NF)}' | tr -d ')')
+    # remove the leading "v"
+    # shellcheck disable=SC2153
+    web_version=$(echo "${WEB_VERSION}" | tr -d '[:alpha:]')
+    web_version_latest=$(echo "${GITHUB_WEB_VERSION}" | tr -d '[:alpha:]')
 
     # if web_version is something else then x.xx or x.xx.xxx set it to N/A
     if ! echo "${web_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${web_version_latest}" = "ERROR" ]; then
       web_version="N/A"
       web_version_heatmap=${yellow_text}
     else
-      # remove the leading "v" from web_version_latest
-      web_version_latest=$(echo "${web_version_latest}" | tr -d '\r\n[:alpha:]')
       # is web up-to-date?
       if [ "${web_version}" != "${web_version_latest}" ]; then
         out_of_date_flag="true"
@@ -512,16 +514,15 @@ GetVersionInformation() {
   fi
 
   # Gather FTL version information...
-  ftl_version=$(pihole -v -f | awk '{print $4}' | tr -d '[:alpha:]')
-  ftl_version_latest=$(pihole -v -f | awk '{print $(NF)}' | tr -d ')')
+  # shellcheck disable=SC2153
+  ftl_version=$(echo "${FTL_VERSION}" | tr -d '[:alpha:]')
+  ftl_version_latest=$(echo "${GITHUB_FTL_VERSION}" | tr -d '[:alpha:]')
 
   # if ftl_version is something else then x.xx or x.xx.xxx set it to N/A
   if ! echo "${ftl_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${ftl_version_latest}" = "ERROR" ]; then
     ftl_version="N/A"
     ftl_version_heatmap=${yellow_text}
   else
-    # remove the leading "v" from ftl_version_latest
-    ftl_version_latest=$(echo "${ftl_version_latest}" | tr -d '\r\n[:alpha:]')
     # is ftl up-to-date?
     if [ "${ftl_version}" != "${ftl_version_latest}" ]; then
       out_of_date_flag="true"
@@ -1062,6 +1063,9 @@ StartupRoutine(){
   # adds the y-offset
   moveYOffset
 
+  # Get versions information
+  . /etc/pihole/versions
+
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     moveXOffset; PrintLogo "$1"
     moveXOffset; printf "%b" "START-UP ===========\n"
@@ -1194,6 +1198,7 @@ NormalPADD() {
 
     # Get Pi-hole components and PADD version information once every 24 hours
     if [ $((now - LastCheckVersionInformation)) -ge 86400 ]; then
+      . /etc/pihole/versions
       GetVersionInformation
       LastCheckVersionInformation="${now}"
     fi
