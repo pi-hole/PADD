@@ -464,74 +464,67 @@ GetVersionInformation() {
   # Check if version status has been saved
   # all info is sourced from /etc/pihole/versions
 
-  # remove the leading "v"
-  # shellcheck disable=SC2153
-  core_version=$(echo "${CORE_VERSION}" | tr -d '[:alpha:]')
-  core_version_latest=$(echo "${GITHUB_CORE_VERSION}" | tr -d '[:alpha:]')
-
-  # if core_version is something else then x.xx or x.xx.xxx set it to N/A
-  if ! echo "${core_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${core_version_latest}" = "ERROR" ]; then
-    core_version="N/A"
+  # Gather CORE version information...
+  # if ${CORE_VERSION} is something else then vx.xx or vx.xx.xxx set it to N/A
+  if ! echo "${CORE_VERSION}" | grep -qE '^v[0-9]+([.][0-9]+){1,2}$' ; then
+    CORE_VERSION="N/A"
     core_version_heatmap=${yellow_text}
   else
     # is core up-to-date?
-    if [ "${core_version}" != "${core_version_latest}" ]; then
+    core_version_converted="$(VersionConverter "${CORE_VERSION}")"
+    core_version_latest_converted=$(VersionConverter "${GITHUB_CORE_VERSION}")
+
+    if [ "${core_version_converted}" -lt "${core_version_latest_converted}" ]; then
       out_of_date_flag="true"
       core_version_heatmap=${red_text}
     else
       core_version_heatmap=${green_text}
     fi
-    # add leading "v" to version number
-    core_version="v${core_version}"
+
   fi
 
   # Gather web version information...
   if [ "$INSTALL_WEB_INTERFACE" = true ]; then
-    # remove the leading "v"
-    # shellcheck disable=SC2153
-    web_version=$(echo "${WEB_VERSION}" | tr -d '[:alpha:]')
-    web_version_latest=$(echo "${GITHUB_WEB_VERSION}" | tr -d '[:alpha:]')
-
-    # if web_version is something else then x.xx or x.xx.xxx set it to N/A
-    if ! echo "${web_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${web_version_latest}" = "ERROR" ]; then
-      web_version="N/A"
+    # if ${WEB_VERSION} is something else then x.xx or x.xx.xxx set it to N/A
+    if ! echo "${WEB_VERSION}" | grep -qE '^v[0-9]+([.][0-9]+){1,2}$' ; then
+      WEB_VERSION="N/A"
       web_version_heatmap=${yellow_text}
     else
       # is web up-to-date?
-      if [ "${web_version}" != "${web_version_latest}" ]; then
+      web_version_converted="$(VersionConverter "${WEB_VERSION}")"
+      web_version_latest_converted=$(VersionConverter "${GITHUB_WEB_VERSION}")
+
+      if [ "${web_version_converted}" -lt "${web_version_latest_converted}" ]; then
         out_of_date_flag="true"
         web_version_heatmap=${red_text}
       else
         web_version_heatmap=${green_text}
       fi
-      # add leading "v" to version number
-      web_version="v${web_version}"
+
     fi
   else
     # Web interface not installed
-    web_version="N/A"
+    WEB_VERSION="N/A"
     web_version_heatmap=${yellow_text}
   fi
 
   # Gather FTL version information...
-  # shellcheck disable=SC2153
-  ftl_version=$(echo "${FTL_VERSION}" | tr -d '[:alpha:]')
-  ftl_version_latest=$(echo "${GITHUB_FTL_VERSION}" | tr -d '[:alpha:]')
-
-  # if ftl_version is something else then x.xx or x.xx.xxx set it to N/A
-  if ! echo "${ftl_version}" | grep -qE '^[0-9]+([.][0-9]+){1,2}$' || [ "${ftl_version_latest}" = "ERROR" ]; then
-    ftl_version="N/A"
+  # if ${FTL_VERSION} is something else then x.xx or x.xx.xxx set it to N/A
+  if ! echo "${FTL_VERSION}" | grep -qE '^v[0-9]+([.][0-9]+){1,2}$' ; then
+    FTL_VERSION="N/A"
     ftl_version_heatmap=${yellow_text}
   else
     # is ftl up-to-date?
-    if [ "${ftl_version}" != "${ftl_version_latest}" ]; then
+    ftl_version_converted="$(VersionConverter "${FTL_VERSION}")"
+    ftl_version_latest_converted=$(VersionConverter "${GITHUB_FTL_VERSION}")
+
+    if [ "${ftl_version_converted}" -lt "${ftl_version_latest_converted}" ]; then
       out_of_date_flag="true"
       ftl_version_heatmap=${red_text}
     else
       ftl_version_heatmap=${green_text}
     fi
-  # add leading "v" to version number
-  ftl_version="v${ftl_version}"
+
   fi
 
   # PADD version information...
@@ -653,18 +646,18 @@ PrintLogo() {
   elif [ "$1" = "mini" ]; then
     printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
   elif [ "$1" = "tiny" ]; then
-    printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
+    printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
     printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
   elif [ "$1" = "slim" ]; then
     printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
     printf "%s${clear_line}\n" "${padd_logo_1}"
-    printf "%s${clear_line}\n" "${padd_logo_2}Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
+    printf "%s${clear_line}\n" "${padd_logo_2}Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
     printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
   # normal or not defined
   else
     printf "%s${clear_line}\n" "${padd_logo_retro_1}"
-    printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
+    printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
     printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
   fi
 }
@@ -752,7 +745,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}" " Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
     elif [ "$1" = "tiny" ]; then
          # tiny is a screen at least 53x20 (columns x lines)
-        moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ============================================${reset_text}"
         moveXOffset; printf " %-10s${pihole_heatmap}%-16s${reset_text} %-8s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
@@ -787,7 +780,7 @@ PrintDashboard() {
            moveXOffset; printf "%s${clear_line}\n" ""
         else
             moveXOffset; printf "%s${clear_line}\n" "${padd_logo_1}"
-            moveXOffset; printf "%s${clear_line}\n" "${padd_logo_2}Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
+            moveXOffset; printf "%s${clear_line}\n" "${padd_logo_2}Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
             moveXOffset; printf "%s${clear_line}\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
             moveXOffset; printf "%s${clear_line}\n" ""
         fi
@@ -818,7 +811,7 @@ PrintDashboard() {
     else # ${padd_size} = mega
          # mega is a screen with at least 80 columns and 26 lines
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_1}"
-        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" ""
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS =========================================================================${reset_text}"
@@ -1104,8 +1097,8 @@ StartupRoutine(){
     GetNetworkInformation
     moveXOffset; echo "- Gathering version info."
     GetVersionInformation
-    moveXOffset; echo "  - Core $core_version, Web $web_version"
-    moveXOffset; echo "  - FTL $ftl_version, PADD $padd_version"
+    moveXOffset; echo "  - Core $CORE_VERSION, Web $WEB_VERSION"
+    moveXOffset; echo "  - FTL $FTL_VERSION, PADD $padd_version"
     moveXOffset; echo "  - $version_status"
 
   else
@@ -1128,9 +1121,9 @@ StartupRoutine(){
     GetNetworkInformation
     moveXOffset; echo "- Gathering version information..."
     GetVersionInformation
-    moveXOffset; echo "  - Pi-hole Core $core_version"
-    moveXOffset; echo "  - Web Admin $web_version"
-    moveXOffset; echo "  - FTL $ftl_version"
+    moveXOffset; echo "  - Pi-hole Core $CORE_VERSION"
+    moveXOffset; echo "  - Web Admin $WEB_VERSION"
+    moveXOffset; echo "  - FTL $FTL_VERSION"
     moveXOffset; echo "  - PADD $padd_version"
     moveXOffset; echo "  - $version_status"
   fi
