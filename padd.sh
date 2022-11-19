@@ -465,18 +465,22 @@ GetVersionInformation() {
   # all info is sourced from /etc/pihole/versions
 
   # Gather CORE version information...
-  # if ${CORE_VERSION} is something else then vx.xx or vx.xx.xxx set it to N/A
-  if ! echo "${CORE_VERSION}" | grep -qE '^v[0-9]+([.][0-9]+){1,2}$' ; then
+  # Extract vx.xx or vx.xx.xxx version
+  CORE_VERSION="$(echo "${CORE_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
+  if [ -z "${CORE_VERSION}" ] ; then
     CORE_VERSION="N/A"
     core_version_heatmap=${yellow_text}
   else
     # is core up-to-date?
-    core_version_converted="$(VersionConverter "${CORE_VERSION}")"
-    core_version_latest_converted=$(VersionConverter "${GITHUB_CORE_VERSION}")
-
-    if [ "${core_version_converted}" -lt "${core_version_latest_converted}" ]; then
-      out_of_date_flag="true"
-      core_version_heatmap=${red_text}
+    if [ "$(echo "${CORE_HASH}" | cut -c1-7)" != "$(echo "${GITHUB_CORE_HASH}" | cut -c1-7)" ]; then
+      if [ "${CORE_BRANCH}" = "master" ]; then
+        # Master branch
+        out_of_date_flag="true"
+        core_version_heatmap=${red_text}
+      else
+        # Custom branch
+        core_version_heatmap=${yellow_text}
+      fi
     else
       core_version_heatmap=${green_text}
     fi
@@ -485,18 +489,21 @@ GetVersionInformation() {
 
   # Gather web version information...
   if [ "$INSTALL_WEB_INTERFACE" = true ]; then
-    # if ${WEB_VERSION} is something else then x.xx or x.xx.xxx set it to N/A
-    if ! echo "${WEB_VERSION}" | grep -qE '^v[0-9]+([.][0-9]+){1,2}$' ; then
+    WEB_VERSION="$(echo "${WEB_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
+    if [ -z "${WEB_VERSION}" ] ; then
       WEB_VERSION="N/A"
       web_version_heatmap=${yellow_text}
     else
       # is web up-to-date?
-      web_version_converted="$(VersionConverter "${WEB_VERSION}")"
-      web_version_latest_converted=$(VersionConverter "${GITHUB_WEB_VERSION}")
-
-      if [ "${web_version_converted}" -lt "${web_version_latest_converted}" ]; then
-        out_of_date_flag="true"
-        web_version_heatmap=${red_text}
+      if [ "${WEB_HASH}" != "${GITHUB_WEB_HASH}" ]; then
+         if [ "${WEB_BRANCH}" = "master" ]; then
+           # Master branch
+           out_of_date_flag="true"
+           web_version_heatmap=${red_text}
+         else
+           # Custom branch
+           web_version_heatmap=${yellow_text}
+         fi
       else
         web_version_heatmap=${green_text}
       fi
@@ -509,18 +516,21 @@ GetVersionInformation() {
   fi
 
   # Gather FTL version information...
-  # if ${FTL_VERSION} is something else then x.xx or x.xx.xxx set it to N/A
-  if ! echo "${FTL_VERSION}" | grep -qE '^v[0-9]+([.][0-9]+){1,2}$' ; then
+  FTL_VERSION="$(echo "${FTL_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
+  if [ -z "${FTL_VERSION}" ] ; then
     FTL_VERSION="N/A"
     ftl_version_heatmap=${yellow_text}
   else
     # is ftl up-to-date?
-    ftl_version_converted="$(VersionConverter "${FTL_VERSION}")"
-    ftl_version_latest_converted=$(VersionConverter "${GITHUB_FTL_VERSION}")
-
-    if [ "${ftl_version_converted}" -lt "${ftl_version_latest_converted}" ]; then
-      out_of_date_flag="true"
-      ftl_version_heatmap=${red_text}
+    if [ "${FTL_HASH}" != "${GITHUB_FTL_HASH}" ]; then
+      if [ "${FTL_BRANCH}" = "master" ]; then
+        # Master branch
+        out_of_date_flag="true"
+        ftl_version_heatmap=${red_text}
+      else
+        # Custom branch
+        ftl_version_heatmap=${yellow_text}
+      fi
     else
       ftl_version_heatmap=${green_text}
     fi
