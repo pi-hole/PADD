@@ -928,37 +928,64 @@ SizeChecker(){
     console_height=$(stty size | awk '{ print $1 }')
     console_width=$(stty size | awk '{ print $2 }')
 
-  # Below Pico. Gives you nothing...
-  if [ "$console_width" -lt "20" ] || [ "$console_height" -lt "10" ]; then
-    # Nothing is this small, sorry
-    printf "%b" "${check_box_bad} Error!\n    PADD isn't\n    for ants!\n"
-    exit 1
-  # Below Nano. Gives you Pico.
-  elif [ "$console_width" -lt "24" ] || [ "$console_height" -lt "12" ]; then
-    padd_size="pico"
-  # Below Micro, Gives you Nano.
-  elif [ "$console_width" -lt "30" ] || [ "$console_height" -lt "16" ]; then
-    padd_size="nano"
-  # Below Mini. Gives you Micro.
-  elif [ "$console_width" -lt "40" ] || [ "$console_height" -lt "18" ]; then
-    padd_size="micro"
-  # Below Tiny. Gives you Mini.
-  elif [ "$console_width" -lt "53" ] || [ "$console_height" -lt "20" ]; then
-      padd_size="mini"
-  # Below Slim. Gives you Tiny.
-  elif [ "$console_width" -lt "60" ] || [ "$console_height" -lt "21" ]; then
-      padd_size="tiny"
-  # Below Regular. Gives you Slim.
-  elif [ "$console_width" -lt "80" ] || [ "$console_height" -lt "26" ]; then
-    if [ "$console_height" -lt "22" ]; then
-      padd_size="slim"
+    # Below Pico. Gives you nothing...
+    if [ "$console_width" -lt "20" ] || [ "$console_height" -lt "10" ]; then
+        # Nothing is this small, sorry
+        printf "%b" "${check_box_bad} Error!\n    PADD isn't\n    for ants!\n"
+        exit 1
+    # Below Nano. Gives you Pico.
+    elif [ "$console_width" -lt "24" ] || [ "$console_height" -lt "12" ]; then
+        padd_size="pico"
+        width=20
+        height=10
+    # Below Micro, Gives you Nano.
+    elif [ "$console_width" -lt "30" ] || [ "$console_height" -lt "16" ]; then
+        padd_size="nano"
+        width=24
+        height=12
+    # Below Mini. Gives you Micro.
+    elif [ "$console_width" -lt "40" ] || [ "$console_height" -lt "18" ]; then
+        padd_size="micro"
+        width=30
+        height=16
+    # Below Tiny. Gives you Mini.
+    elif [ "$console_width" -lt "53" ] || [ "$console_height" -lt "20" ]; then
+        padd_size="mini"
+        width=40
+        height=18
+    # Below Slim. Gives you Tiny.
+    elif [ "$console_width" -lt "60" ] || [ "$console_height" -lt "21" ]; then
+        padd_size="tiny"
+        width=53
+        height=20
+    # Below Regular. Gives you Slim.
+    elif [ "$console_width" -lt "80" ] || [ "$console_height" -lt "22" ]; then
+        padd_size="slim"
+        width=60
+        height=21
+    # Below Mega. Gives you Regular.
+    elif [ "$console_width" -lt "80" ] || [ "$console_height" -lt "26" ]; then
+        padd_size="regular"
+        width=60
+        height=22
+    # Mega
     else
-      padd_size="regular"
+        padd_size="mega"
+        width=80
+        height=26
     fi
-  # Mega
-  else
-    padd_size="mega"
-  fi
+
+    # Limit the offset to avoid breaks
+    xMaxOffset=$((console_width - width))
+    yMaxOffset=$((console_height - height))
+
+    if [ "$xOffset" -gt "$xMaxOffset" ]; then
+        xOffset="$xMaxOffset"
+    fi
+
+    if [ "$yOffset" -gt "$yMaxOffset" ]; then
+        yOffset="$yMaxOffset"
+    fi
 }
 
 # converts a given version string e.g. v3.7.1 to 3007001000 to allow for easier comparison of multi digit version numbers
