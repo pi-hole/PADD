@@ -934,7 +934,7 @@ SizeChecker(){
         width=80
         height=26
     # Below Mega. Gives you Regular.
-    elif [ "$console_width" -ge "60" ] && [ "$console_height" -ge "26" ]; then
+    elif [ "$console_width" -ge "60" ] && [ "$console_height" -ge "22" ]; then
         padd_size="regular"
         width=60
         height=22
