@@ -959,7 +959,7 @@ SizeChecker(){
         width=53
         height=20
     # Below Regular. Gives you Slim.
-    elif [ "$console_width" -lt "80" ] || [ "$console_height" -lt "22" ]; then
+    elif [ "$console_width" -lt "60" ] || [ "$console_height" -lt "22" ]; then
         padd_size="slim"
         width=60
         height=21
