@@ -975,6 +975,14 @@ SizeChecker(){
         height=26
     fi
 
+    # Restore offsets in case terminal size changed
+    if [ -n "$xOffOrig" ]; then
+        xOffset=$xOffOrig
+    fi
+    if [ -n "$yOffOrig" ]; then
+        yOffset=$yOffOrig
+    fi
+
     # Limit the offset to avoid breaks
     xMaxOffset=$((console_width - width))
     yMaxOffset=$((console_height - height))
@@ -1219,8 +1227,8 @@ setOffsets(){
     while [ $i -le $j ]
     do
         case "$1" in
-            "-xoff"  ) xOffset="$2";;
-            "-yoff"  ) yOffset="$2";;
+            "-xoff"  ) xOffset=$2; xOffOrig=$2;;
+            "-yoff"  ) yOffset=$2; yOffOrig=$2;;
         esac
         i=$((i + 1));
         shift 1;
