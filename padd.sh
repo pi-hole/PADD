@@ -1222,16 +1222,13 @@ EOM
 
 setOffsets(){
     # sets x/y-offsets (for shifting the Dashboard within the screen) if CLI arguments were passed
-    i=1;
-    j=$#;
-    while [ $i -le $j ]
+    while [ $# -gt 0 ]
     do
         case "$1" in
             "-xoff"  ) xOffset=$2; xOffOrig=$2;;
             "-yoff"  ) yOffset=$2; yOffOrig=$2;;
         esac
-        i=$((i + 1));
-        shift 1;
+        shift 2;
     done
 }
 
