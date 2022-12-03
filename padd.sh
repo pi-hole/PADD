@@ -108,6 +108,9 @@ padd_logo_retro_1="${bold_text} ${yellow_text}_${green_text}_      ${blue_text}_
 padd_logo_retro_2="${bold_text}${yellow_text}|${green_text}_${blue_text}_${cyan_text}) ${red_text}/${yellow_text}\\ ${blue_text}|  ${red_text}\\${yellow_text}|  ${cyan_text}\\  ${reset_text}"
 padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${green_text}-${blue_text}\\${cyan_text}|${magenta_text}_${red_text}_${yellow_text}/${green_text}|${blue_text}_${cyan_text}_${magenta_text}/  ${reset_text}"
 
+# Positioning options: default position => top left (no centering)
+center_x=false
+center_y=false
 
 ############################################# GETTERS ##############################################
 
@@ -1215,43 +1218,32 @@ NormalPADD() {
 }
 
 DisplayHelp() {
-  cat << EOM
+    cat << EOM
+
 ::: PADD displays stats about your piHole!
 :::
 ::: Note: If no option is passed, then stats are displayed on screen, updated every 5 seconds
 :::
 ::: Options:
-:::  -xoff [num]         set the x-offset, reference is the upper left corner
-:::  -yoff [num]         set the y-offset, reference is the upper left corner
-:::  -c, --center [opt]  center the output. Option are [xy|x|y]
-:::                      xy=center horizontaly and vertically (default),
-:::                      x=center horizontaly, y=center vertically
-:::  -j, --json          output stats as JSON formatted string
-:::  -h, --help          display this help text
+:::  -xoff [num]     set the x-offset, reference is the upper left corner
+:::  -yoff [num]     set the y-offset, reference is the upper left corner
+:::  -c, --center    center the output both horizontaly and vertically
+:::  --cx            center the output horizontally
+:::  --cy            center the output vertically
+:::                  (note: center options override xoff and yoff options)
+:::  -j, --json      output stats as JSON formatted string and exit
+:::  -h, --help      display this help text
+
 EOM
     exit 0
 }
 
-setOffsets(){
-    # sets x/y-offsets (for shifting the Dashboard within the screen) if CLI arguments were passed
-    while [ $# -gt 0 ]
-    do
-        case "$1" in
-            "-xoff"  ) xOffset=$2; xOffOrig=$2;;
-            "-yoff"  ) yOffset=$2; yOffOrig=$2;;
-        esac
-        shift 2;
-    done
-}
-
 CenterOption(){
-    case "$2" in
-        "x" ) center_x=true;;
-        "y" ) center_y=true;;
-        *   ) center_x=true; center_y=true;;
+    case "$1" in
+        "--cx"            ) center_x=true;;
+        "--cy"            ) center_y=true;;
+        "-c" | "--center" ) center_x=true; center_y=true;;
     esac
-
-    main
 }
 
 CleanExit(){
@@ -1303,18 +1295,18 @@ main(){
     NormalPADD
 }
 
-if [ $# = 0 ]; then
-    # no option supplied, start immediately
-    main
-fi
-
-for var in "$@"; do
-  case "$var" in
-    "-j" | "--json"     ) OutputJSON;;
-    "-h" | "--help"     ) DisplayHelp;;
-    "-c" | "--center"   ) CenterOption "$@";;
-    "-xoff" | "-yoff"   ) setOffsets "$@"
-                          main;;
-    *                   ) DisplayHelp;;
+# Process all options (if present)
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    "-j" | "--json"     ) OutputJSON; exit 0;;
+    "-h" | "--help"     ) DisplayHelp; exit 0;;
+    "-c" | "--center"   ) CenterOption "$1";;
+    "--cx" | "--cy"     ) CenterOption "$1";;
+    "-xoff"             ) xOffset="$2"; xOffOrig="$2"; shift;;
+    "-yoff"             ) yOffset="$2"; yOffOrig="$2"; shift;;
+    *                   ) DisplayHelp; exit 1;;
   esac
+  shift
 done
+
+main
