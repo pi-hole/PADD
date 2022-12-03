@@ -994,6 +994,15 @@ SizeChecker(){
     if [ "$yOffset" -gt "$yMaxOffset" ]; then
         yOffset="$yMaxOffset"
     fi
+
+    # If there is an active option to center, it will override the position on each axis
+    if [ "${center_x}" = true ]; then
+        xOffset="$(( (console_width - width) / 2 ))"
+    fi
+
+    if [ "${center_y}" = true ]; then
+        yOffset="$(( (console_height - height) / 2 ))"
+    fi
 }
 
 # converts a given version string e.g. v3.7.1 to 3007001000 to allow for easier comparison of multi digit version numbers
@@ -1212,10 +1221,13 @@ DisplayHelp() {
 ::: Note: If no option is passed, then stats are displayed on screen, updated every 5 seconds
 :::
 ::: Options:
-:::  -xoff [num]  set the x-offset, reference is the upper left corner
-:::  -yoff [num]  set the y-offset, reference is the upper left corner
-:::  -j, --json    output stats as JSON formatted string
-:::  -h, --help    display this help text
+:::  -xoff [num]         set the x-offset, reference is the upper left corner
+:::  -yoff [num]         set the y-offset, reference is the upper left corner
+:::  -c, --center [opt]  center the output. Option are [xy|x|y]
+:::                      xy=center horizontaly and vertically (default),
+:::                      x=center horizontaly, y=center vertically
+:::  -j, --json          output stats as JSON formatted string
+:::  -h, --help          display this help text
 EOM
     exit 0
 }
@@ -1230,6 +1242,16 @@ setOffsets(){
         esac
         shift 2;
     done
+}
+
+CenterOption(){
+    case "$2" in
+        "x" ) center_x=true;;
+        "y" ) center_y=true;;
+        *   ) center_x=true; center_y=true;;
+    esac
+
+    main
 }
 
 CleanExit(){
@@ -1290,6 +1312,7 @@ for var in "$@"; do
   case "$var" in
     "-j" | "--json"     ) OutputJSON;;
     "-h" | "--help"     ) DisplayHelp;;
+    "-c" | "--center"   ) CenterOption "$@";;
     "-xoff" | "-yoff"   ) setOffsets "$@"
                           main;;
     *                   ) DisplayHelp;;
