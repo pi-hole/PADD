@@ -108,9 +108,6 @@ padd_logo_retro_1="${bold_text} ${yellow_text}_${green_text}_      ${blue_text}_
 padd_logo_retro_2="${bold_text}${yellow_text}|${green_text}_${blue_text}_${cyan_text}) ${red_text}/${yellow_text}\\ ${blue_text}|  ${red_text}\\${yellow_text}|  ${cyan_text}\\  ${reset_text}"
 padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${green_text}-${blue_text}\\${cyan_text}|${magenta_text}_${red_text}_${yellow_text}/${green_text}|${blue_text}_${cyan_text}_${magenta_text}/  ${reset_text}"
 
-# Positioning options: default position => top left (no centering)
-center_x=false
-center_y=false
 
 ############################################# GETTERS ##############################################
 
@@ -978,33 +975,28 @@ SizeChecker(){
         exit 1
     fi
 
-    # Restore offsets in case terminal size changed
+    # Center the output (default position)
+    xOffset="$(( (console_width - width) / 2 ))"
+    yOffset="$(( (console_height - height) / 2 ))"
+
+    # If the user sets an offset option, use it.
     if [ -n "$xOffOrig" ]; then
         xOffset=$xOffOrig
+
+        # Limit the offset to avoid breaks
+        xMaxOffset=$((console_width - width))
+        if [ "$xOffset" -gt "$xMaxOffset" ]; then
+            xOffset="$xMaxOffset"
+        fi
     fi
     if [ -n "$yOffOrig" ]; then
         yOffset=$yOffOrig
-    fi
 
-    # Limit the offset to avoid breaks
-    xMaxOffset=$((console_width - width))
-    yMaxOffset=$((console_height - height))
-
-    if [ "$xOffset" -gt "$xMaxOffset" ]; then
-        xOffset="$xMaxOffset"
-    fi
-
-    if [ "$yOffset" -gt "$yMaxOffset" ]; then
-        yOffset="$yMaxOffset"
-    fi
-
-    # If there is an active option to center, it will override the position on each axis
-    if [ "${center_x}" = true ]; then
-        xOffset="$(( (console_width - width) / 2 ))"
-    fi
-
-    if [ "${center_y}" = true ]; then
-        yOffset="$(( (console_height - height) / 2 ))"
+        # Limit the offset to avoid breaks
+        yMaxOffset=$((console_height - height))
+        if [ "$yOffset" -gt "$yMaxOffset" ]; then
+            yOffset="$yMaxOffset"
+        fi
     fi
 }
 
@@ -1103,7 +1095,7 @@ StartupRoutine(){
     moveXOffset; printf "%b" " [■■■■■■■■■■] 100%\n"
 
   elif [ "$1" = "mini" ]; then
-    PrintLogo "$1"
+    moveXOffset; PrintLogo "$1"
     moveXOffset; echo "START UP ====================="
 
     # Get our information for the first time
@@ -1220,30 +1212,18 @@ NormalPADD() {
 DisplayHelp() {
     cat << EOM
 
-::: PADD displays stats about your piHole!
+::: PADD displays stats about your Pi-hole!
 :::
 ::: Note: If no option is passed, then stats are displayed on screen, updated every 5 seconds
 :::
 ::: Options:
-:::  -xoff [num]     set the x-offset, reference is the upper left corner
-:::  -yoff [num]     set the y-offset, reference is the upper left corner
-:::  -c, --center    center the output both horizontaly and vertically
-:::  --cx            center the output horizontally
-:::  --cy            center the output vertically
-:::                  (note: center options override xoff and yoff options)
-:::  -j, --json      output stats as JSON formatted string and exit
-:::  -h, --help      display this help text
+:::  -xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
+:::  -yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
+:::  -j, --json     output stats as JSON formatted string and exit
+:::  -h, --help     display this help text
 
 EOM
     exit 0
-}
-
-CenterOption(){
-    case "$1" in
-        "--cx"            ) center_x=true;;
-        "--cy"            ) center_y=true;;
-        "-c" | "--center" ) center_x=true; center_y=true;;
-    esac
 }
 
 CleanExit(){
@@ -1272,14 +1252,6 @@ TerminalResize(){
 }
 
 main(){
-    # if the offsets have not been set by setOffset(), set them to zero
-    if [ -z "${xOffset}" ]; then
-        xOffset=0;
-    fi
-    if [ -z "${yOffset}" ]; then
-        yOffset=0;
-    fi
-
     # Hiding the cursor.
     # https://vt100.net/docs/vt510-rm/DECTCEM.html
     printf '\e[?25l'
@@ -1300,8 +1272,6 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     "-j" | "--json"     ) OutputJSON; exit 0;;
     "-h" | "--help"     ) DisplayHelp; exit 0;;
-    "-c" | "--center"   ) CenterOption "$1";;
-    "--cx" | "--cy"     ) CenterOption "$1";;
     "-xoff"             ) xOffset="$2"; xOffOrig="$2"; shift;;
     "-yoff"             ) yOffset="$2"; yOffOrig="$2"; shift;;
     *                   ) DisplayHelp; exit 1;;
