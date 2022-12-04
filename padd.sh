@@ -975,24 +975,28 @@ SizeChecker(){
         exit 1
     fi
 
-    # Restore offsets in case terminal size changed
+    # Center the output (default position)
+    xOffset="$(( (console_width - width) / 2 ))"
+    yOffset="$(( (console_height - height) / 2 ))"
+
+    # If the user sets an offset option, use it.
     if [ -n "$xOffOrig" ]; then
         xOffset=$xOffOrig
+
+        # Limit the offset to avoid breaks
+        xMaxOffset=$((console_width - width))
+        if [ "$xOffset" -gt "$xMaxOffset" ]; then
+            xOffset="$xMaxOffset"
+        fi
     fi
     if [ -n "$yOffOrig" ]; then
         yOffset=$yOffOrig
-    fi
 
-    # Limit the offset to avoid breaks
-    xMaxOffset=$((console_width - width))
-    yMaxOffset=$((console_height - height))
-
-    if [ "$xOffset" -gt "$xMaxOffset" ]; then
-        xOffset="$xMaxOffset"
-    fi
-
-    if [ "$yOffset" -gt "$yMaxOffset" ]; then
-        yOffset="$yMaxOffset"
+        # Limit the offset to avoid breaks
+        yMaxOffset=$((console_height - height))
+        if [ "$yOffset" -gt "$yMaxOffset" ]; then
+            yOffset="$yMaxOffset"
+        fi
     fi
 }
 
@@ -1091,7 +1095,7 @@ StartupRoutine(){
     moveXOffset; printf "%b" " [■■■■■■■■■■] 100%\n"
 
   elif [ "$1" = "mini" ]; then
-    PrintLogo "$1"
+    moveXOffset; PrintLogo "$1"
     moveXOffset; echo "START UP ====================="
 
     # Get our information for the first time
@@ -1206,30 +1210,20 @@ NormalPADD() {
 }
 
 DisplayHelp() {
-  cat << EOM
-::: PADD displays stats about your piHole!
+    cat << EOM
+
+::: PADD displays stats about your Pi-hole!
 :::
 ::: Note: If no option is passed, then stats are displayed on screen, updated every 5 seconds
 :::
 ::: Options:
-:::  -xoff [num]  set the x-offset, reference is the upper left corner
-:::  -yoff [num]  set the y-offset, reference is the upper left corner
-:::  -j, --json    output stats as JSON formatted string
-:::  -h, --help    display this help text
+:::  -xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
+:::  -yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
+:::  -j, --json     output stats as JSON formatted string and exit
+:::  -h, --help     display this help text
+
 EOM
     exit 0
-}
-
-setOffsets(){
-    # sets x/y-offsets (for shifting the Dashboard within the screen) if CLI arguments were passed
-    while [ $# -gt 0 ]
-    do
-        case "$1" in
-            "-xoff"  ) xOffset=$2; xOffOrig=$2;;
-            "-yoff"  ) yOffset=$2; yOffOrig=$2;;
-        esac
-        shift 2;
-    done
 }
 
 CleanExit(){
@@ -1258,14 +1252,6 @@ TerminalResize(){
 }
 
 main(){
-    # if the offsets have not been set by setOffset(), set them to zero
-    if [ -z "${xOffset}" ]; then
-        xOffset=0;
-    fi
-    if [ -z "${yOffset}" ]; then
-        yOffset=0;
-    fi
-
     # Hiding the cursor.
     # https://vt100.net/docs/vt510-rm/DECTCEM.html
     printf '\e[?25l'
@@ -1281,17 +1267,16 @@ main(){
     NormalPADD
 }
 
-if [ $# = 0 ]; then
-    # no option supplied, start immediately
-    main
-fi
-
-for var in "$@"; do
-  case "$var" in
-    "-j" | "--json"     ) OutputJSON;;
-    "-h" | "--help"     ) DisplayHelp;;
-    "-xoff" | "-yoff"   ) setOffsets "$@"
-                          main;;
-    *                   ) DisplayHelp;;
+# Process all options (if present)
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    "-j" | "--json"     ) OutputJSON; exit 0;;
+    "-h" | "--help"     ) DisplayHelp; exit 0;;
+    "-xoff"             ) xOffset="$2"; xOffOrig="$2"; shift;;
+    "-yoff"             ) yOffset="$2"; yOffOrig="$2"; shift;;
+    *                   ) DisplayHelp; exit 1;;
   esac
+  shift
 done
+
+main
