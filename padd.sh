@@ -467,47 +467,38 @@ GetVersionInformation() {
   # Gather CORE version information...
   # Extract vx.xx or vx.xx.xxx version
   CORE_VERSION="$(echo "${CORE_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
-  if [ -z "${CORE_VERSION}" ] ; then
-    CORE_VERSION="N/A"
-    core_version_heatmap=${yellow_text}
-  else
-    # is core up-to-date?
-    if [ "${CORE_HASH}" != "${GITHUB_CORE_HASH}" ]; then
-      if [ "${CORE_BRANCH}" = "master" ]; then
-        # Master branch
+  if [ "${CORE_BRANCH}" = "master" ]; then
+    if [ "${CORE_HASH}" = "${GITHUB_CORE_HASH}" ]; then
+        # up-to-date
+        core_version_heatmap=${green_text}
+      else
+        #out-of-date
         out_of_date_flag="true"
         core_version_heatmap=${red_text}
-      else
-        # Custom branch
-        core_version_heatmap=${yellow_text}
       fi
-    else
-      core_version_heatmap=${green_text}
-    fi
-
+  else
+    # Custom branch
+    core_version_heatmap=${yellow_text}
+    CORE_VERSION="###"
   fi
 
   # Gather web version information...
+  # Extract vx.xx or vx.xx.xxx version
   if [ "$INSTALL_WEB_INTERFACE" = true ]; then
     WEB_VERSION="$(echo "${WEB_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
-    if [ -z "${WEB_VERSION}" ] ; then
-      WEB_VERSION="N/A"
-      web_version_heatmap=${yellow_text}
+    if [ "${WEB_BRANCH}" = "master" ]; then
+      if [ "${WEB_HASH}" = "${GITHUB_WEB_HASH}" ]; then
+          # up-to-date
+          web_version_heatmap=${green_text}
+        else
+          #out-of-date
+          out_of_date_flag="true"
+          web_version_heatmap=${red_text}
+        fi
     else
-      # is web up-to-date?
-      if [ "${WEB_HASH}" != "${GITHUB_WEB_HASH}" ]; then
-         if [ "${WEB_BRANCH}" = "master" ]; then
-           # Master branch
-           out_of_date_flag="true"
-           web_version_heatmap=${red_text}
-         else
-           # Custom branch
-           web_version_heatmap=${yellow_text}
-         fi
-      else
-        web_version_heatmap=${green_text}
-      fi
-
+      # Custom branch
+      web_version_heatmap=${yellow_text}
+      WEB_VERSION="###"
     fi
   else
     # Web interface not installed
@@ -516,25 +507,21 @@ GetVersionInformation() {
   fi
 
   # Gather FTL version information...
+  # Extract vx.xx or vx.xx.xxx version
   FTL_VERSION="$(echo "${FTL_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
-  if [ -z "${FTL_VERSION}" ] ; then
-    FTL_VERSION="N/A"
-    ftl_version_heatmap=${yellow_text}
-  else
-    # is ftl up-to-date?
-    if [ "${FTL_HASH}" != "${GITHUB_FTL_HASH}" ]; then
-      if [ "${FTL_BRANCH}" = "master" ]; then
-        # Master branch
+  if [ "${FTL_BRANCH}" = "master" ]; then
+    if [ "${FTL_HASH}" = "${GITHUB_FTL_HASH}" ]; then
+        # up-to-date
+        ftl_version_heatmap=${green_text}
+      else
+        #out-of-date
         out_of_date_flag="true"
         ftl_version_heatmap=${red_text}
-      else
-        # Custom branch
-        ftl_version_heatmap=${yellow_text}
       fi
-    else
-      ftl_version_heatmap=${green_text}
-    fi
-
+  else
+    # Custom branch
+    ftl_version_heatmap=${yellow_text}
+    FTL_VERSION="###"
   fi
 
   # PADD version information...
