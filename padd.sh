@@ -472,7 +472,7 @@ GetVersionInformation() {
     core_version_heatmap=${yellow_text}
   else
     # is core up-to-date?
-    if [ "$(echo "${CORE_HASH}" | cut -c1-7)" != "$(echo "${GITHUB_CORE_HASH}" | cut -c1-7)" ]; then
+    if [ "${CORE_HASH}" != "${GITHUB_CORE_HASH}" ]; then
       if [ "${CORE_BRANCH}" = "master" ]; then
         # Master branch
         out_of_date_flag="true"
