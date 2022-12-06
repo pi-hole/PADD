@@ -300,7 +300,6 @@ GetNetworkInformation() {
 
   # Get hostname and gateway
   pi_hostname=$(hostname)
-  pi_gateway=$(ip r | grep 'default' | awk '{print $3}')
 
   full_hostname=${pi_hostname}
   # does the Pi-hole have a domain set?
@@ -329,15 +328,9 @@ GetNetworkInformation() {
 
   # if there's only one DNS server
   if [ ${dns_count} -eq 1 ]; then
-    if [ "${PIHOLE_DNS_1}" = "127.0.0.1#5053" ]; then
-      dns_information="1 server (Cloudflared)"
-    elif [ "${PIHOLE_DNS_1}" = "${pi_gateway}#53" ]; then
-      dns_information="1 server (gateway)"
-    else
       dns_information="1 server"
-    fi
-  elif [ ${dns_count} -gt 8 ]; then
-    dns_information="8+ servers"
+  elif [ ${dns_count} -gt 9 ]; then
+    dns_information="9+ servers"
   else
     dns_information="${dns_count} servers"
   fi
