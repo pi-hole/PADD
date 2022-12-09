@@ -844,7 +844,7 @@ PrintDashboard() {
         moveXOffset; printf " %-6s%-19s %-10s%-29s${clear_line}\n" "IPv4:" "${pi_ip4_addr}" "IPv6:" "${pi_ip6_addr}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}DNS ==========================DHCP=============================================${reset_text}"
         moveXOffset; printf " %-10s%-19s %-6s${dhcp_heatmap}%-19s${reset_text}${clear_line}\n" "Servers:" "${dns_information}" "DHCP:" "${dhcp_status}"
-        moveXOffset; printf " %-10s${dnssec_heatmap}%-19s${reset_text} %-10s${conditional_forwarding_heatmap}%-9s${reset_text}${clear_line}\n" "DNSSEC:" "${dnssec_status}" "IPv6 Spt:" "${dhcp_ipv6_status}"
+        moveXOffset; printf " %-10s${dnssec_heatmap}%-19s${reset_text} %-10s${dhcp_ipv6_heatmap}%-9s${reset_text}${clear_line}\n" "DNSSEC:" "${dnssec_status}" "IPv6 Spt:" "${dhcp_ipv6_status}"
         moveXOffset; printf " %-10s${conditional_forwarding_heatmap}%-19s${reset_text}%s${clear_line}\n" "CdFwding:" "${conditional_forwarding_status}" "${dhcp_info}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM ========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Device:" "${sys_model}"
