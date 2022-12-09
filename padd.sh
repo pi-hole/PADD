@@ -329,8 +329,6 @@ GetNetworkInformation() {
   # if there's only one DNS server
   if [ ${dns_count} -eq 1 ]; then
       dns_information="1 server"
-  elif [ ${dns_count} -gt 9 ]; then
-    dns_information="9+ servers"
   else
     dns_information="${dns_count} servers"
   fi
