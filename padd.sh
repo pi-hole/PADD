@@ -479,7 +479,8 @@ GetVersionInformation() {
   else
     # Custom branch
     core_version_heatmap=${yellow_text}
-    CORE_VERSION="###"
+    # use the first 7 characters of the branch name as version
+    CORE_VERSION="$(printf '%s' "$CORE_BRANCH" | cut -c 1-7)"
   fi
 
   # Gather web version information...
@@ -498,7 +499,8 @@ GetVersionInformation() {
     else
       # Custom branch
       web_version_heatmap=${yellow_text}
-      WEB_VERSION="###"
+      # use the first 7 characters of the branch name as version
+      WEB_VERSION="$(printf '%s' "$WEB_BRANCH" | cut -c 1-7)"
     fi
   else
     # Web interface not installed
@@ -521,7 +523,8 @@ GetVersionInformation() {
   else
     # Custom branch
     ftl_version_heatmap=${yellow_text}
-    FTL_VERSION="###"
+    # use the first 7 characters of the branch name as version
+    FTL_VERSION="$(printf '%s' "$FTL_BRANCH" | cut -c 1-7)"
   fi
 
   # PADD version information...
@@ -772,7 +775,7 @@ PrintDashboard() {
         # slim is a screen with at least 60 columns and exactly 21 lines
         # regular is a screen at least 60x22 (columns x lines)
         if [ "$1" = "slim" ]; then
-           moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   Pi-hole® ${core_version_heatmap}${core_version}${reset_text}, Web ${web_version_heatmap}${web_version}${reset_text}, FTL ${ftl_version_heatmap}${ftl_version}${reset_text}"
+           moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
            moveXOffset; printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
            moveXOffset; printf "%s${clear_line}\n" ""
         else
