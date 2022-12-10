@@ -478,9 +478,16 @@ GetVersionInformation() {
       fi
   else
     # Custom branch
-    core_version_heatmap=${yellow_text}
-    # use the first 7 characters of the branch name as version
-    CORE_VERSION="$(printf '%s' "$CORE_BRANCH" | cut -c 1-7)"
+    if [ -z "${CORE_BRANCH}"  ]; then
+      # Branch name is empty, something went wrong
+      core_version_heatmap=${red_text}
+      CORE_VERSION="?"
+    else
+      core_version_heatmap=${yellow_text}
+      # shorten common branch names (fix/, tweak/, new/)
+      # use the first 7 characters of the branch name as version
+      CORE_VERSION="$(printf '%s' "$CORE_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
+    fi
   fi
 
   # Gather web version information...
@@ -497,10 +504,17 @@ GetVersionInformation() {
           web_version_heatmap=${red_text}
         fi
     else
-      # Custom branch
-      web_version_heatmap=${yellow_text}
-      # use the first 7 characters of the branch name as version
-      WEB_VERSION="$(printf '%s' "$WEB_BRANCH" | cut -c 1-7)"
+    # Custom branch
+      if [ -z "${WEB_BRANCH}"  ]; then
+        # Branch name is empty, something went wrong
+        web_version_heatmap=${red_text}
+        WEB_VERSION="?"
+      else
+        web_version_heatmap=${yellow_text}
+        # shorten common branch names (fix/, tweak/, new/)
+        # use the first 7 characters of the branch name as version
+        WEB_VERSION="$(printf '%s' "$WEB_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
+      fi
     fi
   else
     # Web interface not installed
@@ -522,9 +536,16 @@ GetVersionInformation() {
       fi
   else
     # Custom branch
-    ftl_version_heatmap=${yellow_text}
-    # use the first 7 characters of the branch name as version
-    FTL_VERSION="$(printf '%s' "$FTL_BRANCH" | cut -c 1-7)"
+    if [ -z "${FTL_BRANCH}"  ]; then
+      # Branch name is empty, something went wrong
+      ftl_version_heatmap=${red_text}
+      FTL_VERSION="?"
+    else
+      ftl_version_heatmap=${yellow_text}
+      # shorten common branch names (fix/, tweak/, new/)
+      # use the first 7 characters of the branch name as version
+      FTL_VERSION="$(printf '%s' "$FTL_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
+    fi
   fi
 
   # PADD version information...
