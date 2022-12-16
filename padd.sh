@@ -218,9 +218,13 @@ GetSystemInformation() {
   # Device model
   if [ -f /sys/devices/virtual/dmi/id/product_name ] || [ -f /sys/devices/virtual/dmi/id/product_family ]; then
     # Get model, remove possible null byte
-    # There are no guarantees both files exist. Redirecting error to dev/null
-    product_name=$(cat /sys/devices/virtual/dmi/id/product_name 2>/dev/null | tr -d '\0')
-    product_family=$(cat /sys/devices/virtual/dmi/id/product_family 2>/dev/null | tr -d '\0')
+    # There are no guarantees both files exist at the same time. Test them individually.
+    if [ -f /sys/devices/virtual/dmi/id/product_name ]; then
+      product_name=$(tr -d '\0' < /sys/devices/virtual/dmi/id/product_name)
+    fi
+    if [ -f /sys/devices/virtual/dmi/id/product_family ]; then
+      product_family=$(tr -d '\0' < /sys/devices/virtual/dmi/id/product_family)
+    fi
     sys_model="$(echo "$product_name" | grep "$product_family")"
 
     # If product_family is not contained in product_name, both are shown
@@ -230,16 +234,20 @@ GetSystemInformation() {
   elif [ -f /sys/firmware/devicetree/base/model ]; then
     sys_model=$(tr -d '\0' < /sys/firmware/devicetree/base/model)
   elif [ -f /sys/devices/virtual/dmi/id/board_vendor ] || [ -f /sys/devices/virtual/dmi/id/board_name ]; then
-    # There are no guarantees both files exist. Redirecting error to dev/null
-    sys_model=$(cat /sys/devices/virtual/dmi/id/board_vendor 2>/dev/null | tr -d '\0')
-    sys_model="$sys_model $(cat /sys/devices/virtual/dmi/id/board_name 2>/dev/null | tr -d '\0')"
+    # There are no guarantees both files exist at the same time. Test them individually.
+    if [ -f /sys/devices/virtual/dmi/id/board_vendor ]; then
+      sys_model=$(tr -d '\0' < /sys/devices/virtual/dmi/id/board_vendor)
+    fi
+    if [ -f /sys/devices/virtual/dmi/id/board_name ]; then
+      sys_model="$sys_model $(tr -d '\0' < /sys/devices/virtual/dmi/id/board_name)"
+    fi
   elif [ -f /tmp/sysinfo/model ]; then
     sys_model=$(tr -d '\0' < /tmp/sysinfo/model)
   fi
 
   # Cleaning device model from useless OEM information
   sys_model=${sys_model#"To be filled by O.E.M."}
-	sys_model=${sys_model%"To be filled by O.E.M."}
+  sys_model=${sys_model%"To be filled by O.E.M."}
   sys_model=${sys_model#"To Be Filled*"}
   sys_model=${sys_model%"To Be Filled*"}
   sys_model=${sys_model#"OEM*"}
