@@ -1059,15 +1059,15 @@ OutputJSON() {
 }
 
 StartupRoutine(){
-    # Get config variables
+  # Get config variables
   . /etc/pihole/setupVars.conf
 
-    # Clear the screen and move cursor to (0,0).
-    # This mimics the 'clear' command.
-    # https://vt100.net/docs/vt510-rm/ED.html
-    # https://vt100.net/docs/vt510-rm/CUP.html
-    # E3 extension `\e[3J` to clear the scrollback buffer see 'man clear'
-    printf '\e[H\e[2J\e[3J'
+  # Clear the screen and move cursor to (0,0).
+  # This mimics the 'clear' command.
+  # https://vt100.net/docs/vt510-rm/ED.html
+  # https://vt100.net/docs/vt510-rm/CUP.html
+  # E3 extension `\e[3J` to clear the scrollback buffer see 'man clear'
+  printf '\e[H\e[2J\e[3J'
 
   # adds the y-offset
   moveYOffset
@@ -1273,6 +1273,13 @@ main(){
 
     # Trap on exit
     trap 'CleanExit' INT TERM EXIT
+
+    # If setupVars.conf is not present, then PADD is not running on a Pi-hole
+    # and we are not able to start as StartupRoutine() will fail below
+    if [ ! -f /etc/pihole/setupVars.conf ]; then
+      printf "%b" "${check_box_bad} Error!\n    PADD is only works in conjunction with Pi-hole!\n"
+      exit 1
+    fi
 
     SizeChecker
 
