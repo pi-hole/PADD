@@ -244,9 +244,9 @@ GetSystemInformation() {
     fi
   elif [ -f /tmp/sysinfo/model ]; then
     sys_model=$(tr -d '\0' < /tmp/sysinfo/model)
-  elif [ -f /pihole.docker.tag ]; then
-    # Docker image. Remove final line break
-    sys_model=$(tr -d '\n' < /pihole.docker.tag)
+  elif [ -n "${DOCKER_VERSION}" ]; then
+    # Docker image. DOCKER_VERSION is read from /etc/pihole/versions
+    sys_model="Docker tag ${DOCKER_VERSION}"
   fi
 
   # Cleaning device model from useless OEM information
