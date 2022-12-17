@@ -684,13 +684,8 @@ PrintLogo() {
 }
 
 PrintDashboard() {
-    # Clear the screen and move cursor to (0,0).
-    # This mimics the 'clear' command.
-    # https://vt100.net/docs/vt510-rm/ED.html
-    # https://vt100.net/docs/vt510-rm/CUP.html
-    # E3 extension `\e[3J` to clear the scrollback buffer (see 'man clear')
-
-    printf '\e[H\e[2J\e[3J'
+    # Move cursor to (0,0).
+    printf '\e[H'
 
     # adds the y-offset
     moveYOffset
@@ -932,8 +927,8 @@ SizeChecker(){
     # this reduces "flickering" of GenerateSizeDependendOutput() items
     # after a terminal re-size
     sleep 0.1
-    console_height=$(stty size | awk '{ print $1 }')
-    console_width=$(stty size | awk '{ print $2 }')
+    console_width=$(tput cols)
+    console_height=$(tput lines)
 
     # Mega
     if [ "$console_width" -ge "80" ] && [ "$console_height" -ge "26" ]; then
@@ -1259,6 +1254,15 @@ TerminalResize(){
     # kill the sleep function within NormalPADD() to trigger redrawing
     # of the Dashboard
     SizeChecker
+
+    # Clear the screen and move cursor to (0,0).
+    # This mimics the 'clear' command.
+    # https://vt100.net/docs/vt510-rm/ED.html
+    # https://vt100.net/docs/vt510-rm/CUP.html
+    # E3 extension `\e[3J` to clear the scrollback buffer (see 'man clear')
+
+    printf '\e[H\e[2J\e[3J'
+
     kill $sleepPID > /dev/null 2>&1
 }
 
