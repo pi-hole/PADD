@@ -1277,7 +1277,7 @@ main(){
     # If setupVars.conf is not present, then PADD is not running on a Pi-hole
     # and we are not able to start as StartupRoutine() will fail below
     if [ ! -f /etc/pihole/setupVars.conf ]; then
-      printf "%b" "${check_box_bad} Error!\n    PADD is only works in conjunction with Pi-hole!\n"
+      printf "%b" "${check_box_bad} Error!\n    PADD only works in conjunction with Pi-hole!\n"
       exit 1
     fi
 
