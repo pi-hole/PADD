@@ -468,14 +468,16 @@ GetVersionInformation() {
   # Extract vx.xx or vx.xx.xxx version
   CORE_VERSION="$(echo "${CORE_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
   if [ "${CORE_BRANCH}" = "master" ]; then
-    if [ "${CORE_HASH}" = "${GITHUB_CORE_HASH}" ]; then
-        # up-to-date
-        core_version_heatmap=${green_text}
-      else
-        #out-of-date
-        out_of_date_flag="true"
-        core_version_heatmap=${red_text}
-      fi
+    core_version_converted="$(VersionConverter "${CORE_VERSION}")"
+    core_version_latest_converted=$(VersionConverter "${GITHUB_CORE_VERSION}")
+
+    if [ "${core_version_converted}" -lt "${core_version_latest_converted}" ]; then
+      out_of_date_flag="true"
+      core_version_heatmap=${red_text}
+    else
+      core_version_heatmap=${green_text}
+    fi
+
   else
     # Custom branch
     if [ -z "${CORE_BRANCH}"  ]; then
@@ -483,7 +485,14 @@ GetVersionInformation() {
       core_version_heatmap=${red_text}
       CORE_VERSION="?"
     else
-      core_version_heatmap=${yellow_text}
+      if [ "${CORE_HASH}" = "${GITHUB_CORE_HASH}" ]; then
+        # up-to-date
+        core_version_heatmap=${green_text}
+      else
+        # out-of-date
+        out_of_date_flag="true"
+        core_version_heatmap=${red_text}
+      fi
       # shorten common branch names (fix/, tweak/, new/)
       # use the first 7 characters of the branch name as version
       CORE_VERSION="$(printf '%s' "$CORE_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
@@ -495,14 +504,16 @@ GetVersionInformation() {
   if [ "$INSTALL_WEB_INTERFACE" = true ]; then
     WEB_VERSION="$(echo "${WEB_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
     if [ "${WEB_BRANCH}" = "master" ]; then
-      if [ "${WEB_HASH}" = "${GITHUB_WEB_HASH}" ]; then
-          # up-to-date
-          web_version_heatmap=${green_text}
-        else
-          #out-of-date
-          out_of_date_flag="true"
-          web_version_heatmap=${red_text}
-        fi
+      web_version_converted="$(VersionConverter "${WEB_VERSION}")"
+      web_version_latest_converted=$(VersionConverter "${GITHUB_WEB_VERSION}")
+
+      if [ "${web_version_converted}" -lt "${web_version_latest_converted}" ]; then
+        out_of_date_flag="true"
+        web_version_heatmap=${red_text}
+      else
+        web_version_heatmap=${green_text}
+      fi
+
     else
     # Custom branch
       if [ -z "${WEB_BRANCH}"  ]; then
@@ -510,7 +521,14 @@ GetVersionInformation() {
         web_version_heatmap=${red_text}
         WEB_VERSION="?"
       else
-        web_version_heatmap=${yellow_text}
+        if [ "${WEB_HASH}" = "${GITHUB_WEB_HASH}" ]; then
+          # up-to-date
+          web_version_heatmap=${green_text}
+        else
+          # out-of-date
+          out_of_date_flag="true"
+          web_version_heatmap=${red_text}
+        fi
         # shorten common branch names (fix/, tweak/, new/)
         # use the first 7 characters of the branch name as version
         WEB_VERSION="$(printf '%s' "$WEB_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
@@ -526,14 +544,15 @@ GetVersionInformation() {
   # Extract vx.xx or vx.xx.xxx version
   FTL_VERSION="$(echo "${FTL_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
   if [ "${FTL_BRANCH}" = "master" ]; then
-    if [ "${FTL_HASH}" = "${GITHUB_FTL_HASH}" ]; then
-        # up-to-date
-        ftl_version_heatmap=${green_text}
-      else
-        #out-of-date
-        out_of_date_flag="true"
-        ftl_version_heatmap=${red_text}
-      fi
+    ftl_version_converted="$(VersionConverter "${FTL_VERSION}")"
+    ftl_version_latest_converted=$(VersionConverter "${GITHUB_FTL_VERSION}")
+
+    if [ "${ftl_version_converted}" -lt "${ftl_version_latest_converted}" ]; then
+      out_of_date_flag="true"
+      ftl_version_heatmap=${red_text}
+    else
+      ftl_version_heatmap=${green_text}
+    fi
   else
     # Custom branch
     if [ -z "${FTL_BRANCH}"  ]; then
@@ -541,7 +560,14 @@ GetVersionInformation() {
       ftl_version_heatmap=${red_text}
       FTL_VERSION="?"
     else
-      ftl_version_heatmap=${yellow_text}
+      if [ "${FTL_HASH}" = "${GITHUB_FTL_HASH}" ]; then
+        # up-to-date
+        ftl_version_heatmap=${green_text}
+      else
+        # out-of-date
+        out_of_date_flag="true"
+        ftl_version_heatmap=${red_text}
+      fi
       # shorten common branch names (fix/, tweak/, new/)
       # use the first 7 characters of the branch name as version
       FTL_VERSION="$(printf '%s' "$FTL_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
