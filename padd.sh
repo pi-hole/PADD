@@ -227,6 +227,16 @@ GetSystemInformation() {
     product_family=$(tr -d '\0' < /sys/devices/virtual/dmi/id/product_family)
   fi
 
+  board_vendor=
+  board_name=
+  if [ -f /sys/devices/virtual/dmi/id/board_vendor ]; then
+    board_vendor=$(tr -d '\0' < /sys/devices/virtual/dmi/id/board_vendor)
+  fi
+  if [ -f /sys/devices/virtual/dmi/id/board_name ]; then
+    board_name="$(tr -d '\0' < /sys/devices/virtual/dmi/id/board_name)"
+  fi
+
+
   if [ -n "$product_name" ] || [ -n "$product_family" ]; then
     if echo "$product_family" | grep -q "$product_name"; then
       # If product_name is contained in product_family, only show product_family
@@ -237,11 +247,8 @@ GetSystemInformation() {
     fi
   elif [ -f /sys/firmware/devicetree/base/model ]; then
     sys_model=$(tr -d '\0' < /sys/firmware/devicetree/base/model)
-  elif [ -f /sys/devices/virtual/dmi/id/board_vendor ]; then
-    sys_model=$(tr -d '\0' < /sys/devices/virtual/dmi/id/board_vendor)
-    if [ -f /sys/devices/virtual/dmi/id/board_name ]; then
-      sys_model="$sys_model $(tr -d '\0' < /sys/devices/virtual/dmi/id/board_name)"
-    fi
+  elif [ -n "$board_vendor" ] || [ -n "$board_name" ]; then
+    sys_model="${board_vendor} ${board_name}"
   elif [ -f /tmp/sysinfo/model ]; then
     sys_model=$(tr -d '\0' < /tmp/sysinfo/model)
   elif [ -n "${DOCKER_VERSION}" ]; then
@@ -251,7 +258,7 @@ GetSystemInformation() {
 
   # Cleaning device model from useless OEM information
   sys_model=${sys_model#"To be filled by O.E.M."}
-	sys_model=${sys_model%"To be filled by O.E.M."}
+  sys_model=${sys_model%"To be filled by O.E.M."}
   sys_model=${sys_model#"To Be Filled*"}
   sys_model=${sys_model%"To Be Filled*"}
   sys_model=${sys_model#"OEM*"}
