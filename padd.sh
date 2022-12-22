@@ -119,8 +119,6 @@ GetFTLData() {
       # Send command to FTL and ask to quit when finished
       data="$(echo ">$1 >quit" | nc 127.0.0.1 "${ftl_port}")"
       echo "${data}"
-    else
-      echo "0"
     fi
 }
 
