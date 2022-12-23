@@ -215,29 +215,50 @@ GetSystemInformation() {
   memory_percent=$(awk '/MemTotal:/{total=$2} /MemFree:/{free=$2} /Buffers:/{buffers=$2} /^Cached:/{cached=$2} END {printf "%.1f", (total-free-buffers-cached)*100/total}' '/proc/meminfo')
   memory_heatmap=$(HeatmapGenerator "${memory_percent}")
 
-  # Device model
-  if [ -f /sys/devices/virtual/dmi/id/product_name ] || [ -f /sys/devices/virtual/dmi/id/product_family ]; then
-    # Get model, remove possible null byte
+  # Get product name and family
+  product_name=
+  product_family=
+  if [ -f /sys/devices/virtual/dmi/id/product_name ]; then
+    # Get product name, remove possible null byte
     product_name=$(tr -d '\0' < /sys/devices/virtual/dmi/id/product_name)
+  fi
+  if [ -f /sys/devices/virtual/dmi/id/product_family ]; then
+    # Get product family, remove possible null byte
     product_family=$(tr -d '\0' < /sys/devices/virtual/dmi/id/product_family)
-    sys_model="$(echo "$product_name" | grep "$product_family")"
+  fi
 
-    # If product_family is not contained in product_name, both are shown
-    if [ -z "$sys_model" ]; then
+  board_vendor=
+  board_name=
+  if [ -f /sys/devices/virtual/dmi/id/board_vendor ]; then
+    board_vendor=$(tr -d '\0' < /sys/devices/virtual/dmi/id/board_vendor)
+  fi
+  if [ -f /sys/devices/virtual/dmi/id/board_name ]; then
+    board_name="$(tr -d '\0' < /sys/devices/virtual/dmi/id/board_name)"
+  fi
+
+
+  if [ -n "$product_name" ] || [ -n "$product_family" ]; then
+    if echo "$product_family" | grep -q "$product_name"; then
+      # If product_name is contained in product_family, only show product_family
+      sys_model="${product_family}"
+    else
+      # If product_name is not contained in product_family, both are shown
       sys_model="${product_family} ${product_name}"
     fi
   elif [ -f /sys/firmware/devicetree/base/model ]; then
     sys_model=$(tr -d '\0' < /sys/firmware/devicetree/base/model)
-  elif [ -f /sys/devices/virtual/dmi/id/board_vendor ] || [ -f /sys/devices/virtual/dmi/id/board_name ]; then
-    sys_model=$(tr -d '\0' < /sys/devices/virtual/dmi/id/board_vendor)
-    sys_model="$sys_model $(tr -d '\0' < /sys/devices/virtual/dmi/id/board_name)"
+  elif [ -n "$board_vendor" ] || [ -n "$board_name" ]; then
+    sys_model="${board_vendor} ${board_name}"
   elif [ -f /tmp/sysinfo/model ]; then
     sys_model=$(tr -d '\0' < /tmp/sysinfo/model)
+  elif [ -n "${DOCKER_VERSION}" ]; then
+    # Docker image. DOCKER_VERSION is read from /etc/pihole/versions
+    sys_model="Docker tag ${DOCKER_VERSION}"
   fi
 
   # Cleaning device model from useless OEM information
   sys_model=${sys_model#"To be filled by O.E.M."}
-	sys_model=${sys_model%"To be filled by O.E.M."}
+  sys_model=${sys_model%"To be filled by O.E.M."}
   sys_model=${sys_model#"To Be Filled*"}
   sys_model=${sys_model%"To Be Filled*"}
   sys_model=${sys_model#"OEM*"}
