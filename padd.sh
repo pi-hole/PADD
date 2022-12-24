@@ -196,14 +196,12 @@ GetSystemInformation() {
   cpu_percent=$(printf %.1f "$(echo "${cpu_load_1} ${core_count}" | awk '{print ($1 / $2) * 100}')")
 
   # CPU temperature heatmap
+  hot_flag=false
   # If we're getting close to 85°C... (https://www.raspberrypi.org/blog/introducing-turbo-mode-up-to-50-more-performance-for-free/)
   if [ ${cpu} -gt 80000 ]; then
     temp_heatmap=${blinking_text}${red_text}
-    pico_status="${pico_status_hot}"
-    mini_status="${mini_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-    tiny_status="${tiny_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-    full_status="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-    mega_status="${mega_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+    # set flag to change the status message in SetStatusMessage()
+    hot_flag=true
   elif [ ${cpu} -gt 70000 ]; then
     temp_heatmap=${magenta_text}
   elif [ ${cpu} -gt 60000 ]; then
@@ -423,15 +421,13 @@ GetPiholeInformation() {
   ftlPID=$(pidof pihole-FTL)
 
   # If FTL is not running, set all variables to "not running"
+  ftl_down_flag=false
   if [ -z "${ftlPID}" ]; then
     ftl_status="Not running"
     ftl_heatmap=${yellow_text}
     ftl_check_box=${check_box_info}
-    pico_status=${pico_status_ftl_down}
-    mini_status=${mini_status_ftl_down}
-    tiny_status=${tiny_status_ftl_down}
-    full_status=${full_status_ftl_down}
-    mega_status=${mega_status_ftl_down}
+    # set flag to change the status message in SetStatusMessage()
+    ftl_down_flag=true
   else
     ftl_status="Running"
     ftl_heatmap=${green_text}
@@ -439,21 +435,18 @@ GetPiholeInformation() {
     # Get FTL CPU and memory usage
     ftl_cpu="$(ps -p "${ftlPID}" -o %cpu | tail -n1 | tr -d '[:space:]')"
     ftl_mem_percentage="$(ps -p "${ftlPID}" -o %mem | tail -n1 | tr -d '[:space:]')"
+    # Get Pi-hole (blocking) status
+    ftl_dns_port=$(GetFTLData "dns-port")
   fi
 
-  # Get Pi-hole (blocking) status
-  ftl_dns_port=$(GetFTLData "dns-port")
-
   # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled, ${ftl_status} == "Not running" no ftlPID found
+  dns_down_flag=false
   if [ "${ftl_dns_port}" = 0 ] || [ "${ftl_status}" = "Not running" ]; then
     pihole_status="DNS Offline"
     pihole_heatmap=${red_text}
     pihole_check_box=${check_box_bad}
-    pico_status=${pico_status_dns_down}
-    mini_status=${mini_status_dns_down}
-    tiny_status=${tiny_status_dns_down}
-    full_status=${full_status_dns_down}
-    mega_status=${mega_status_dns_down}
+    # set flag to change the status message in SetStatusMessage()
+    dns_down_flag=true
   else
     if [ "${blocking_status}" = "enabled" ]; then
       pihole_status="Active"
@@ -464,21 +457,11 @@ GetPiholeInformation() {
       pihole_status="Blocking disabled"
       pihole_heatmap=${red_text}
       pihole_check_box=${check_box_bad}
-      pico_status=${pico_status_off}
-      mini_status=${mini_status_off}
-      tiny_status=${tiny_status_off}
-      full_status=${full_status_off}
-      mega_status=${mega_status_off}
     fi
     if [ "${blocking_status}" = "unknown" ]; then
       pihole_status="Unknown"
       pihole_heatmap=${yellow_text}
       pihole_check_box=${check_box_question}
-      pico_status=${pico_status_unknown}
-      mini_status=${mini_status_unknown}
-      tiny_status=${tiny_status_unknown}
-      full_status=${full_status_unknown}
-      mega_status=${mega_status_unknown}
     fi
   fi
 
@@ -487,6 +470,8 @@ GetPiholeInformation() {
 GetVersionInformation() {
   # Check if version status has been saved
   # all info is sourced from /etc/pihole/versions
+
+  out_of_date_flag=false
 
   # Gather CORE version information...
   # Extract vx.xx or vx.xx.xxx version
@@ -605,6 +590,7 @@ GetPADDInformation() {
   # PADD version information...
   padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
   # is PADD up-to-date?
+  padd_out_of_date_flag=false
   if [ -z "${padd_version_latest}" ]; then
     padd_version_heatmap=${yellow_text}
   else
@@ -617,35 +603,6 @@ GetPADDInformation() {
     else
       # local and remote PADD version match or local is newer
       padd_version_heatmap=${green_text}
-    fi
-  fi
-
-  # was any portion of Pi-hole out-of-date?
-  # yes, pi-hole is out of date
-  if [ "${out_of_date_flag}" = "true" ]; then
-    version_status="Pi-hole is out-of-date!"
-    pico_status=${pico_status_update}
-    mini_status=${mini_status_update}
-    tiny_status=${tiny_status_update}
-    full_status=${full_status_update}
-    mega_status=${mega_status_update}
-  else
-    # but is PADD out-of-date?
-    if [ "${padd_out_of_date_flag}" = "true" ]; then
-      version_status="PADD is out-of-date!"
-      pico_status=${pico_status_update}
-      mini_status=${mini_status_update}
-      tiny_status=${tiny_status_update}
-      full_status=${full_status_update}
-      mega_status=${mega_status_update}
-    # else, everything is good!
-    else
-      version_status="Pi-hole is up-to-date!"
-      pico_status=${pico_status_ok}
-      mini_status=${mini_status_ok}
-      tiny_status=${tiny_status_ok}
-      full_status=${full_status_ok}
-      mega_status=${mega_status_ok}
     fi
   fi
 }
@@ -705,6 +662,82 @@ GenerateSizeDependendOutput() {
     cpu_bar=$(BarGenerator "${cpu_percent}" 10)
     memory_bar=$(BarGenerator "${memory_percent}" 10)
   fi
+}
+
+SetStatusMessage() {
+    # depending on which flags are set, the "message field" shows a different output
+    # 7 messages are possible (from highest to lowest priority):
+
+    #   - System is hot
+    #   - FTLDNS service is not running
+    #   - Pi-hole's DNS server is off (FTL running, but not providing DNS)
+    #   - Unable to determine Pi-hole blocking status
+    #   - Pi-hole blocking disabled
+    #   - Updates are available
+    #   - Everything is fine
+
+
+    if [ "${hot_flag}" = true ]; then
+        pico_status="${pico_status_hot}"
+        mini_status="${mini_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+        tiny_status="${tiny_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+        full_status="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+        mega_status="${mega_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+        return
+    fi
+
+    if [ "${ftl_down_flag}" = true ]; then
+        pico_status=${pico_status_ftl_down}
+        mini_status=${mini_status_ftl_down}
+        tiny_status=${tiny_status_ftl_down}
+        full_status=${full_status_ftl_down}
+        mega_status=${mega_status_ftl_down}
+        return
+    fi
+    if [ "${dns_down_flag}" = true ]; then
+        pico_status=${pico_status_dns_down}
+        mini_status=${mini_status_dns_down}
+        tiny_status=${tiny_status_dns_down}
+        full_status=${full_status_dns_down}
+        mega_status=${mega_status_dns_down}
+        return
+    fi
+
+    if [ "${blocking_status}" = "unknown" ]; then
+        pico_status=${pico_status_unknown}
+        mini_status=${mini_status_unknown}
+        tiny_status=${tiny_status_unknown}
+        full_status=${full_status_unknown}
+        mega_status=${mega_status_unknown}
+        return
+    fi
+
+    if [ "${blocking_status}" = "disabled" ]; then
+        pico_status=${pico_status_off}
+        mini_status=${mini_status_off}
+        tiny_status=${tiny_status_off}
+        full_status=${full_status_off}
+        mega_status=${mega_status_off}
+        return
+    fi
+    if [ "${out_of_date_flag}" = "true" ] || [ "${padd_out_of_date_flag}" = "true" ]; then
+        pico_status=${pico_status_update}
+        mini_status=${mini_status_update}
+        tiny_status=${tiny_status_update}
+        full_status=${full_status_update}
+        mega_status=${mega_status_update}
+        return
+    fi
+
+    # if we reach this point and blocking is enabled, everything is fine
+    if [ "${blocking_status}" = "enabled" ]; then
+        pico_status=${pico_status_ok}
+        mini_status=${mini_status_ok}
+        tiny_status=${tiny_status_ok}
+        full_status=${full_status_ok}
+        mega_status=${mega_status_ok}
+        return
+    fi
 }
 
 ############################################# PRINTERS #############################################
@@ -792,7 +825,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
         moveXOffset; printf "%s${clear_line}\n" ""
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ================================${reset_text}"
-        moveXOffset; printf " %-9s${pihole_heatmap}%-10s${reset_text} %-9s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+        moveXOffset; printf " %-9s${pihole_heatmap}%-10s${reset_text} %-5s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ==================================${reset_text}"
         moveXOffset; printf " %-9s%-29s${clear_line}\n" "Blckng:" "${domains_being_blocked} domains"
         moveXOffset; printf " %-9s[%-20s] %-5s${clear_line}\n" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
@@ -1170,7 +1203,6 @@ StartupRoutine(){
     GetPADDInformation
     moveXOffset; echo "  - Core $CORE_VERSION, Web $WEB_VERSION"
     moveXOffset; echo "  - FTL $FTL_VERSION, PADD $padd_version"
-    moveXOffset; echo "  - $version_status"
 
 
   else
@@ -1198,7 +1230,6 @@ StartupRoutine(){
     moveXOffset; echo "  - Web Admin $WEB_VERSION"
     moveXOffset; echo "  - FTL $FTL_VERSION"
     moveXOffset; echo "  - PADD $padd_version"
-    moveXOffset; echo "  - $version_status"
   fi
 
   moveXOffset; printf "%s" "- Starting in "
@@ -1219,6 +1250,9 @@ NormalPADD() {
     # Generate output that depends on the terminal size
     # e.g. Heatmap and barchart
     GenerateSizeDependendOutput ${padd_size}
+
+    # Sets the message displayed in the "status field" depending on the set flags
+    SetStatusMessage
 
     # Output everything to the screen
     PrintDashboard ${padd_size}
@@ -1271,7 +1305,6 @@ NormalPADD() {
 
     # Get PADD version information every 24hours
     if [ $((now - LastCheckPADDInformation)) -ge 86400 ]; then
-      . /etc/pihole/versions
       GetPADDInformation
       LastCheckPADDInformation="${now}"
     fi
