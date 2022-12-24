@@ -26,6 +26,7 @@ LastCheckNetworkInformation=$(date +%s)
 LastCheckSummaryInformation=$(date +%s)
 LastCheckPiholeInformation=$(date +%s)
 LastCheckSystemInformation=$(date +%s)
+LastCheckPADDInformation=$(date +%s)
 
 # CORES
 core_count=$(nproc --all 2> /dev/null)
@@ -597,6 +598,10 @@ GetVersionInformation() {
     fi
   fi
 
+}
+
+GetPADDInformation() {
+
   # PADD version information...
   padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
   # is PADD up-to-date?
@@ -614,7 +619,6 @@ GetVersionInformation() {
       padd_version_heatmap=${green_text}
     fi
   fi
-
 
   # was any portion of Pi-hole out-of-date?
   # yes, pi-hole is out of date
@@ -1146,6 +1150,7 @@ StartupRoutine(){
     moveXOffset; printf "%b" " [■■■■■■■■··]  80%\r"
     GetVersionInformation
     moveXOffset; printf "%b" " [■■■■■■■■■·]  90%\r"
+    GetPADDInformation
     moveXOffset; printf "%b" " [■■■■■■■■■■] 100%\n"
 
   elif [ "$1" = "mini" ]; then
@@ -1162,9 +1167,11 @@ StartupRoutine(){
     GetNetworkInformation
     moveXOffset; echo "- Gathering version info."
     GetVersionInformation
+    GetPADDInformation
     moveXOffset; echo "  - Core $CORE_VERSION, Web $WEB_VERSION"
     moveXOffset; echo "  - FTL $FTL_VERSION, PADD $padd_version"
     moveXOffset; echo "  - $version_status"
+
 
   else
     moveXOffset; printf "%b" "${padd_logo_retro_1}\n"
@@ -1186,6 +1193,7 @@ StartupRoutine(){
     GetNetworkInformation
     moveXOffset; echo "- Gathering version information..."
     GetVersionInformation
+    GetPADDInformation
     moveXOffset; echo "  - Pi-hole Core $CORE_VERSION"
     moveXOffset; echo "  - Web Admin $WEB_VERSION"
     moveXOffset; echo "  - FTL $FTL_VERSION"
@@ -1254,11 +1262,18 @@ NormalPADD() {
       LastCheckNetworkInformation="${now}"
     fi
 
-    # Get Pi-hole components and PADD version information once every 24 hours
-    if [ $((now - LastCheckVersionInformation)) -ge 86400 ]; then
+    # Get Pi-hole components version information every 30 seconds
+    if [ $((now - LastCheckVersionInformation)) -ge 30 ]; then
       . /etc/pihole/versions
       GetVersionInformation
       LastCheckVersionInformation="${now}"
+    fi
+
+    # Get PADD version information every 24hours
+    if [ $((now - LastCheckPADDInformation)) -ge 86400 ]; then
+      . /etc/pihole/versions
+      GetPADDInformation
+      LastCheckPADDInformation="${now}"
     fi
 
   done
