@@ -57,7 +57,7 @@ wget -N https://raw.githubusercontent.com/pi-hole/PADD/master/padd.sh
 **Note: if you are already running Chronometer2 v1.3.1 or below, you’ll need to follow [these instructions](https://github.com/jpmck/PADD/wiki/Updating-from-Chronometer2)!**
 
 ## Running Pi-hole in a Docker Container
-If you're running Pi-hole in a Docker Container you can use `padd.sh` this way:
+If you're running Pi-hole in the official Docker Container, `padd.sh` is pre-installed and named `padd`. It can be used with the following command:
 ```bash
 docker exec -it <container_name> padd [padd_options]
 ```
