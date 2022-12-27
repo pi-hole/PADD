@@ -676,7 +676,7 @@ SetStatusMessage() {
     #   - Updates are available
     #   - Everything is fine
 
-
+    # Check if CPU temperature is high
     if [ "${hot_flag}" = true ]; then
         pico_status="${pico_status_hot}"
         mini_status="${mini_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
@@ -686,6 +686,7 @@ SetStatusMessage() {
         return
     fi
 
+    # Check if FTL is down
     if [ "${ftl_down_flag}" = true ]; then
         pico_status=${pico_status_ftl_down}
         mini_status=${mini_status_ftl_down}
@@ -694,6 +695,8 @@ SetStatusMessage() {
         mega_status=${mega_status_ftl_down}
         return
     fi
+
+    # Check if DNS is down
     if [ "${dns_down_flag}" = true ]; then
         pico_status=${pico_status_dns_down}
         mini_status=${mini_status_dns_down}
@@ -703,6 +706,7 @@ SetStatusMessage() {
         return
     fi
 
+    # Check if blocking status is unknown
     if [ "${blocking_status}" = "unknown" ]; then
         pico_status=${pico_status_unknown}
         mini_status=${mini_status_unknown}
@@ -712,6 +716,7 @@ SetStatusMessage() {
         return
     fi
 
+    # Check if blocking status is disabled
     if [ "${blocking_status}" = "disabled" ]; then
         pico_status=${pico_status_off}
         mini_status=${mini_status_off}
@@ -720,6 +725,8 @@ SetStatusMessage() {
         mega_status=${mega_status_off}
         return
     fi
+
+    # Check if one of the components of Pi-hole (or PADD itself) is out of date
     if [ "${out_of_date_flag}" = "true" ] || [ "${padd_out_of_date_flag}" = "true" ]; then
         pico_status=${pico_status_update}
         mini_status=${mini_status_update}
