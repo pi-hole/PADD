@@ -397,9 +397,9 @@ GetPiholeInformation() {
   # Get FTL's current PID
   ftlPID="$(getFTLPID)"
 
-  # If FTL is not running, set all variables to "not running"
+  # If FTL is not running (getFTLPID returns -1), set all variables to "not running"
   ftl_down_flag=false
-  if [ -z "${ftlPID}" ]; then
+  if [ "${ftlPID}" = "-1" ]; then
     ftl_status="Not running"
     ftl_heatmap=${yellow_text}
     ftl_check_box=${check_box_info}
