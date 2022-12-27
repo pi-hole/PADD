@@ -676,74 +676,62 @@ SetStatusMessage() {
     #   - Updates are available
     #   - Everything is fine
 
-    # Check if CPU temperature is high
+
     if [ "${hot_flag}" = true ]; then
+        # Check if CPU temperature is high
         pico_status="${pico_status_hot}"
         mini_status="${mini_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
         tiny_status="${tiny_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
         full_status="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
         mega_status="${mega_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-        return
-    fi
 
-    # Check if FTL is down
-    if [ "${ftl_down_flag}" = true ]; then
+    elif [ "${ftl_down_flag}" = true ]; then
+        # Check if FTL is down
         pico_status=${pico_status_ftl_down}
         mini_status=${mini_status_ftl_down}
         tiny_status=${tiny_status_ftl_down}
         full_status=${full_status_ftl_down}
         mega_status=${mega_status_ftl_down}
-        return
-    fi
 
-    # Check if DNS is down
-    if [ "${dns_down_flag}" = true ]; then
+    elif [ "${dns_down_flag}" = true ]; then
+        # Check if DNS is down
         pico_status=${pico_status_dns_down}
         mini_status=${mini_status_dns_down}
         tiny_status=${tiny_status_dns_down}
         full_status=${full_status_dns_down}
         mega_status=${mega_status_dns_down}
-        return
-    fi
 
-    # Check if blocking status is unknown
-    if [ "${blocking_status}" = "unknown" ]; then
+    elif [ "${blocking_status}" = "unknown" ]; then
+        # Check if blocking status is unknown
         pico_status=${pico_status_unknown}
         mini_status=${mini_status_unknown}
         tiny_status=${tiny_status_unknown}
         full_status=${full_status_unknown}
         mega_status=${mega_status_unknown}
-        return
-    fi
 
-    # Check if blocking status is disabled
-    if [ "${blocking_status}" = "disabled" ]; then
+    elif [ "${blocking_status}" = "disabled" ]; then
+        # Check if blocking status is disabled
         pico_status=${pico_status_off}
         mini_status=${mini_status_off}
         tiny_status=${tiny_status_off}
         full_status=${full_status_off}
         mega_status=${mega_status_off}
-        return
-    fi
 
-    # Check if one of the components of Pi-hole (or PADD itself) is out of date
-    if [ "${out_of_date_flag}" = "true" ] || [ "${padd_out_of_date_flag}" = "true" ]; then
+    elif [ "${out_of_date_flag}" = "true" ] || [ "${padd_out_of_date_flag}" = "true" ]; then
+        # Check if one of the components of Pi-hole (or PADD itself) is out of date
         pico_status=${pico_status_update}
         mini_status=${mini_status_update}
         tiny_status=${tiny_status_update}
         full_status=${full_status_update}
         mega_status=${mega_status_update}
-        return
-    fi
 
-    # if we reach this point and blocking is enabled, everything is fine
-    if [ "${blocking_status}" = "enabled" ]; then
+    elif [ "${blocking_status}" = "enabled" ]; then
+        # if we reach this point and blocking is enabled, everything is fine
         pico_status=${pico_status_ok}
         mini_status=${mini_status_ok}
         tiny_status=${tiny_status_ok}
         full_status=${full_status_ok}
         mega_status=${mega_status_ok}
-        return
     fi
 }
 
