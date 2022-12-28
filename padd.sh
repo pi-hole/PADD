@@ -1112,6 +1112,10 @@ moveXOffset(){
 filterModel() {
     FILTERLIST="To be filled by O.E.M.|To Be Filled\*|OEM\*|Not Applicable|System Product Name|System Version|Undefined|Default string|Not Specified|Type1ProductConfigId|INVALID|All Series|�"
 
+    # Description:
+    #    `-v`      : set $FILTERLIST into a variable called `list`
+    #    `gsub()`  : replace all list items with an empty string, deleting them
+    #    `{$1=$1}1`: remove all extra spaces. The last "1" evaluates as true, printing the result
     echo "$1" | awk -v list="$FILTERLIST" '{gsub(list,"")};{$1=$1}1'
 }
 
