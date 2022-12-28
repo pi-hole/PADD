@@ -405,13 +405,15 @@ GetPiholeInformation() {
     ftl_check_box=${check_box_info}
     # set flag to change the status message in SetStatusMessage()
     ftl_down_flag=true
+    ftl_cpu="N/A"
+    ftl_mem_percentage="N/A"
   else
     ftl_status="Running"
     ftl_heatmap=${green_text}
     ftl_check_box=${check_box_good}
     # Get FTL CPU and memory usage
-    ftl_cpu="$(ps h -p "${ftlPID}" -o %cpu | tr -d '[:space:]')"
-    ftl_mem_percentage="$(ps h -p "${ftlPID}" -o %mem | tr -d '[:space:]')"
+    ftl_cpu="$(ps h -p "${ftlPID}" -o %cpu | tr -d '[:space:]')%"
+    ftl_mem_percentage="$(ps h -p "${ftlPID}" -o %mem | tr -d '[:space:]')%"
     # Get Pi-hole (blocking) status
     ftl_dns_port=$(GetFTLData "dns-port")
   fi
@@ -896,7 +898,7 @@ PrintDashboard() {
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}FTL ===========================================================================${reset_text}"
-        moveXOffset; printf " %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}%" "Mem. Use:" "${ftl_mem_percentage}%"
+        moveXOffset; printf " %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}" "Mem. Use:" "${ftl_mem_percentage}"
         moveXOffset; printf " %-10s%-69s${clear_line}\n" "DNSCache:" "${cache_inserts} insertions, ${cache_deletes} deletions, ${cache_size} total entries"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK =======================================================================${reset_text}"
         moveXOffset; printf " %-10s%-19s${clear_line}\n" "Hostname:" "${full_hostname}"
