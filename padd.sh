@@ -256,32 +256,7 @@ GetSystemInformation() {
   fi
 
   # Cleaning device model from useless OEM information
-  sys_model=${sys_model#"To be filled by O.E.M."}
-  sys_model=${sys_model%"To be filled by O.E.M."}
-  sys_model=${sys_model#"To Be Filled*"}
-  sys_model=${sys_model%"To Be Filled*"}
-  sys_model=${sys_model#"OEM*"}
-  sys_model=${sys_model%"OEM*"}
-  sys_model=${sys_model#"Not Applicable"}
-  sys_model=${sys_model%"Not Applicable"}
-  sys_model=${sys_model#"System Product Name"}
-  sys_model=${sys_model%"System Product Name"}
-  sys_model=${sys_model#"System Version"}
-  sys_model=${sys_model%"System Version"}
-  sys_model=${sys_model#"Undefined"}
-  sys_model=${sys_model%"Undefined"}
-  sys_model=${sys_model#"Default string"}
-  sys_model=${sys_model%"Default string"}
-  sys_model=${sys_model#"Not Specified"}
-  sys_model=${sys_model%"Not Specified"}
-  sys_model=${sys_model#"Type1ProductConfigId"}
-  sys_model=${sys_model%"Type1ProductConfigId"}
-  sys_model=${sys_model#"INVALID"}
-  sys_model=${sys_model%"INVALID"}
-  sys_model=${sys_model#"All Series"}
-  sys_model=${sys_model%"All Series"}
-  sys_model=${sys_model#"�"}
-  sys_model=${sys_model%"�"}
+  sys_model=$(filterModel "${sys_model}")
 
   if [  -z "$sys_model" ]; then
     sys_model="Unknown"
@@ -1132,6 +1107,18 @@ moveXOffset(){
         printf '\e[%sC' "${xOffset}"
     fi
 }
+
+# Remove undesired strings from sys_model variable - used in GetSystemInformation() function
+filterModel() {
+    FILTERLIST="To be filled by O.E.M.|Not Applicable|System Product Name|System Version|Undefined|Default string|Not Specified|Type1ProductConfigId|INVALID|All Series|�"
+
+    # Description:
+    #    `-v`      : set $FILTERLIST into a variable called `list`
+    #    `gsub()`  : replace all list items (ignoring case) with an empty string, deleting them
+    #    `{$1=$1}1`: remove all extra spaces. The last "1" evaluates as true, printing the result
+    echo "$1" | awk -v list="$FILTERLIST" '{IGNORECASE=1; gsub(list,"")}; {$1=$1}1'
+}
+
 ########################################## MAIN FUNCTIONS ##########################################
 
 OutputJSON() {
