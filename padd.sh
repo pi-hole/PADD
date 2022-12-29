@@ -18,7 +18,7 @@ LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.9.0"
+padd_version="v3.10.0"
 
 # LastChecks
 LastCheckVersionInformation=$(date +%s)
@@ -26,6 +26,7 @@ LastCheckNetworkInformation=$(date +%s)
 LastCheckSummaryInformation=$(date +%s)
 LastCheckPiholeInformation=$(date +%s)
 LastCheckSystemInformation=$(date +%s)
+LastCheckPADDInformation=$(date +%s)
 
 # CORES
 core_count=$(nproc --all 2> /dev/null)
@@ -56,8 +57,8 @@ check_box_info="[${yellow_text}i${reset_text}]"      # Info / i
 pico_status_ok="${check_box_good} Sys. OK"
 pico_status_update="${check_box_info} Update"
 pico_status_hot="${check_box_bad} Sys. Hot!"
-pico_status_off="${check_box_bad} Offline"
-pico_status_ftl_down="${check_box_info} FTL Down"
+pico_status_off="${check_box_info} No blck"
+pico_status_ftl_down="${check_box_bad} FTL Down"
 pico_status_dns_down="${check_box_bad} DNS Down"
 pico_status_unknown="${check_box_question} Stat. Unk."
 
@@ -65,8 +66,8 @@ pico_status_unknown="${check_box_question} Stat. Unk."
 mini_status_ok="${check_box_good} System OK"
 mini_status_update="${check_box_info} Update avail."
 mini_status_hot="${check_box_bad} System is hot!"
-mini_status_off="${check_box_bad} Pi-hole off!"
-mini_status_ftl_down="${check_box_info} FTL down!"
+mini_status_off="${check_box_info} No blocking!"
+mini_status_ftl_down="${check_box_bad} FTL down!"
 mini_status_dns_down="${check_box_bad} DNS off!"
 mini_status_unknown="${check_box_question} Status unknown"
 
@@ -74,8 +75,8 @@ mini_status_unknown="${check_box_question} Status unknown"
 full_status_ok="${check_box_good} System is healthy"
 full_status_update="${check_box_info} Updates are available"
 full_status_hot="${check_box_bad} System is hot!"
-full_status_off="${check_box_bad} Pi-hole is offline"
-full_status_ftl_down="${check_box_info} FTL is down!"
+full_status_off="${check_box_info} Blocking is disabled"
+full_status_ftl_down="${check_box_bad} FTL is down!"
 full_status_dns_down="${check_box_bad} DNS is off!"
 full_status_unknown="${check_box_question} Status unknown!"
 
@@ -83,8 +84,8 @@ full_status_unknown="${check_box_question} Status unknown!"
 mega_status_ok="${check_box_good} Your system is healthy"
 mega_status_update="${check_box_info} Updates are available"
 mega_status_hot="${check_box_bad} Your system is hot!"
-mega_status_off="${check_box_bad} Pi-hole is offline!"
-mega_status_ftl_down="${check_box_info} FTLDNS service is not running!"
+mega_status_off="${check_box_info} Blocking is disabled!"
+mega_status_ftl_down="${check_box_bad} FTLDNS service is not running!"
 mega_status_dns_down="${check_box_bad} Pi-hole's DNS server is off!"
 mega_status_unknown="${check_box_question} Unable to determine Pi-hole status!"
 
@@ -92,8 +93,8 @@ mega_status_unknown="${check_box_question} Unable to determine Pi-hole status!"
 tiny_status_ok="${check_box_good} System is healthy"
 tiny_status_update="${check_box_info} Updates are available"
 tiny_status_hot="${check_box_bad} System is hot!"
-tiny_status_off="${check_box_bad} Pi-hole is offline"
-tiny_status_ftl_down="${check_box_info} FTL is down!"
+tiny_status_off="${check_box_info} Blocking is disabled"
+tiny_status_ftl_down="${check_box_bad} FTL is down!"
 tiny_status_dns_down="${check_box_bad} DNS is off!"
 tiny_status_unknown="${check_box_question} Status unknown!"
 
@@ -118,8 +119,6 @@ GetFTLData() {
       # Send command to FTL and ask to quit when finished
       data="$(echo ">$1 >quit" | nc 127.0.0.1 "${ftl_port}")"
       echo "${data}"
-    else
-      echo "0"
     fi
 }
 
@@ -195,14 +194,12 @@ GetSystemInformation() {
   cpu_percent=$(printf %.1f "$(echo "${cpu_load_1} ${core_count}" | awk '{print ($1 / $2) * 100}')")
 
   # CPU temperature heatmap
+  hot_flag=false
   # If we're getting close to 85°C... (https://www.raspberrypi.org/blog/introducing-turbo-mode-up-to-50-more-performance-for-free/)
   if [ ${cpu} -gt 80000 ]; then
     temp_heatmap=${blinking_text}${red_text}
-    pico_status="${pico_status_hot}"
-    mini_status="${mini_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-    tiny_status="${tiny_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-    full_status="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-    mega_status="${mega_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+    # set flag to change the status message in SetStatusMessage()
+    hot_flag=true
   elif [ ${cpu} -gt 70000 ]; then
     temp_heatmap=${magenta_text}
   elif [ ${cpu} -gt 60000 ]; then
@@ -215,53 +212,49 @@ GetSystemInformation() {
   memory_percent=$(awk '/MemTotal:/{total=$2} /MemFree:/{free=$2} /Buffers:/{buffers=$2} /^Cached:/{cached=$2} END {printf "%.1f", (total-free-buffers-cached)*100/total}' '/proc/meminfo')
   memory_heatmap=$(HeatmapGenerator "${memory_percent}")
 
-  # Device model
-  if [ -f /sys/devices/virtual/dmi/id/product_name ] || [ -f /sys/devices/virtual/dmi/id/product_family ]; then
-    # Get model, remove possible null byte
+  # Get product name and family
+  product_name=
+  product_family=
+  if [ -f /sys/devices/virtual/dmi/id/product_name ]; then
+    # Get product name, remove possible null byte
     product_name=$(tr -d '\0' < /sys/devices/virtual/dmi/id/product_name)
+  fi
+  if [ -f /sys/devices/virtual/dmi/id/product_family ]; then
+    # Get product family, remove possible null byte
     product_family=$(tr -d '\0' < /sys/devices/virtual/dmi/id/product_family)
-    sys_model="$(echo "$product_name" | grep "$product_family")"
+  fi
 
-    # If product_family is not contained in product_name, both are shown
-    if [ -z "$sys_model" ]; then
+  board_vendor=
+  board_name=
+  if [ -f /sys/devices/virtual/dmi/id/board_vendor ]; then
+    board_vendor=$(tr -d '\0' < /sys/devices/virtual/dmi/id/board_vendor)
+  fi
+  if [ -f /sys/devices/virtual/dmi/id/board_name ]; then
+    board_name="$(tr -d '\0' < /sys/devices/virtual/dmi/id/board_name)"
+  fi
+
+
+  if [ -n "$product_name" ] || [ -n "$product_family" ]; then
+    if echo "$product_family" | grep -q "$product_name"; then
+      # If product_name is contained in product_family, only show product_family
+      sys_model="${product_family}"
+    else
+      # If product_name is not contained in product_family, both are shown
       sys_model="${product_family} ${product_name}"
     fi
   elif [ -f /sys/firmware/devicetree/base/model ]; then
     sys_model=$(tr -d '\0' < /sys/firmware/devicetree/base/model)
-  elif [ -f /sys/devices/virtual/dmi/id/board_vendor ] || [ -f /sys/devices/virtual/dmi/id/board_name ]; then
-    sys_model=$(tr -d '\0' < /sys/devices/virtual/dmi/id/board_vendor)
-    sys_model="$sys_model $(tr -d '\0' < /sys/devices/virtual/dmi/id/board_name)"
+  elif [ -n "$board_vendor" ] || [ -n "$board_name" ]; then
+    sys_model="${board_vendor} ${board_name}"
   elif [ -f /tmp/sysinfo/model ]; then
     sys_model=$(tr -d '\0' < /tmp/sysinfo/model)
+  elif [ -n "${DOCKER_VERSION}" ]; then
+    # Docker image. DOCKER_VERSION is read from /etc/pihole/versions
+    sys_model="Docker tag ${DOCKER_VERSION}"
   fi
 
   # Cleaning device model from useless OEM information
-  sys_model=${sys_model#"To be filled by O.E.M."}
-	sys_model=${sys_model%"To be filled by O.E.M."}
-  sys_model=${sys_model#"To Be Filled*"}
-  sys_model=${sys_model%"To Be Filled*"}
-  sys_model=${sys_model#"OEM*"}
-  sys_model=${sys_model%"OEM*"}
-  sys_model=${sys_model#"Not Applicable"}
-  sys_model=${sys_model%"Not Applicable"}
-  sys_model=${sys_model#"System Product Name"}
-  sys_model=${sys_model%"System Product Name"}
-  sys_model=${sys_model#"System Version"}
-  sys_model=${sys_model%"System Version"}
-  sys_model=${sys_model#"Undefined"}
-  sys_model=${sys_model%"Undefined"}
-  sys_model=${sys_model#"Default string"}
-  sys_model=${sys_model%"Default string"}
-  sys_model=${sys_model#"Not Specified"}
-  sys_model=${sys_model%"Not Specified"}
-  sys_model=${sys_model#"Type1ProductConfigId"}
-  sys_model=${sys_model%"Type1ProductConfigId"}
-  sys_model=${sys_model#"INVALID"}
-  sys_model=${sys_model%"INVALID"}
-  sys_model=${sys_model#"All Series"}
-  sys_model=${sys_model%"All Series"}
-  sys_model=${sys_model#"�"}
-  sys_model=${sys_model%"�"}
+  sys_model=$(filterModel "${sys_model}")
 
   if [  -z "$sys_model" ]; then
     sys_model="Unknown"
@@ -398,84 +391,66 @@ GetNetworkInformation() {
 
 GetPiholeInformation() {
   # Get FTL status
-  ftlPID=$(pidof pihole-FTL)
 
-  if [ -z ${ftlPID+x} ]; then
+  # Get FTL's current PID
+  ftlPID="$(getFTLPID)"
+
+  # If FTL is not running (getFTLPID returns -1), set all variables to "not running"
+  ftl_down_flag=false
+  if [ "${ftlPID}" = "-1" ]; then
     ftl_status="Not running"
-    ftl_heatmap=${yellow_text}
-    ftl_check_box=${check_box_info}
-    pico_status=${pico_status_ftl_down}
-    mini_status=${mini_status_ftl_down}
-    tiny_status=${tiny_status_ftl_down}
-    full_status=${full_status_ftl_down}
-    mega_status=${mega_status_ftl_down}
+    ftl_heatmap=${red_text}
+    ftl_check_box=${check_box_bad}
+    # set flag to change the status message in SetStatusMessage()
+    ftl_down_flag=true
+    ftl_cpu="N/A"
+    ftl_mem_percentage="N/A"
   else
     ftl_status="Running"
     ftl_heatmap=${green_text}
     ftl_check_box=${check_box_good}
-    ftl_cpu="$(ps -p "${ftlPID}" -o %cpu | tail -n1 | tr -d '[:space:]')"
-    ftl_mem_percentage="$(ps -p "${ftlPID}" -o %mem | tail -n1 | tr -d '[:space:]')"
+    # Get FTL CPU and memory usage
+    ftl_cpu="$(ps h -p "${ftlPID}" -o %cpu | tr -d '[:space:]')%"
+    ftl_mem_percentage="$(ps h -p "${ftlPID}" -o %mem | tr -d '[:space:]')%"
+    # Get Pi-hole (blocking) status
+    ftl_dns_port=$(GetFTLData "dns-port")
   fi
-
-  # Get Pi-hole (blocking) status
-  ftl_dns_port=$(GetFTLData "dns-port")
 
   # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled, ${ftl_status} == "Not running" no ftlPID found
+  dns_down_flag=false
   if [ "${ftl_dns_port}" = 0 ] || [ "${ftl_status}" = "Not running" ]; then
-    pihole_status="DNS Offline"
-    pihole_heatmap=${red_text}
-    pihole_check_box=${check_box_bad}
-    pico_status=${pico_status_dns_down}
-    mini_status=${mini_status_dns_down}
-    tiny_status=${tiny_status_dns_down}
-    full_status=${full_status_dns_down}
-    mega_status=${mega_status_dns_down}
+    dns_status="DNS offline"
+    dns_heatmap=${red_text}
+    dns_check_box=${check_box_bad}
+    # set flag to change the status message in SetStatusMessage()
+    dns_down_flag=true
   else
-    if [ "${blocking_status}" = "enabled" ]; then
-      pihole_status="Active"
-      pihole_heatmap=${green_text}
-      pihole_check_box=${check_box_good}
-    fi
-    if [ "${blocking_status}" = "disabled" ]; then
-      pihole_status="Blocking disabled"
-      pihole_heatmap=${red_text}
-      pihole_check_box=${check_box_bad}
-      pico_status=${pico_status_off}
-      mini_status=${mini_status_off}
-      tiny_status=${tiny_status_off}
-      full_status=${full_status_off}
-      mega_status=${mega_status_off}
-    fi
-    if [ "${blocking_status}" = "unknown" ]; then
-      pihole_status="Unknown"
-      pihole_heatmap=${yellow_text}
-      pihole_check_box=${check_box_question}
-      pico_status=${pico_status_unknown}
-      mini_status=${mini_status_unknown}
-      tiny_status=${tiny_status_unknown}
-      full_status=${full_status_unknown}
-      mega_status=${mega_status_unknown}
-    fi
-  fi
-
+    dns_check_box=${check_box_good}
+    dns_status="Active"
+    dns_heatmap=${green_text}
+fi
 }
 
 GetVersionInformation() {
   # Check if version status has been saved
   # all info is sourced from /etc/pihole/versions
 
+  out_of_date_flag=false
+
   # Gather CORE version information...
   # Extract vx.xx or vx.xx.xxx version
   CORE_VERSION="$(echo "${CORE_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
   if [ "${CORE_BRANCH}" = "master" ]; then
-    if [ "${CORE_HASH}" = "${GITHUB_CORE_HASH}" ]; then
-        # up-to-date
-        core_version_heatmap=${green_text}
-      else
-        #out-of-date
-        out_of_date_flag="true"
-        core_version_heatmap=${red_text}
-      fi
+    core_version_converted="$(VersionConverter "${CORE_VERSION}")"
+    core_version_latest_converted=$(VersionConverter "${GITHUB_CORE_VERSION}")
+
+    if [ "${core_version_converted}" -lt "${core_version_latest_converted}" ]; then
+      out_of_date_flag="true"
+      core_version_heatmap=${red_text}
+    else
+      core_version_heatmap=${green_text}
+    fi
+
   else
     # Custom branch
     if [ -z "${CORE_BRANCH}"  ]; then
@@ -483,7 +458,14 @@ GetVersionInformation() {
       core_version_heatmap=${red_text}
       CORE_VERSION="?"
     else
-      core_version_heatmap=${yellow_text}
+      if [ "${CORE_HASH}" = "${GITHUB_CORE_HASH}" ]; then
+        # up-to-date
+        core_version_heatmap=${green_text}
+      else
+        # out-of-date
+        out_of_date_flag="true"
+        core_version_heatmap=${red_text}
+      fi
       # shorten common branch names (fix/, tweak/, new/)
       # use the first 7 characters of the branch name as version
       CORE_VERSION="$(printf '%s' "$CORE_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
@@ -495,14 +477,16 @@ GetVersionInformation() {
   if [ "$INSTALL_WEB_INTERFACE" = true ]; then
     WEB_VERSION="$(echo "${WEB_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
     if [ "${WEB_BRANCH}" = "master" ]; then
-      if [ "${WEB_HASH}" = "${GITHUB_WEB_HASH}" ]; then
-          # up-to-date
-          web_version_heatmap=${green_text}
-        else
-          #out-of-date
-          out_of_date_flag="true"
-          web_version_heatmap=${red_text}
-        fi
+      web_version_converted="$(VersionConverter "${WEB_VERSION}")"
+      web_version_latest_converted=$(VersionConverter "${GITHUB_WEB_VERSION}")
+
+      if [ "${web_version_converted}" -lt "${web_version_latest_converted}" ]; then
+        out_of_date_flag="true"
+        web_version_heatmap=${red_text}
+      else
+        web_version_heatmap=${green_text}
+      fi
+
     else
     # Custom branch
       if [ -z "${WEB_BRANCH}"  ]; then
@@ -510,7 +494,14 @@ GetVersionInformation() {
         web_version_heatmap=${red_text}
         WEB_VERSION="?"
       else
-        web_version_heatmap=${yellow_text}
+        if [ "${WEB_HASH}" = "${GITHUB_WEB_HASH}" ]; then
+          # up-to-date
+          web_version_heatmap=${green_text}
+        else
+          # out-of-date
+          out_of_date_flag="true"
+          web_version_heatmap=${red_text}
+        fi
         # shorten common branch names (fix/, tweak/, new/)
         # use the first 7 characters of the branch name as version
         WEB_VERSION="$(printf '%s' "$WEB_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
@@ -526,14 +517,15 @@ GetVersionInformation() {
   # Extract vx.xx or vx.xx.xxx version
   FTL_VERSION="$(echo "${FTL_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
   if [ "${FTL_BRANCH}" = "master" ]; then
-    if [ "${FTL_HASH}" = "${GITHUB_FTL_HASH}" ]; then
-        # up-to-date
-        ftl_version_heatmap=${green_text}
-      else
-        #out-of-date
-        out_of_date_flag="true"
-        ftl_version_heatmap=${red_text}
-      fi
+    ftl_version_converted="$(VersionConverter "${FTL_VERSION}")"
+    ftl_version_latest_converted=$(VersionConverter "${GITHUB_FTL_VERSION}")
+
+    if [ "${ftl_version_converted}" -lt "${ftl_version_latest_converted}" ]; then
+      out_of_date_flag="true"
+      ftl_version_heatmap=${red_text}
+    else
+      ftl_version_heatmap=${green_text}
+    fi
   else
     # Custom branch
     if [ -z "${FTL_BRANCH}"  ]; then
@@ -541,16 +533,28 @@ GetVersionInformation() {
       ftl_version_heatmap=${red_text}
       FTL_VERSION="?"
     else
-      ftl_version_heatmap=${yellow_text}
+      if [ "${FTL_HASH}" = "${GITHUB_FTL_HASH}" ]; then
+        # up-to-date
+        ftl_version_heatmap=${green_text}
+      else
+        # out-of-date
+        out_of_date_flag="true"
+        ftl_version_heatmap=${red_text}
+      fi
       # shorten common branch names (fix/, tweak/, new/)
       # use the first 7 characters of the branch name as version
       FTL_VERSION="$(printf '%s' "$FTL_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
     fi
   fi
 
+}
+
+GetPADDInformation() {
+
   # PADD version information...
   padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
   # is PADD up-to-date?
+  padd_out_of_date_flag=false
   if [ -z "${padd_version_latest}" ]; then
     padd_version_heatmap=${yellow_text}
   else
@@ -563,36 +567,6 @@ GetVersionInformation() {
     else
       # local and remote PADD version match or local is newer
       padd_version_heatmap=${green_text}
-    fi
-  fi
-
-
-  # was any portion of Pi-hole out-of-date?
-  # yes, pi-hole is out of date
-  if [ "${out_of_date_flag}" = "true" ]; then
-    version_status="Pi-hole is out-of-date!"
-    pico_status=${pico_status_update}
-    mini_status=${mini_status_update}
-    tiny_status=${tiny_status_update}
-    full_status=${full_status_update}
-    mega_status=${mega_status_update}
-  else
-    # but is PADD out-of-date?
-    if [ "${padd_out_of_date_flag}" = "true" ]; then
-      version_status="PADD is out-of-date!"
-      pico_status=${pico_status_update}
-      mini_status=${mini_status_update}
-      tiny_status=${tiny_status_update}
-      full_status=${full_status_update}
-      mega_status=${mega_status_update}
-    # else, everything is good!
-    else
-      version_status="Pi-hole is up-to-date!"
-      pico_status=${pico_status_ok}
-      mini_status=${mini_status_ok}
-      tiny_status=${tiny_status_ok}
-      full_status=${full_status_ok}
-      mega_status=${mega_status_ok}
     fi
   fi
 }
@@ -654,6 +628,77 @@ GenerateSizeDependendOutput() {
   fi
 }
 
+SetStatusMessage() {
+    # depending on which flags are set, the "message field" shows a different output
+    # 7 messages are possible (from highest to lowest priority):
+
+    #   - System is hot
+    #   - FTLDNS service is not running
+    #   - Pi-hole's DNS server is off (FTL running, but not providing DNS)
+    #   - Unable to determine Pi-hole blocking status
+    #   - Pi-hole blocking disabled
+    #   - Updates are available
+    #   - Everything is fine
+
+
+    if [ "${hot_flag}" = true ]; then
+        # Check if CPU temperature is high
+        pico_status="${pico_status_hot}"
+        mini_status="${mini_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+        tiny_status="${tiny_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+        full_status="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+        mega_status="${mega_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+
+    elif [ "${ftl_down_flag}" = true ]; then
+        # Check if FTL is down
+        pico_status=${pico_status_ftl_down}
+        mini_status=${mini_status_ftl_down}
+        tiny_status=${tiny_status_ftl_down}
+        full_status=${full_status_ftl_down}
+        mega_status=${mega_status_ftl_down}
+
+    elif [ "${dns_down_flag}" = true ]; then
+        # Check if DNS is down
+        pico_status=${pico_status_dns_down}
+        mini_status=${mini_status_dns_down}
+        tiny_status=${tiny_status_dns_down}
+        full_status=${full_status_dns_down}
+        mega_status=${mega_status_dns_down}
+
+    elif [ "${blocking_status}" = "unknown" ]; then
+        # Check if blocking status is unknown
+        pico_status=${pico_status_unknown}
+        mini_status=${mini_status_unknown}
+        tiny_status=${tiny_status_unknown}
+        full_status=${full_status_unknown}
+        mega_status=${mega_status_unknown}
+
+    elif [ "${blocking_status}" = "disabled" ]; then
+        # Check if blocking status is disabled
+        pico_status=${pico_status_off}
+        mini_status=${mini_status_off}
+        tiny_status=${tiny_status_off}
+        full_status=${full_status_off}
+        mega_status=${mega_status_off}
+
+    elif [ "${out_of_date_flag}" = "true" ] || [ "${padd_out_of_date_flag}" = "true" ]; then
+        # Check if one of the components of Pi-hole (or PADD itself) is out of date
+        pico_status=${pico_status_update}
+        mini_status=${mini_status_update}
+        tiny_status=${tiny_status_update}
+        full_status=${full_status_update}
+        mega_status=${mega_status_update}
+
+    elif [ "${blocking_status}" = "enabled" ]; then
+        # if we reach this point and blocking is enabled, everything is fine
+        pico_status=${pico_status_ok}
+        mini_status=${mini_status_ok}
+        tiny_status=${tiny_status_ok}
+        full_status=${full_status_ok}
+        mega_status=${mega_status_ok}
+    fi
+}
+
 ############################################# PRINTERS #############################################
 
 PrintLogo() {
@@ -679,18 +724,13 @@ PrintLogo() {
   else
     printf "%s${clear_line}\n" "${padd_logo_retro_1}"
     printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
-    printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
+    printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_retro_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
   fi
 }
 
 PrintDashboard() {
-    # Clear the screen and move cursor to (0,0).
-    # This mimics the 'clear' command.
-    # https://vt100.net/docs/vt510-rm/ED.html
-    # https://vt100.net/docs/vt510-rm/CUP.html
-    # E3 extension `\e[3J` to clear the scrollback buffer (see 'man clear')
-
-    printf '\e[H\e[2J\e[3J'
+    # Move cursor to (0,0).
+    printf '\e[H'
 
     # adds the y-offset
     moveYOffset
@@ -711,7 +751,7 @@ PrintDashboard() {
         # nano is a screen at least 24x12 (columns x lines)
         moveXOffset; printf "%s${clear_line}\n" "n${padd_text} ${mini_status}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ================${reset_text}"
-        moveXOffset; printf "%s${clear_line}\n" " Up:  ${pihole_check_box}      FTL: ${ftl_check_box}"
+        moveXOffset; printf "%s${clear_line}\n" " DNS:  ${dns_check_box}      FTL: ${ftl_check_box}"
         moveXOffset; printf "%s${clear_line}\n" " Blk: [${ads_blocked_bar}] ${ads_percentage_today}%"
         moveXOffset; printf "%s${clear_line}\n" " Blk: ${ads_blocked_today} / ${dns_queries_today}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ================${reset_text}"
@@ -726,7 +766,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "µ${padd_text}     ${mini_status}"
         moveXOffset; printf "%s${clear_line}\n" ""
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ======================${reset_text}"
-        moveXOffset; printf "%s${clear_line}\n" " Status:  ${pihole_check_box}      FTL:  ${ftl_check_box}"
+        moveXOffset; printf "%s${clear_line}\n" " DNS:  ${dns_check_box}      FTL:  ${ftl_check_box}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ========================${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" " Blckng:  ${domains_being_blocked} domains"
         moveXOffset; printf "%s${clear_line}\n" " Piholed: [${ads_blocked_bar}] ${ads_percentage_today}%"
@@ -744,7 +784,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
         moveXOffset; printf "%s${clear_line}\n" ""
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ================================${reset_text}"
-        moveXOffset; printf " %-9s${pihole_heatmap}%-10s${reset_text} %-9s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+        moveXOffset; printf " %-9s${dns_heatmap}%-10s${reset_text} %-5s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "DNS:" "${dns_status}" "FTL:" "${ftl_status}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ==================================${reset_text}"
         moveXOffset; printf " %-9s%-29s${clear_line}\n" "Blckng:" "${domains_being_blocked} domains"
         moveXOffset; printf " %-9s[%-20s] %-5s${clear_line}\n" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
@@ -769,7 +809,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ============================================${reset_text}"
-        moveXOffset; printf " %-10s${pihole_heatmap}%-16s${reset_text} %-8s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+        moveXOffset; printf " %-10s${dns_heatmap}%-16s${reset_text} %-8s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "DNS:" "${dns_status}" "FTL:" "${ftl_status}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ==============================================${reset_text}"
         moveXOffset; printf " %-10s%-29s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains"
         moveXOffset; printf " %-10s[%-30s] %-5s${clear_line}\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
@@ -806,7 +846,7 @@ PrintDashboard() {
             moveXOffset; printf "%s${clear_line}\n" ""
         fi
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ===================================================${reset_text}"
-        moveXOffset; printf " %-10s${pihole_heatmap}%-19s${reset_text} %-10s${ftl_heatmap}%-19s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+        moveXOffset; printf " %-10s${dns_heatmap}%-19s${reset_text} %-10s${ftl_heatmap}%-19s${reset_text}${clear_line}\n" "DNS:" "${dns_status}" "FTL:" "${ftl_status}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS =====================================================${reset_text}"
         moveXOffset; printf " %-10s%-49s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains"
         moveXOffset; printf " %-10s[%-40s] %-5s${clear_line}\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
@@ -833,7 +873,7 @@ PrintDashboard() {
          # mega is a screen with at least 80 columns and 26 lines
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_1}"
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
-        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" ""
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS =========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-19s %-10s[%-40s] %-5s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
@@ -843,7 +883,7 @@ PrintDashboard() {
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}FTL ===========================================================================${reset_text}"
-        moveXOffset; printf " %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}%" "Mem. Use:" "${ftl_mem_percentage}%"
+        moveXOffset; printf " %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}" "Mem. Use:" "${ftl_mem_percentage}"
         moveXOffset; printf " %-10s%-69s${clear_line}\n" "DNSCache:" "${cache_inserts} insertions, ${cache_deletes} deletions, ${cache_size} total entries"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK =======================================================================${reset_text}"
         moveXOffset; printf " %-10s%-19s${clear_line}\n" "Hostname:" "${full_hostname}"
@@ -932,8 +972,8 @@ SizeChecker(){
     # this reduces "flickering" of GenerateSizeDependendOutput() items
     # after a terminal re-size
     sleep 0.1
-    console_height=$(stty size | awk '{ print $1 }')
-    console_width=$(stty size | awk '{ print $2 }')
+    console_width=$(tput cols)
+    console_height=$(tput lines)
 
     # Mega
     if [ "$console_width" -ge "80" ] && [ "$console_height" -ge "26" ]; then
@@ -1035,6 +1075,37 @@ getFTLAPIPort(){
 
 }
 
+# returns FTL's PID based on the content of the pihole-FTL.pid file
+# honor PIDFILE setting in `pihole-FTL.conf`
+getFTLPID() {
+    local FTLCONFFILE="/etc/pihole/pihole-FTL.conf"
+    local DEFAULT_PID_FILE="/run/pihole-FTL.pid"
+    local FTL_PID_FILE
+    local FTL_PID
+
+    if [ -s "${FTLCONFFILE}" ]; then
+      # if PIDFILE is not set in pihole-FTL.conf, use the default path
+      FTL_PID_FILE="$({ grep '^PIDFILE=' "${FTLCONFFILE}" || echo "${DEFAULT_PID_FILE}"; } | cut -d'=' -f2-)"
+    else
+      # if there is no pihole-FTL.conf, use the default path
+      FTL_PID_FILE="${DEFAULT_PID_FILE}"
+    fi
+
+    if [ -s "${FTL_PID_FILE}" ]; then
+        # -s: FILE exists and has a size greater than zero
+        FTL_PID="$(cat "${FTL_PID_FILE}")"
+        # Exploit prevention: unset the variable if there is malicious content
+        # Verify that the value read from the file is numeric
+        expr "${FTL_PID}" : "[^[:digit:]]" > /dev/null && unset FTL_PID
+    fi
+
+    # If FTL is not running, or the PID file contains malicious stuff, substitute
+    # negative PID to signal this
+    FTL_PID=${FTL_PID:=-1}
+    echo  "${FTL_PID}"
+}
+
+
 moveYOffset(){
     # moves the cursor yOffset-times down
     # https://vt100.net/docs/vt510-rm/CUD.html
@@ -1056,6 +1127,18 @@ moveXOffset(){
         printf '\e[%sC' "${xOffset}"
     fi
 }
+
+# Remove undesired strings from sys_model variable - used in GetSystemInformation() function
+filterModel() {
+    FILTERLIST="To be filled by O.E.M.|Not Applicable|System Product Name|System Version|Undefined|Default string|Not Specified|Type1ProductConfigId|INVALID|All Series|�"
+
+    # Description:
+    #    `-v`      : set $FILTERLIST into a variable called `list`
+    #    `gsub()`  : replace all list items (ignoring case) with an empty string, deleting them
+    #    `{$1=$1}1`: remove all extra spaces. The last "1" evaluates as true, printing the result
+    echo "$1" | awk -v list="$FILTERLIST" '{IGNORECASE=1; gsub(list,"")}; {$1=$1}1'
+}
+
 ########################################## MAIN FUNCTIONS ##########################################
 
 OutputJSON() {
@@ -1064,15 +1147,15 @@ OutputJSON() {
 }
 
 StartupRoutine(){
-    # Get config variables
+  # Get config variables
   . /etc/pihole/setupVars.conf
 
-    # Clear the screen and move cursor to (0,0).
-    # This mimics the 'clear' command.
-    # https://vt100.net/docs/vt510-rm/ED.html
-    # https://vt100.net/docs/vt510-rm/CUP.html
-    # E3 extension `\e[3J` to clear the scrollback buffer see 'man clear'
-    printf '\e[H\e[2J\e[3J'
+  # Clear the screen and move cursor to (0,0).
+  # This mimics the 'clear' command.
+  # https://vt100.net/docs/vt510-rm/ED.html
+  # https://vt100.net/docs/vt510-rm/CUP.html
+  # E3 extension `\e[3J` to clear the scrollback buffer see 'man clear'
+  printf '\e[H\e[2J\e[3J'
 
   # adds the y-offset
   moveYOffset
@@ -1102,6 +1185,7 @@ StartupRoutine(){
     moveXOffset; printf "%b" " [■■■■■■■■··]  80%\r"
     GetVersionInformation
     moveXOffset; printf "%b" " [■■■■■■■■■·]  90%\r"
+    GetPADDInformation
     moveXOffset; printf "%b" " [■■■■■■■■■■] 100%\n"
 
   elif [ "$1" = "mini" ]; then
@@ -1118,9 +1202,10 @@ StartupRoutine(){
     GetNetworkInformation
     moveXOffset; echo "- Gathering version info."
     GetVersionInformation
+    GetPADDInformation
     moveXOffset; echo "  - Core $CORE_VERSION, Web $WEB_VERSION"
     moveXOffset; echo "  - FTL $FTL_VERSION, PADD $padd_version"
-    moveXOffset; echo "  - $version_status"
+
 
   else
     moveXOffset; printf "%b" "${padd_logo_retro_1}\n"
@@ -1142,11 +1227,11 @@ StartupRoutine(){
     GetNetworkInformation
     moveXOffset; echo "- Gathering version information..."
     GetVersionInformation
+    GetPADDInformation
     moveXOffset; echo "  - Pi-hole Core $CORE_VERSION"
     moveXOffset; echo "  - Web Admin $WEB_VERSION"
     moveXOffset; echo "  - FTL $FTL_VERSION"
     moveXOffset; echo "  - PADD $padd_version"
-    moveXOffset; echo "  - $version_status"
   fi
 
   moveXOffset; printf "%s" "- Starting in "
@@ -1167,6 +1252,9 @@ NormalPADD() {
     # Generate output that depends on the terminal size
     # e.g. Heatmap and barchart
     GenerateSizeDependendOutput ${padd_size}
+
+    # Sets the message displayed in the "status field" depending on the set flags
+    SetStatusMessage
 
     # Output everything to the screen
     PrintDashboard ${padd_size}
@@ -1210,11 +1298,17 @@ NormalPADD() {
       LastCheckNetworkInformation="${now}"
     fi
 
-    # Get Pi-hole components and PADD version information once every 24 hours
-    if [ $((now - LastCheckVersionInformation)) -ge 86400 ]; then
+    # Get Pi-hole components version information every 30 seconds
+    if [ $((now - LastCheckVersionInformation)) -ge 30 ]; then
       . /etc/pihole/versions
       GetVersionInformation
       LastCheckVersionInformation="${now}"
+    fi
+
+    # Get PADD version information every 24hours
+    if [ $((now - LastCheckPADDInformation)) -ge 86400 ]; then
+      GetPADDInformation
+      LastCheckPADDInformation="${now}"
     fi
 
   done
@@ -1259,6 +1353,15 @@ TerminalResize(){
     # kill the sleep function within NormalPADD() to trigger redrawing
     # of the Dashboard
     SizeChecker
+
+    # Clear the screen and move cursor to (0,0).
+    # This mimics the 'clear' command.
+    # https://vt100.net/docs/vt510-rm/ED.html
+    # https://vt100.net/docs/vt510-rm/CUP.html
+    # E3 extension `\e[3J` to clear the scrollback buffer (see 'man clear')
+
+    printf '\e[H\e[2J\e[3J'
+
     kill $sleepPID > /dev/null 2>&1
 }
 
@@ -1269,6 +1372,13 @@ main(){
 
     # Trap on exit
     trap 'CleanExit' INT TERM EXIT
+
+    # If setupVars.conf is not present, then PADD is not running on a Pi-hole
+    # and we are not able to start as StartupRoutine() will fail below
+    if [ ! -f /etc/pihole/setupVars.conf ]; then
+      printf "%b" "${check_box_bad} Error!\n    PADD only works in conjunction with Pi-hole!\n"
+      exit 1
+    fi
 
     SizeChecker
 
