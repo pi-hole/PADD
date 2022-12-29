@@ -52,14 +52,13 @@ check_box_good="[${green_text}✓${reset_text}]"       # Good
 check_box_bad="[${red_text}✗${reset_text}]"          # Bad
 check_box_question="[${yellow_text}?${reset_text}]"  # Question / ?
 check_box_info="[${yellow_text}i${reset_text}]"      # Info / i
-check_box_minus="[${magenta_text}-${reset_text}]"    # -
 
 # PICO STATUSES
 pico_status_ok="${check_box_good} Sys. OK"
 pico_status_update="${check_box_info} Update"
 pico_status_hot="${check_box_bad} Sys. Hot!"
-pico_status_off="${check_box_bad} No blck"
-pico_status_ftl_down="${check_box_info} FTL Down"
+pico_status_off="${check_box_info} No blck"
+pico_status_ftl_down="${check_box_bad} FTL Down"
 pico_status_dns_down="${check_box_bad} DNS Down"
 pico_status_unknown="${check_box_question} Stat. Unk."
 
@@ -67,8 +66,8 @@ pico_status_unknown="${check_box_question} Stat. Unk."
 mini_status_ok="${check_box_good} System OK"
 mini_status_update="${check_box_info} Update avail."
 mini_status_hot="${check_box_bad} System is hot!"
-mini_status_off="${check_box_minus} No blocking!"
-mini_status_ftl_down="${check_box_info} FTL down!"
+mini_status_off="${check_box_info} No blocking!"
+mini_status_ftl_down="${check_box_bad} FTL down!"
 mini_status_dns_down="${check_box_bad} DNS off!"
 mini_status_unknown="${check_box_question} Status unknown"
 
@@ -76,8 +75,8 @@ mini_status_unknown="${check_box_question} Status unknown"
 full_status_ok="${check_box_good} System is healthy"
 full_status_update="${check_box_info} Updates are available"
 full_status_hot="${check_box_bad} System is hot!"
-full_status_off="${check_box_minus} Blocking is disabled"
-full_status_ftl_down="${check_box_info} FTL is down!"
+full_status_off="${check_box_info} Blocking is disabled"
+full_status_ftl_down="${check_box_bad} FTL is down!"
 full_status_dns_down="${check_box_bad} DNS is off!"
 full_status_unknown="${check_box_question} Status unknown!"
 
@@ -85,8 +84,8 @@ full_status_unknown="${check_box_question} Status unknown!"
 mega_status_ok="${check_box_good} Your system is healthy"
 mega_status_update="${check_box_info} Updates are available"
 mega_status_hot="${check_box_bad} Your system is hot!"
-mega_status_off="${check_box_minus} Blocking is disabled!"
-mega_status_ftl_down="${check_box_info} FTLDNS service is not running!"
+mega_status_off="${check_box_info} Blocking is disabled!"
+mega_status_ftl_down="${check_box_bad} FTLDNS service is not running!"
 mega_status_dns_down="${check_box_bad} Pi-hole's DNS server is off!"
 mega_status_unknown="${check_box_question} Unable to determine Pi-hole status!"
 
@@ -94,8 +93,8 @@ mega_status_unknown="${check_box_question} Unable to determine Pi-hole status!"
 tiny_status_ok="${check_box_good} System is healthy"
 tiny_status_update="${check_box_info} Updates are available"
 tiny_status_hot="${check_box_bad} System is hot!"
-tiny_status_off="${check_box_minus} Blocking is disabled"
-tiny_status_ftl_down="${check_box_info} FTL is down!"
+tiny_status_off="${check_box_info} Blocking is disabled"
+tiny_status_ftl_down="${check_box_bad} FTL is down!"
 tiny_status_dns_down="${check_box_bad} DNS is off!"
 tiny_status_unknown="${check_box_question} Status unknown!"
 
@@ -400,8 +399,8 @@ GetPiholeInformation() {
   ftl_down_flag=false
   if [ -z "${ftlPID}" ]; then
     ftl_status="Not running"
-    ftl_heatmap=${yellow_text}
-    ftl_check_box=${check_box_info}
+    ftl_heatmap=${red_text}
+    ftl_check_box=${check_box_bad}
     # set flag to change the status message in SetStatusMessage()
     ftl_down_flag=true
   else
@@ -418,29 +417,16 @@ GetPiholeInformation() {
   # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled, ${ftl_status} == "Not running" no ftlPID found
   dns_down_flag=false
   if [ "${ftl_dns_port}" = 0 ] || [ "${ftl_status}" = "Not running" ]; then
-    pihole_status="DNS Offline"
-    pihole_heatmap=${red_text}
-    pihole_check_box=${check_box_bad}
+    dns_status="DNS offline"
+    dns_heatmap=${red_text}
+    dns_check_box=${check_box_bad}
     # set flag to change the status message in SetStatusMessage()
     dns_down_flag=true
   else
-    if [ "${blocking_status}" = "enabled" ]; then
-      pihole_status="Active"
-      pihole_heatmap=${green_text}
-      pihole_check_box=${check_box_good}
-    fi
-    if [ "${blocking_status}" = "disabled" ]; then
-      pihole_status="Blocking disabled"
-      pihole_heatmap=${red_text}
-      pihole_check_box=${check_box_minus}
-    fi
-    if [ "${blocking_status}" = "unknown" ]; then
-      pihole_status="Unknown"
-      pihole_heatmap=${yellow_text}
-      pihole_check_box=${check_box_question}
-    fi
-  fi
-
+    dns_check_box=${check_box_good}
+    dns_status="Active"
+    dns_heatmap=${green_text}
+fi
 }
 
 GetVersionInformation() {
@@ -736,7 +722,7 @@ PrintLogo() {
   else
     printf "%s${clear_line}\n" "${padd_logo_retro_1}"
     printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
-    printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
+    printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_retro_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
   fi
 }
 
@@ -763,7 +749,7 @@ PrintDashboard() {
         # nano is a screen at least 24x12 (columns x lines)
         moveXOffset; printf "%s${clear_line}\n" "n${padd_text} ${mini_status}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ================${reset_text}"
-        moveXOffset; printf "%s${clear_line}\n" " Up:  ${pihole_check_box}      FTL: ${ftl_check_box}"
+        moveXOffset; printf "%s${clear_line}\n" " DNS:  ${dns_check_box}      FTL: ${ftl_check_box}"
         moveXOffset; printf "%s${clear_line}\n" " Blk: [${ads_blocked_bar}] ${ads_percentage_today}%"
         moveXOffset; printf "%s${clear_line}\n" " Blk: ${ads_blocked_today} / ${dns_queries_today}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ================${reset_text}"
@@ -778,7 +764,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "µ${padd_text}     ${mini_status}"
         moveXOffset; printf "%s${clear_line}\n" ""
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ======================${reset_text}"
-        moveXOffset; printf "%s${clear_line}\n" " Status:  ${pihole_check_box}      FTL:  ${ftl_check_box}"
+        moveXOffset; printf "%s${clear_line}\n" " DNS:  ${dns_check_box}      FTL:  ${ftl_check_box}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ========================${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" " Blckng:  ${domains_being_blocked} domains"
         moveXOffset; printf "%s${clear_line}\n" " Piholed: [${ads_blocked_bar}] ${ads_percentage_today}%"
@@ -796,7 +782,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
         moveXOffset; printf "%s${clear_line}\n" ""
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ================================${reset_text}"
-        moveXOffset; printf " %-9s${pihole_heatmap}%-10s${reset_text} %-5s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+        moveXOffset; printf " %-9s${dns_heatmap}%-10s${reset_text} %-5s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "DNS:" "${dns_status}" "FTL:" "${ftl_status}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ==================================${reset_text}"
         moveXOffset; printf " %-9s%-29s${clear_line}\n" "Blckng:" "${domains_being_blocked} domains"
         moveXOffset; printf " %-9s[%-20s] %-5s${clear_line}\n" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
@@ -821,7 +807,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ============================================${reset_text}"
-        moveXOffset; printf " %-10s${pihole_heatmap}%-16s${reset_text} %-8s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+        moveXOffset; printf " %-10s${dns_heatmap}%-16s${reset_text} %-8s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "DNS:" "${dns_status}" "FTL:" "${ftl_status}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ==============================================${reset_text}"
         moveXOffset; printf " %-10s%-29s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains"
         moveXOffset; printf " %-10s[%-30s] %-5s${clear_line}\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
@@ -858,7 +844,7 @@ PrintDashboard() {
             moveXOffset; printf "%s${clear_line}\n" ""
         fi
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ===================================================${reset_text}"
-        moveXOffset; printf " %-10s${pihole_heatmap}%-19s${reset_text} %-10s${ftl_heatmap}%-19s${reset_text}${clear_line}\n" "Status:" "${pihole_status}" "FTL:" "${ftl_status}"
+        moveXOffset; printf " %-10s${dns_heatmap}%-19s${reset_text} %-10s${ftl_heatmap}%-19s${reset_text}${clear_line}\n" "DNS:" "${dns_status}" "FTL:" "${ftl_status}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS =====================================================${reset_text}"
         moveXOffset; printf " %-10s%-49s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains"
         moveXOffset; printf " %-10s[%-40s] %-5s${clear_line}\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
@@ -885,7 +871,7 @@ PrintDashboard() {
          # mega is a screen with at least 80 columns and 26 lines
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_1}"
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
-        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" ""
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS =========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-19s %-10s[%-40s] %-5s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
