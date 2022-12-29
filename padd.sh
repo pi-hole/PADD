@@ -735,7 +735,7 @@ PrintLogo() {
   else
     printf "%s${clear_line}\n" "${padd_logo_retro_1}"
     printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
-    printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
+    printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
   fi
 }
 
@@ -884,7 +884,7 @@ PrintDashboard() {
          # mega is a screen with at least 80 columns and 26 lines
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_1}"
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
-        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} Core  ${ftl_check_box} FTL   ${mega_status}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${pihole_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" ""
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS =========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-19s %-10s[%-40s] %-5s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
