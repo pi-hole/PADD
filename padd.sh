@@ -52,6 +52,7 @@ check_box_good="[${green_text}✓${reset_text}]"       # Good
 check_box_bad="[${red_text}✗${reset_text}]"          # Bad
 check_box_question="[${yellow_text}?${reset_text}]"  # Question / ?
 check_box_info="[${yellow_text}i${reset_text}]"      # Info / i
+check_box_minus="[${magenta_text}-${reset_text}]"    # -
 
 # PICO STATUSES
 pico_status_ok="${check_box_good} Sys. OK"
@@ -431,7 +432,7 @@ GetPiholeInformation() {
     if [ "${blocking_status}" = "disabled" ]; then
       pihole_status="Blocking disabled"
       pihole_heatmap=${red_text}
-      pihole_check_box=${check_box_bad}
+      pihole_check_box=${check_box_minus}
     fi
     if [ "${blocking_status}" = "unknown" ]; then
       pihole_status="Unknown"
