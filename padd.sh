@@ -433,6 +433,11 @@ GetVersionInformation() {
 
   out_of_date_flag=false
 
+  # If PADD is running inside docker, immediately return without checking for updated component versions
+  if [ -n "${DOCKER_VERSION}" ]; then
+    return
+  fi
+
   # Gather CORE version information...
   # Extract vx.xx or vx.xx.xxx version
   CORE_VERSION="$(echo "${CORE_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
@@ -546,6 +551,10 @@ GetVersionInformation() {
 }
 
 GetPADDInformation() {
+  # If PADD is running inside docker, immediately return without checking for an update
+  if [ -n "${DOCKER_VERSION}" ]; then
+    return
+  fi
 
   # PADD version information...
   padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
