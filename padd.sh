@@ -580,97 +580,34 @@ GenerateSizeDependendOutput() {
   elif [ "$1" = "mini" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 20 "color")
 
-    if [ ${#latest_blocked_raw} -gt 29 ]; then
-      latest_blocked=$(echo "$latest_blocked_raw" | cut -c1-26)"..."
-    else
-      latest_blocked=${latest_blocked_raw}
-    fi
-
-    if [ ${#top_blocked_raw} -gt 29 ]; then
-      top_blocked=$(echo "$top_blocked_raw" | cut -c1-26)"..."
-    else
-      top_blocked=${top_blocked_raw}
-    fi
+    latest_blocked=$(truncateString "$latest_blocked_raw" 29)
+    top_blocked=$(truncateString "$top_blocked_raw" 29)
 
   elif [ "$1" = "tiny" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
 
-    if [ ${#latest_blocked_raw} -gt 41 ]; then
-      latest_blocked=$(echo "$latest_blocked_raw" | cut -c1-38)"..."
-    else
-      latest_blocked=${latest_blocked_raw}
-    fi
-
-    if [ ${#top_blocked_raw} -gt 41 ]; then
-      top_blocked=$(echo "$top_blocked_raw" | cut -c1-38)"..."
-    else
-      top_blocked=${top_blocked_raw}
-    fi
-
-    if [ ${#top_domain_raw} -gt 41 ]; then
-      top_domain=$(echo "$top_domain_raw" | cut -c1-38)"..."
-    else
-      top_domain=${top_domain_raw}
-    fi
-
-    if [ ${#top_client_raw} -gt 41 ]; then
-      top_client=$(echo "$top_client_raw" | cut -c1-38)"..."
-    else
-      top_client=${top_client_raw}
-    fi
+    latest_blocked=$(truncateString "$latest_blocked_raw" 41)
+    top_blocked=$(truncateString "$top_blocked_raw" 41)
+    top_domain=$(truncateString "$top_domain_raw" 41)
+    top_client=$(truncateString "$top_client_raw" 41)
 
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 40 "color")
 
-    if [ ${#latest_blocked_raw} -gt 48 ]; then
-      latest_blocked=$(echo "$latest_blocked_raw" | cut -c1-45)"..."
-    else
-      latest_blocked=${latest_blocked_raw}
-    fi
+    latest_blocked=$(truncateString "$latest_blocked_raw" 48)
+    top_blocked=$(truncateString "$top_blocked_raw" 48)
+    top_domain=$(truncateString "$top_domain_raw" 48)
+    top_client=$(truncateString "$top_client_raw" 48)
 
-    if [ ${#top_blocked_raw} -gt 48 ]; then
-      top_blocked=$(echo "$top_blocked_raw" | cut -c1-45)"..."
-    else
-      top_blocked=${top_blocked_raw}
-    fi
-
-    if [ ${#top_domain_raw} -gt 48 ]; then
-      top_domain=$(echo "$top_domain_raw" | cut -c1-45)"..."
-    else
-      top_domain=${top_domain_raw}
-    fi
-
-    if [ ${#top_client_raw} -gt 48 ]; then
-      top_client=$(echo "$top_client_raw" | cut -c1-45)"..."
-    else
-      top_client=${top_client_raw}
-    fi
 
   elif [ "$1" = "mega" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
-    if [ ${#latest_blocked_raw} -gt 68 ]; then
-      latest_blocked=$(echo "$latest_blocked_raw" | cut -c1-65)"..."
-    else
-      latest_blocked=${latest_blocked_raw}
-    fi
 
-    if [ ${#top_blocked_raw} -gt 68 ]; then
-      top_blocked=$(echo "$top_blocked_raw" | cut -c1-65)"..."
-    else
-      top_blocked=${top_blocked_raw}
-    fi
+    latest_blocked=$(truncateString "$latest_blocked_raw" 68)
+    top_blocked=$(truncateString "$top_blocked_raw" 68)
+    top_domain=$(truncateString "$top_domain_raw" 68)
+    top_client=$(truncateString "$top_client_raw" 68)
 
-    if [ ${#top_domain_raw} -gt 68 ]; then
-      top_domain=$(echo "$top_domain_raw" | cut -c1-65)"..."
-    else
-      top_domain=${top_domain_raw}
-    fi
-
-    if [ ${#top_client_raw} -gt 68 ]; then
-      top_client=$(echo "$top_client_raw" | cut -c1-65)"..."
-    else
-      top_client=${top_client_raw}
-    fi
   fi
 
   # System uptime
@@ -1203,6 +1140,25 @@ filterModel() {
     #    `{$1=$1}1`: remove all extra spaces. The last "1" evaluates as true, printing the result
     echo "$1" | awk -v list="$FILTERLIST" '{IGNORECASE=1; gsub(list,"")}; {$1=$1}1'
 }
+
+# Truncates a given string and appends three '...'
+# takes two parameters
+# $1: string to truncate
+# $2: max length of the string
+truncateString() {
+    local truncatedString length shorted
+
+    length=${#1}
+    shorted=$(($2-3))
+    if [ "${length}" -gt "$2" ]; then
+      truncatedString=$(echo "$1" | cut -c1-$shorted)"..."
+      echo "${truncatedString}"
+    else
+      echo "$1"
+    fi
+}
+
+
 
 ########################################## MAIN FUNCTIONS ##########################################
 
