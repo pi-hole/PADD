@@ -128,7 +128,7 @@ Authenthication() {
     # Try to authenticate
     ChallengeResponse
 
-    while [ "${validSession}" = false ]; do
+    while [ "${validSession}" = false ] || [ -z "${validSession}" ] ; do
         echo "Authentication failed."
 
         # no password was supplied as argument
