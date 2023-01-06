@@ -1149,12 +1149,14 @@ truncateString() {
     local truncatedString length shorted
 
     length=${#1}
-    shorted=$(($2-3))
+    shorted=$(($2-3)) # shorten max allowed length by 3 to make room for the dots
     if [ "${length}" -gt "$2" ]; then
-      truncatedString=$(echo "$1" | cut -c1-$shorted)"..."
-      echo "${truncatedString}"
+        # if length of the string is larger then the specified max length
+        # cut every char from the string exceeding length $shorted and add three dots
+        truncatedString=$(echo "$1" | cut -c1-$shorted)"..."
+        echo "${truncatedString}"
     else
-      echo "$1"
+        echo "$1"
     fi
 }
 
