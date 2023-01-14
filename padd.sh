@@ -84,7 +84,6 @@ mega_status_hot="${check_box_bad} Your system is hot!"
 mega_status_off="${check_box_info} Blocking is disabled!"
 mega_status_ftl_down="${check_box_bad} FTLDNS service is not running!"
 mega_status_dns_down="${check_box_bad} Pi-hole's DNS server is off!"
-mega_status_unknown="${check_box_question} Unable to determine Pi-hole status!"
 
 # TINY STATUS
 tiny_status_ok="${check_box_good} System is healthy"
@@ -122,7 +121,7 @@ ConstructAPI() {
 
 TestAPIAvailability() {
 
-    availabilityResonse=$(curl -s -o /dev/null -w "%{http_code}" http://${URL}:${PORT}/${APIPATH}/auth)
+    availabilityResonse=$(curl -s -o /dev/null -w "%{http_code}" "http://${URL}:${PORT}/${APIPATH}/auth")
 
     # test if http status code was 200 (OK)
     if [ "${availabilityResonse}" = 200 ]; then
@@ -171,7 +170,7 @@ DeleteSession() {
     # SID is not null (successful authenthication only), delete the session
     if [ "${validSession}" = true ] && [ ! "${SID}" = null ]; then
         # Try to delte the session. Omitt the output, but get the http status code
-        deleteResponse=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE http://${URL}:${PORT}/${APIPATH}/auth  -H "Accept: application/json" -H "sid: ${SID}")
+        deleteResponse=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "http://${URL}:${PORT}/${APIPATH}/auth"  -H "Accept: application/json" -H "sid: ${SID}")
 
         case "${deleteResponse}" in
             "200") printf "%b" "\nA session that was not created cannot be deleted (e.g., empty API password).\n";;
@@ -194,9 +193,9 @@ ChallengeResponse() {
 	# Get challenge from FTL
 	# Calculate response based on challenge and password hash
 	# Send response & get session response
-	challenge="$(curl --silent -X GET http://${URL}:${PORT}/${APIPATH}/auth | jq --raw-output .challenge)"
+	challenge="$(curl --silent -X GET "http://${URL}:${PORT}/${APIPATH}/auth" | jq --raw-output .challenge)"
 	response="$(printf "%b" "${challenge}:${pwhash}" | sha256sum | sed 's/\s.*$//')"
-	sessionResponse="$(curl --silent -X POST http://${URL}:${PORT}/${APIPATH}/auth --data "{\"response\":\"${response}\"}" )"
+	sessionResponse="$(curl --silent -X POST "http://${URL}:${PORT}/${APIPATH}/auth" --data "{\"response\":\"${response}\"}" )"
 
   if [ -z "${sessionResponse}" ]; then
     echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
@@ -222,7 +221,7 @@ GetSummaryInformation() {
 
   clients=$(echo "${summary}" | jq .ftl.clients.active )
 
-  blocking_status=$(echo "${summary}" | jq .system.dns.blocking )
+  blocking_enabled=$(echo "${summary}" | jq .system.dns.blocking )
 
   domains_being_blocked_raw=$(echo "${summary}" | jq .ftl.database.gravity )
   domains_being_blocked=$(printf "%.f" "${domains_being_blocked_raw}")
@@ -246,10 +245,10 @@ GetSummaryInformation() {
 
   top_domain_raw=$(GetFTLData "/stats/top_domains" | jq --raw-output .top_domains[0].domain)
 
-  top_client_raw=$(GetFTLData "/stats/top_clients" | jq --raw-output .clients[0].name))
+  top_client_raw=$(GetFTLData "/stats/top_clients" | jq --raw-output .clients[0].name)
   if [ -z "${top_client_raw}" ]; then
     # if no hostname was supplied, use IP
-    top_client_raw=$(GetFTLData "/stats/top_clients" | jq --raw-output .clients[0].ip))
+    top_client_raw=$(GetFTLData "/stats/top_clients" | jq --raw-output .clients[0].ip)
   fi
 }
 
@@ -260,15 +259,15 @@ GetSystemInformation() {
     # CPU temperature is returned in °C
     cpu_temp=$(echo "${summary}" | jq .system.sensors[0].value )
 
-  # Convert CPU temperature to correct unit
-  if [ "${TEMPERATUREUNIT}" = "F" ]; then
-    temperature="$(printf %.1f "$(echo "${cpu_temp}" | awk '{print $1 * 9 / 5000 + 32}')")°F"
-  elif [ "${TEMPERATUREUNIT}" = "K" ]; then
-    temperature="$(printf %.1f "$(echo "${cpu_temp}" | awk '{print $1 / 1000 + 273.15}')")°K"
-  # Addresses Issue 1: https://github.com/jpmck/PAD/issues/1
-  else
-    temperature="$(printf %.1f "$(echo "${cpu_temp}" | awk '{print $1 / 1000}')")°C"
-  fi
+    # Convert CPU temperature to correct unit
+    if [ "${TEMPERATUREUNIT}" = "F" ]; then
+        cpu_temp="$(printf %.1f "$(echo "${cpu_temp}" | awk '{print $1 * 9 / 5000 + 32}')")°F"
+    elif [ "${TEMPERATUREUNIT}" = "K" ]; then
+        cpu_temp="$(printf %.1f "$(echo "${cpu_temp}" | awk '{print $1 / 1000 + 273.15}')")°K"
+    # Addresses Issue 1: https://github.com/jpmck/PAD/issues/1
+    else
+        cpu_temp="$(printf %.1f "$(echo "${cpu_temp}" | awk '{print $1 / 1000}')")°C"
+    fi
 
     # CPU, load, heatmap
     core_count=$(echo "${summary}" | jq .system.cpu.nprocs)
@@ -283,13 +282,13 @@ GetSystemInformation() {
   # CPU temperature heatmap
   hot_flag=false
   # If we're getting close to 85°C... (https://www.raspberrypi.org/blog/introducing-turbo-mode-up-to-50-more-performance-for-free/)
-  if [ ${cpu_tmp} -gt 80000 ]; then
+  if [ "${cpu_temp}" -gt 80000 ]; then
     temp_heatmap=${blinking_text}${red_text}
     # set flag to change the status message in SetStatusMessage()
     hot_flag=true
-  elif [ ${cpu_temp} -gt 70000 ]; then
+  elif [ "${cpu_temp}" -gt 70000 ]; then
     temp_heatmap=${magenta_text}
-  elif [ ${cpu_temp} -gt 60000 ]; then
+  elif [ "${cpu_temp}" -gt 60000 ]; then
     temp_heatmap=${blue_text}
   else
     temp_heatmap=${cyan_text}
@@ -503,12 +502,14 @@ GetPiholeInformation() {
     ftl_status="Running"
     ftl_heatmap=${green_text}
     ftl_check_box=${check_box_good}
+    # Get FTL CPU and memory usage
     ftl_cpu="$(ps -p "${ftlPID}" -o %cpu | tail -n1 | tr -d '[:space:]')"
     ftl_mem_percentage="$(ps -p "${ftlPID}" -o %mem | tail -n1 | tr -d '[:space:]')"
+    # Get Pi-hole (blocking) status
+    ftl_dns_port=$(GetFTLData "/dns/port" | jq .dns_port)
   fi
 
-  # Get Pi-hole (blocking) status
-  ftl_dns_port=$(GetFTLData "/dns/port" | jq .dns_port)
+
 
   # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled, ${ftl_status} == "Not running" no ftlPID found
   dns_down_flag=false
@@ -527,16 +528,17 @@ fi
 
 GetVersionInformation() {
 
+    out_of_date_flag=false
     versions_raw=$(GetFTLData "/version")
 
     # Check if core version
-    core_branch="$(echo "${versions_raw}" | jq --raw-output .core.branch)"
-    core_version=$(echo "${versions_raw}" | jq --raw-output .core.tag | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')
-    core_version_latest=$(pihole -v -p | awk '{print $(NF)}' | tr -d ')')
+    CORE_BRANCH="$(echo "${versions_raw}" | jq --raw-output .core.branch)"
+    CORE_VERSION=$(echo "${versions_raw}" | jq --raw-output .core.tag | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')
+    GITHUB_CORE_VERSION=$(pihole -v -p | awk '{print $(NF)}' | tr -d ')')
+    CORE_HASH
+    GITHUB_CORE_HASH
 
-  out_of_date_flag=false
-
-  # Gather CORE version information...
+  # Gather core version information...
   # Extract vx.xx or vx.xx.xxx version
   CORE_VERSION="$(echo "${CORE_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
   if [ "${CORE_BRANCH}" = "master" ]; then
@@ -576,6 +578,9 @@ GetVersionInformation() {
   if [ "$INSTALL_WEB_INTERFACE" = true ]; then
     WEB_BRANCH="$(echo "${versions_raw}" | jq --raw-output .web.branch)"
     WEB_VERSION=$(echo "${versions_raw}" | jq --raw-output .web.tag | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')
+    GITHUB_WEB_VERSION
+    WEB_HASH
+    GITHUB_WEB_HASH
 
     if [ "${WEB_BRANCH}" = "master" ]; then
       web_version_converted="$(VersionConverter "${WEB_VERSION}")"
@@ -618,6 +623,10 @@ GetVersionInformation() {
    # Extract vx.xx or vx.xx.xxx version
   FTL_BRANCH="$(echo "${versions_raw}" | jq --raw-output .ftl.branch)"
   FTL_VERSION=$(echo "${versions_raw}" | jq --raw-output .ftl.tag | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')
+  GITHUB_FTL_VERSION
+  FTL_HASH
+  GITHUB_FTL_HASH
+
 
   if [ "${FTL_BRANCH}" = "master" ]; then
     ftl_version_converted="$(VersionConverter "${FTL_VERSION}")"
@@ -750,10 +759,10 @@ SetStatusMessage() {
     if [ "${hot_flag}" = true ]; then
         # Check if CPU temperature is high
         pico_status="${pico_status_hot}"
-        mini_status="${mini_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-        tiny_status="${tiny_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-        full_status="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-        mega_status="${mega_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
+        mini_status="${mini_status_hot} ${blinking_text}${red_text}${cpu_temp}${reset_text}"
+        tiny_status="${tiny_status_hot} ${blinking_text}${red_text}${cpu_temp}${reset_text}"
+        full_status="${full_status_hot} ${blinking_text}${red_text}${cpu_temp}${reset_text}"
+        mega_status="${mega_status_hot} ${blinking_text}${red_text}${cpu_temp}${reset_text}"
 
     elif [ "${ftl_down_flag}" = true ]; then
         # Check if FTL is down
@@ -771,15 +780,7 @@ SetStatusMessage() {
         full_status=${full_status_dns_down}
         mega_status=${mega_status_dns_down}
 
-    elif [ "${blocking_status}" = "unknown" ]; then
-        # Check if blocking status is unknown
-        pico_status=${pico_status_unknown}
-        mini_status=${mini_status_unknown}
-        tiny_status=${tiny_status_unknown}
-        full_status=${full_status_unknown}
-        mega_status=${mega_status_unknown}
-
-    elif [ "${blocking_status}" = "disabled" ]; then
+    elif [ "${blocking_enabled}" = "false" ]; then
         # Check if blocking status is disabled
         pico_status=${pico_status_off}
         mini_status=${mini_status_off}
@@ -795,7 +796,7 @@ SetStatusMessage() {
         full_status=${full_status_update}
         mega_status=${mega_status_update}
 
-    elif [ "${blocking_status}" = "enabled" ]; then
+    elif [ "${blocking_enabled}" = "true" ]; then
         # if we reach this point and blocking is enabled, everything is fine
         pico_status=${pico_status_ok}
         mini_status=${mini_status_ok}
@@ -936,7 +937,7 @@ PrintDashboard() {
         fi
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM ==============================================${reset_text}"
         moveXOffset; printf " %-10s%-29s${clear_line}\n" "Uptime:" "${system_uptime}"
-        moveXOffset; printf " %-10s${temp_heatmap}%-17s${reset_text} %-8s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
+        moveXOffset; printf " %-10s${temp_heatmap}%-17s${reset_text} %-8s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${cpu_temp}" "Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
         moveXOffset; printf " %-10s[${memory_heatmap}%-7s${reset_text}] %-6s %-8s[${cpu_load_1_heatmap}%-7s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU:" "${cpu_bar}" "${cpu_percent}%"
     elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
         # slim is a screen with at least 60 columns and exactly 21 lines
@@ -973,7 +974,7 @@ PrintDashboard() {
         fi
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =====================================================${reset_text}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Uptime:" "${system_uptime}"
-        moveXOffset; printf " %-10s${temp_heatmap}%-21s${reset_text}%-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
+        moveXOffset; printf " %-10s${temp_heatmap}%-21s${reset_text}%-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${cpu_temp}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
         moveXOffset; printf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
     else # ${padd_size} = mega
          # mega is a screen with at least 80 columns and 26 lines
@@ -990,7 +991,7 @@ PrintDashboard() {
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}FTL ============================================================================${reset_text}"
         moveXOffset; printf " %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}" "Mem. Use:" "${ftl_mem_percentage}"
-        moveXOffset; printf " %-10s%-69s${clear_line}\n" "DNSCache:" "${cache_inserts} insertions, ${cache_deletes} deletions, ${cache_size} total entries"
+        moveXOffset; printf " %-10s%-69s${clear_line}\n" "DNSCache:" "${cache_inserts} insertions, ${cache_evictions} deletions, ${cache_size} total entries"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-19s${clear_line}\n" "Hostname:" "${full_hostname}"
         moveXOffset; printf " %-10s%-15s %-4s%-9s %-4s%-9s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
@@ -1002,7 +1003,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Device:" "${sys_model}"
         moveXOffset; printf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
-        moveXOffset; printf " %-10s${temp_heatmap}%-10s${reset_text} %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-7s${reset_text} %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
+        moveXOffset; printf " %-10s${temp_heatmap}%-10s${reset_text} %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-7s${reset_text} %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}" "CPU Temp:" "${cpu_temp}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
     fi
 
     # Clear to end of screen (below the drawn dashboard)
@@ -1152,6 +1153,7 @@ SizeChecker(){
         fi
     fi
 }
+
 # converts a given version string e.g. v3.7.1 to 3007001000 to allow for easier comparison of multi digit version numbers
 # credits https://apple.stackexchange.com/a/123408
 VersionConverter() {
@@ -1178,6 +1180,7 @@ moveXOffset(){
     if [ "${xOffset}" -gt 0 ]; then
         printf '\e[%sC' "${xOffset}"
     fi
+}
 
 # Remove undesired strings from sys_model variable - used in GetSystemInformation() function
 filterModel() {
@@ -1216,7 +1219,7 @@ truncateString() {
 OutputJSON() {
     # Traps for graceful shutdown
     # https://unix.stackexchange.com/a/681201
-    trap clean_exit EXIT
+    trap CleanExit EXIT
     trap sig_cleanup INT QUIT TERM
 
     # Save current terminal settings (needed for later restore after password prompt)
@@ -1235,8 +1238,6 @@ OutputJSON() {
 }
 
 StartupRoutine(){
-  # Get config variables
-  . /etc/pihole/setupVars.conf
 
   # Clear the screen and move cursor to (0,0).
   # This mimics the 'clear' command.
@@ -1247,9 +1248,6 @@ StartupRoutine(){
 
   # adds the y-offset
   moveYOffset
-
-  # Get versions information
-  . /etc/pihole/versions
 
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     moveXOffset; PrintLogo "$1"
@@ -1378,7 +1376,6 @@ NormalPADD() {
 
     # Get uptime, CPU load, temp, etc. every 5 seconds
     if [ $((now - LastCheckSystemInformation)) -ge 5 ]; then
-      . /etc/pihole/setupVars.conf
       GetSystemInformation
       LastCheckSystemInformation="${now}"
     fi
@@ -1387,12 +1384,6 @@ NormalPADD() {
     if [ $((now - LastCheckSummaryInformation)) -ge 5 ]; then
       GetSummaryInformation
       LastCheckSummaryInformation="${now}"
-    fi
-
-    # Get uptime, CPU load, temp, etc. every 5 seconds
-    if [ $((now - LastCheckSystemInformation)) -ge 5 ]; then
-      GetSystemInformation ${padd_size}
-      LastCheckSystemInformation="${now}"
     fi
 
     # Get FTL status every 5 seconds
@@ -1409,7 +1400,6 @@ NormalPADD() {
 
     # Get Pi-hole components version information every 30 seconds
     if [ $((now - LastCheckVersionInformation)) -ge 30 ]; then
-      . /etc/pihole/versions
       GetVersionInformation
       LastCheckVersionInformation="${now}"
     fi
@@ -1421,8 +1411,6 @@ NormalPADD() {
     fi
 
   done
-
-  DeleteSession
 }
 
 DisplayHelp() {
@@ -1435,15 +1423,16 @@ DisplayHelp() {
 :::  -xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
 :::  -yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
 :::
-:::   -u <URL|IP>             URL or address of your Pi-hole (default: pi.hole)
-:::   -p <port>               Port of your Pi-hole's API (default: 8080)
-:::   -a <api>                Path where your  Pi-hole's API is hosted (default: api)
-:::   -s <secret password>    Your Pi-hole's password, required to access the API
-:::   -j                      output stats as JSON formatted string and exit and exit
-:::   -h                      display this help text
+:::  -u <URL|IP>             URL or address of your Pi-hole (default: pi.hole)
+:::  -p <port>               Port of your Pi-hole's API (default: 8080)
+:::  -a <api>                Path where your  Pi-hole's API is hosted (default: api)
+:::  -s <secret password>    Your Pi-hole's password, required to access the API
+:::  -j                      output stats as JSON formatted string and exit and exit
+:::  -h                      display this help text
 
 EOM
-    exit 0
+    # exit with the supplied argument
+    exit "$1"
 }
 
 # Called on signals INT QUIT TERM
@@ -1455,12 +1444,12 @@ sig_cleanup() {
     # causing EXIT trap to be executed, so we trap EXIT after INT
     trap '' EXIT
 
-    (exit $err) # execute in a subshell just to pass $? to clean_exit()
-    clean_exit
+    (exit $err) # execute in a subshell just to pass $? to CleanExit()
+    CleanExit
 }
 
 # Called on signal EXIT, or indirectly on INT QUIT TERM
-clean_exit() {
+CleanExit() {
     # save the return code of the script
     err=$?
 
@@ -1472,58 +1461,16 @@ clean_exit() {
         stty "${stty_orig}"
     fi
 
-    # Turn cursor on
-    setterm -cursor on
-
-    #  Delete session from FTL server
-    DeleteSession
-    exit $err # exit the script with saved $?
-}
-
-# Get supplied options
-
-while getopts ":u:p:a:s:jh" args; do
-	case "${args}" in
-	u)	URL="${OPTARG}" ;;
-    p)	PORT="${OPTARG}" ;;
-	a)	APIPATH="${OPTARG}" ;;
-	s)	password="${OPTARG}" ;;
-    j)  OutputJSON;;
-	h)  DisplayHelp;;
-	\?)	echo "Invalid option: -${OPTARG}"
-		  exit 1 ;;
-	:)	echo "Option -$OPTARG requires an argument."
-     	exit 1 ;;
-	*)	DisplayHelp;;
-	esac
-done
-
-# Save current terminal settings (needed for later restore after password prompt)
-stty_orig=$(stty -g)
-
-# Turns off the cursor
-# (From Pull request #8 https://github.com/jpmck/PADD/pull/8)
-setterm -cursor off
-
-# Construct FTL's API address depending on the arguments supplied
-ConstructAPI
-
-# Test if the authentication endpoint is availabe
-TestAPIAvailability
-
-# Traps for graceful shutdown
-# https://unix.stackexchange.com/a/681201
-trap clean_exit EXIT
-trap sig_cleanup INT QUIT TERM
-
     # Show the cursor
     # https://vt100.net/docs/vt510-rm/DECTCEM.html
     printf '\e[?25h'
 
     # if background sleep is running, kill it
     # http://mywiki.wooledge.org/SignalTrap#When_is_the_signal_handled.3F
-    kill $sleepPID > /dev/null 2>&1
+    kill "{$sleepPID}" > /dev/null 2>&1
 
+    #  Delete session from FTL server
+    DeleteSession
     exit $err # exit the script with saved $?
 }
 
@@ -1541,23 +1488,29 @@ TerminalResize(){
 
     printf '\e[H\e[2J\e[3J'
 
-    kill $sleepPID > /dev/null 2>&1
+    kill "{$sleepPID}" > /dev/null 2>&1
 }
 
 main(){
+
     # Hiding the cursor.
     # https://vt100.net/docs/vt510-rm/DECTCEM.html
     printf '\e[?25l'
 
-    # Trap on exit
-    trap 'CleanExit' INT TERM EXIT
+    # Traps for graceful shutdown
+    # https://unix.stackexchange.com/a/681201
+    trap CleanExit EXIT
+    trap sig_cleanup INT QUIT TERM
 
-    # If setupVars.conf is not present, then PADD is not running on a Pi-hole
-    # and we are not able to start as StartupRoutine() will fail below
-    if [ ! -f /etc/pihole/setupVars.conf ]; then
-      printf "%b" "${check_box_bad} Error!\n    PADD only works in conjunction with Pi-hole!\n"
-      exit 1
-    fi
+    # Save current terminal settings (needed for later restore after password prompt)
+    stty_orig=$(stty -g)
+
+
+    # Construct FTL's API address depending on the arguments supplied
+    ConstructAPI
+
+    # Test if the authentication endpoint is availabe
+    TestAPIAvailability
 
     SizeChecker
 
@@ -1570,11 +1523,15 @@ main(){
 # Process all options (if present)
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    "-j" | "--json"     ) OutputJSON; exit 0;;
-    "-h" | "--help"     ) DisplayHelp; exit 0;;
+    "-j" | "--json"     ) OutputJSON;;
+    "-h" | "--help"     ) DisplayHelp "0";;
     "-xoff"             ) xOffset="$2"; xOffOrig="$2"; shift;;
     "-yoff"             ) yOffset="$2"; yOffOrig="$2"; shift;;
-    *                   ) DisplayHelp; exit 1;;
+    "-u"                ) URL="$2"; shift;;
+    "-p"                ) PORT="$2"; shift;;
+    "-a"                ) APIPATH="$2"; shift;;
+    "-s"                ) password="$2"; shift;;
+    *                   ) DisplayHelp "1";;
   esac
   shift
 done
