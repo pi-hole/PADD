@@ -28,7 +28,7 @@ jobs:
           days-before-pr-close: 0
           # only run the action on merge conflict PR
           any-of-labels: 'Merge Conflict'
-          exempt-pr-labels: 'Internal,Never Stale,On Hold,WIP'
+          exempt-pr-labels: 'Internal, Never Stale, On Hold, WIP'
           exempt-all-pr-assignees: true
           operations-per-run: 300
           stale-pr-message: ''
