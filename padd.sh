@@ -299,7 +299,8 @@ GetSystemInformation() {
     cpu_percent=$(printf %.1f "$(echo "${sysinfo}" | jq .system.cpu.load.percent[0])")
 
     # Memory use, heatmap and bar
-    memory_percent="$(echo "${sysinfo}" | jq '.system.memory.ram."%used"')"
+    memory_percent_raw="$(echo "${sysinfo}" | jq '.system.memory.ram."%used"')"
+    memory_percent=$(printf %.1f "${memory_percent_raw}")
     memory_heatmap="$(HeatmapGenerator "${memory_percent}")"
 
     # Get device model
