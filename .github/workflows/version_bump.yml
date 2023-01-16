@@ -1,0 +1,49 @@
+name: Version bump
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 * * * *"
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    env:
+      REPO: ${{ github.repository }}
+      GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+    steps:
+      - name: Get latest release tag # can also be a draft release
+        run: |
+          LATEST_TAG=$(gh -R $REPO release list -L 1 | awk '{printf $3}')
+          echo "Latest version tag for releases in $REPO is $LATEST_TAG"
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_ENV
+
+      - name: Checkout code
+        uses: actions/checkout@v3.2.0
+        with:
+          ref: 'development'
+
+      - name: Check if branch already exists
+        run: |
+          LATEST_TAG=${{ env.latest_tag }}
+          REMOTE_BRANCH=$(git ls-remote --heads origin "bump_$LATEST_TAG")
+          [[ -z ${REMOTE_BRANCH} ]] && echo "branch_exists=false" >> $GITHUB_ENV || echo "branch_exists=true" >> $GITHUB_ENV
+          [[ -z ${REMOTE_BRANCH} ]] && echo "Remote branch bump_$LATEST_TAG does not exist" || echo "Remote branch bump_$LATEST_TAG already exists"
+
+      - name: Get current version
+        run: |
+          CURRENT_VERSION=$(cat padd.sh | grep '^padd_version=' | cut -d'"' -f 2)
+          echo "Current PADD version is $CURRENT_VERSION"
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_ENV
+
+      - name: Create PR if versions don't match and branch does not exist
+        if: (env.current_version != env.latest_tag) && (env.branch_exists == 'false')
+        run: |
+          LATEST_TAG=${{ env.latest_tag }}
+          git config --global user.email "pralor-bot@users.noreply.github.com"
+          git config --global user.name "pralor-bot"
+          git checkout -b "bump_$LATEST_TAG" development
+          sed -i "s/^padd_version=.*/padd_version=\"$LATEST_TAG\"/" padd.sh
+          git commit -a -m "Bump version to $LATEST_TAG"
+          git push --set-upstream origin "bump_$LATEST_TAG"
+          gh pr create -B development -H "bump_$LATEST_TAG" --title "Bump version to ${LATEST_TAG}" --body 'Created by Github action' --label 'Internal'
