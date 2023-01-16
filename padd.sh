@@ -144,14 +144,8 @@ Authenthication() {
             moveXOffset; echo "Wrong password supplied, please enter the correct password:"
         fi
 
-        # POSIX's `read` does not support `-s` option (suppressing the input)
-        # this workaround changes the terminal characteristics to not echo input and later rests this option
-        # credits https://stackoverflow.com/a/4316765
-
-        stty -echo
-        read -r password
-        stty "${stty_orig}"
-        echo ""
+        # secretly read the password
+        moveXOffset; secretRead; printf '\n'
 
         # Try to authenticate again
         ChallengeResponse
@@ -1187,6 +1181,53 @@ truncateString() {
 convertUptime() {
     # shellcheck disable=SC2016
     eval "echo $(date -ud "@$1" +'$((%s/3600/24)) days, %H hours, %M minutes')"
+}
+
+secretRead() {
+
+    # POSIX compliant function to read user-input and
+    # mask every character entered by (*)
+    #
+    # This is challenging, because in POSIX, `read` does not support
+    # `-s` option (suppressing the input) or
+    # `-n` option (reading n chars)
+
+
+    # This workaround changes the terminal characteristics to not echo input and later rests this option
+    # credits https://stackoverflow.com/a/4316765
+    # showing astrix instead of password
+    # https://stackoverflow.com/a/24600839
+    # https://unix.stackexchange.com/a/464963
+
+    stty -echo # do not echo user input
+    stty -icanon min 1 time 0 # disable cannonical mode https://man7.org/linux/man-pages/man3/termios.3.html
+
+    unset password
+    unset key
+    unset charcount
+    charcount=0
+    while key=$(dd ibs=1 count=1 2>/dev/null); do #read one byte of input
+        if [ "${key}" = "$(printf '\0' | tr -d '\0')" ] ; then
+            # Enter - accept password
+            break
+        fi
+        if [ "${key}" = "$(printf '\177')" ] ; then
+            # Backspace
+            if [ $charcount -gt 0 ] ; then
+                charcount=$((charcount-1))
+                printf '\b \b'
+                password="${password%?}"
+            fi
+        else
+            # any other character
+            charcount=$((charcount+1))
+            printf '*'
+            password="$password$key"
+        fi
+    done
+
+    # restore original terminal settings
+    stty "${stty_orig}"
 }
 
 ########################################## MAIN FUNCTIONS ##########################################
