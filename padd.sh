@@ -9,11 +9,8 @@
 # A more advanced version of the chronometer provided with Pihole
 
 # SETS LOCALE
-# Issue 5: https://github.com/jpmck/PADD/issues/5
-# Updated to en_US to support
-# export LC_ALL=en_US.UTF-8 > /dev/null 2>&1 || export LC_ALL=en_GB.UTF-8 > /dev/null 2>&1 || export LC_ALL=C.UTF-8 > /dev/null 2>&1
-LC_ALL=C
-LC_NUMERIC=C
+export LC_ALL=C
+export LC_NUMERIC=C
 
 ############################################ VARIABLES #############################################
 
