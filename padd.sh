@@ -471,7 +471,7 @@ GetPiholeInformation() {
     ftl_cpu="$(printf "%.1f" "${ftl_cpu_raw}")%"
     ftl_mem_percentage="$(printf "%.1f" "${ftl_mem_percentage_raw}")%"
     # Get Pi-hole (blocking) status
-    ftl_dns_port=$(GetFTLData "/dns/port" | jq .dns_port)
+    ftl_dns_port=$(GetFTLData "/config" | jq .config.dnsmasq.port)
   fi
 
 
