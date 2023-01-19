@@ -246,7 +246,7 @@ GetSystemInformation() {
     sys_model=$(tr -d '\0' < /tmp/sysinfo/model)
   elif [ -n "${DOCKER_VERSION}" ]; then
     # Docker image. DOCKER_VERSION is read from /etc/pihole/versions
-    sys_model="Docker tag ${DOCKER_VERSION}"
+    sys_model="Container"
   fi
 
   # Cleaning device model from useless OEM information
@@ -433,6 +433,20 @@ GetVersionInformation() {
 
   out_of_date_flag=false
 
+  # If PADD is running inside docker, immediately return without checking for updated component versions
+  if [ -n "${DOCKER_VERSION}" ]; then
+    docker_version_converted="$(VersionConverter "${DOCKER_VERSION}")"
+    docker_version_latest_converted="$(VersionConverter "${GITHUB_DOCKER_VERSION}")"
+
+    if [ "${docker_version_converted}" -lt "${docker_version_latest_converted}" ]; then
+      out_of_date_flag="true"
+      docker_version_heatmap=${red_text}
+    else
+      docker_version_heatmap=${green_text}
+    fi
+    return
+  fi
+
   # Gather CORE version information...
   # Extract vx.xx or vx.xx.xxx version
   CORE_VERSION="$(echo "${CORE_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
@@ -546,6 +560,10 @@ GetVersionInformation() {
 }
 
 GetPADDInformation() {
+  # If PADD is running inside docker, immediately return without checking for an update
+  if [ -n "${DOCKER_VERSION}" ]; then
+    return
+  fi
 
   # PADD version information...
   padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
@@ -701,6 +719,12 @@ SetStatusMessage() {
 ############################################# PRINTERS #############################################
 
 PrintLogo() {
+  if [ -n "${DOCKER_VERSION}" ]; then
+      version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
+    else
+      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}"
+  fi
+
   # Screen size checks
   if [ "$1" = "pico" ]; then
     printf "%s${clear_line}\n" "p${padd_text} ${pico_status}"
@@ -711,23 +735,28 @@ PrintLogo() {
   elif [ "$1" = "mini" ]; then
     printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
   elif [ "$1" = "tiny" ]; then
-    printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
+    printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   ${version_info}${reset_text}"
     printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
   elif [ "$1" = "slim" ]; then
     printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
     printf "%s${clear_line}\n" "${padd_logo_1}"
-    printf "%s${clear_line}\n" "${padd_logo_2}Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
+    printf "%s${clear_line}\n" "${padd_logo_2}${version_info}${reset_text}"
     printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
   # normal or not defined
   else
     printf "%s${clear_line}\n" "${padd_logo_retro_1}"
-    printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
+    printf "%s${clear_line}\n" "${padd_logo_retro_2}   ${version_info}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
     printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_retro_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
   fi
 }
 
 PrintDashboard() {
+    if [ -n "${DOCKER_VERSION}" ]; then
+      version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
+    else
+      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}"
+    fi
     # Move cursor to (0,0).
     printf '\e[H'
 
@@ -805,7 +834,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}" " Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
     elif [ "$1" = "tiny" ]; then
          # tiny is a screen at least 53x20 (columns x lines)
-        moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   ${version_info}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE =============================================${reset_text}"
         moveXOffset; printf " %-10s${dns_heatmap}%-16s${reset_text} %-8s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "DNS:" "${dns_status}" "FTL:" "${ftl_status}"
@@ -835,12 +864,12 @@ PrintDashboard() {
         # slim is a screen with at least 60 columns and exactly 21 lines
         # regular is a screen at least 60x22 (columns x lines)
         if [ "$1" = "slim" ]; then
-           moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
+           moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${version_info}${reset_text}"
            moveXOffset; printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
            moveXOffset; printf "%s${clear_line}\n" ""
         else
             moveXOffset; printf "%s${clear_line}\n" "${padd_logo_1}"
-            moveXOffset; printf "%s${clear_line}\n" "${padd_logo_2}Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
+            moveXOffset; printf "%s${clear_line}\n" "${padd_logo_2}${version_info}${reset_text}"
             moveXOffset; printf "%s${clear_line}\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
             moveXOffset; printf "%s${clear_line}\n" ""
         fi
@@ -871,7 +900,7 @@ PrintDashboard() {
     else # ${padd_size} = mega
          # mega is a screen with at least 80 columns and 26 lines
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_1}"
-        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_2}   ${version_info}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" ""
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ==========================================================================${reset_text}"
@@ -1223,9 +1252,12 @@ StartupRoutine(){
     moveXOffset; echo "- Gathering version info."
     GetVersionInformation
     GetPADDInformation
-    moveXOffset; echo "  - Core $CORE_VERSION, Web $WEB_VERSION"
-    moveXOffset; echo "  - FTL $FTL_VERSION, PADD $padd_version"
-
+    if [ -n "${DOCKER_VERSION}" ]; then
+      moveXOffset; echo "  - Docker Tag ${DOCKER_VERSION}"
+    else
+      moveXOffset; echo "  - Core $CORE_VERSION, Web $WEB_VERSION"
+      moveXOffset; echo "  - FTL $FTL_VERSION, PADD $padd_version"
+    fi
 
   else
     moveXOffset; printf "%b" "${padd_logo_retro_1}\n"
@@ -1248,10 +1280,14 @@ StartupRoutine(){
     moveXOffset; echo "- Gathering version information..."
     GetVersionInformation
     GetPADDInformation
-    moveXOffset; echo "  - Pi-hole Core $CORE_VERSION"
-    moveXOffset; echo "  - Web Admin $WEB_VERSION"
-    moveXOffset; echo "  - FTL $FTL_VERSION"
-    moveXOffset; echo "  - PADD $padd_version"
+    if [ -n "${DOCKER_VERSION}" ]; then
+      moveXOffset; echo "  - Docker Tag ${DOCKER_VERSION}"
+    else
+      moveXOffset; echo "  - Pi-hole Core $CORE_VERSION"
+      moveXOffset; echo "  - Web Admin $WEB_VERSION"
+      moveXOffset; echo "  - FTL $FTL_VERSION"
+      moveXOffset; echo "  - PADD $padd_version"
+    fi
   fi
 
   moveXOffset; printf "%s" "- Starting in "
