@@ -9,16 +9,13 @@
 # A more advanced version of the chronometer provided with Pihole
 
 # SETS LOCALE
-# Issue 5: https://github.com/jpmck/PADD/issues/5
-# Updated to en_US to support
-# export LC_ALL=en_US.UTF-8 > /dev/null 2>&1 || export LC_ALL=en_GB.UTF-8 > /dev/null 2>&1 || export LC_ALL=C.UTF-8 > /dev/null 2>&1
-LC_ALL=C
-LC_NUMERIC=C
+export LC_ALL=C
+export LC_NUMERIC=C
 
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.10.0"
+padd_version="v3.10.1"
 
 # LastChecks
 LastCheckVersionInformation=$(date +%s)
@@ -146,17 +143,16 @@ GetSummaryInformation() {
   cache_deletes=$(echo "$cache_info" | grep "cache-live-freed" | grep -Eo "[0-9.]+$")
   cache_inserts=$(echo "$cache_info"| grep "cache-inserted" | grep -Eo "[0-9.]+$")
 
-  latest_blocked=$(GetFTLData recentBlocked)
+  latest_blocked_raw=$(GetFTLData recentBlocked)
 
-  top_blocked=$(GetFTLData "top-ads (1)" | awk '{print $3}')
+  top_blocked_raw=$(GetFTLData "top-ads (1)" | awk '{print $3}')
 
-  top_domain=$(GetFTLData "top-domains (1)" | awk '{print $3}')
+  top_domain_raw=$(GetFTLData "top-domains (1)" | awk '{print $3}')
 
   top_client_raw=$(GetFTLData "top-clients (1)" | awk '{print $4}')
   if [ -z "${top_client_raw}" ]; then
-    top_client=$(GetFTLData "top-clients (1)" | awk '{print $3}')
-  else
-    top_client="${top_client_raw}"
+    # if no hostname was supplied, use IP
+    top_client_raw=$(GetFTLData "top-clients (1)" | awk '{print $3}')
   fi
 }
 
@@ -250,7 +246,7 @@ GetSystemInformation() {
     sys_model=$(tr -d '\0' < /tmp/sysinfo/model)
   elif [ -n "${DOCKER_VERSION}" ]; then
     # Docker image. DOCKER_VERSION is read from /etc/pihole/versions
-    sys_model="Docker tag ${DOCKER_VERSION}"
+    sys_model="Container"
   fi
 
   # Cleaning device model from useless OEM information
@@ -437,6 +433,20 @@ GetVersionInformation() {
 
   out_of_date_flag=false
 
+  # If PADD is running inside docker, immediately return without checking for updated component versions
+  if [ -n "${DOCKER_VERSION}" ]; then
+    docker_version_converted="$(VersionConverter "${DOCKER_VERSION}")"
+    docker_version_latest_converted="$(VersionConverter "${GITHUB_DOCKER_VERSION}")"
+
+    if [ "${docker_version_converted}" -lt "${docker_version_latest_converted}" ]; then
+      out_of_date_flag="true"
+      docker_version_heatmap=${red_text}
+    else
+      docker_version_heatmap=${green_text}
+    fi
+    return
+  fi
+
   # Gather CORE version information...
   # Extract vx.xx or vx.xx.xxx version
   CORE_VERSION="$(echo "${CORE_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
@@ -550,6 +560,10 @@ GetVersionInformation() {
 }
 
 GetPADDInformation() {
+  # If PADD is running inside docker, immediately return without checking for an update
+  if [ -n "${DOCKER_VERSION}" ]; then
+    return
+  fi
 
   # PADD version information...
   padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
@@ -572,40 +586,43 @@ GetPADDInformation() {
 }
 
 GenerateSizeDependendOutput() {
-  if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
+  if [ "$1" = "pico" ] || [ "$1" = "nano" ]; then
+    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 9 "color")
+
+  elif  [ "$1" = "micro" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 10 "color")
+
   elif [ "$1" = "mini" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 20 "color")
 
-    if [ ${#latest_blocked} -gt 30 ]; then
-      latest_blocked=$(echo "$latest_blocked" | cut -c1-27)"..."
-    fi
+    latest_blocked=$(truncateString "$latest_blocked_raw" 29)
+    top_blocked=$(truncateString "$top_blocked_raw" 29)
 
-    if [ ${#top_blocked} -gt 30 ]; then
-      top_blocked=$(echo "$top_blocked" | cut -c1-27)"..."
-    fi
   elif [ "$1" = "tiny" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
 
-    if [ ${#latest_blocked} -gt 38 ]; then
-      latest_blocked=$(echo "$latest_blocked" | cut -c1-38)"..."
-    fi
+    latest_blocked=$(truncateString "$latest_blocked_raw" 41)
+    top_blocked=$(truncateString "$top_blocked_raw" 41)
+    top_domain=$(truncateString "$top_domain_raw" 41)
+    top_client=$(truncateString "$top_client_raw" 41)
 
-    if [ ${#top_blocked} -gt 38 ]; then
-      top_blocked=$(echo "$top_blocked" | cut -c1-38)"..."
-    fi
-
-    if [ ${#top_domain} -gt 38 ]; then
-      top_domain=$(echo "$top_domain" | cut -c1-38)"..."
-    fi
-
-    if [ ${#top_client} -gt 38 ]; then
-      top_client=$(echo "$top_client" | cut -c1-38)"..."
-    fi
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 40 "color")
-  else
+
+    latest_blocked=$(truncateString "$latest_blocked_raw" 48)
+    top_blocked=$(truncateString "$top_blocked_raw" 48)
+    top_domain=$(truncateString "$top_domain_raw" 48)
+    top_client=$(truncateString "$top_client_raw" 48)
+
+
+  elif [ "$1" = "mega" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
+
+    latest_blocked=$(truncateString "$latest_blocked_raw" 68)
+    top_blocked=$(truncateString "$top_blocked_raw" 68)
+    top_domain=$(truncateString "$top_domain_raw" 68)
+    top_client=$(truncateString "$top_client_raw" 68)
+
   fi
 
   # System uptime
@@ -702,6 +719,12 @@ SetStatusMessage() {
 ############################################# PRINTERS #############################################
 
 PrintLogo() {
+  if [ -n "${DOCKER_VERSION}" ]; then
+      version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
+    else
+      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}"
+  fi
+
   # Screen size checks
   if [ "$1" = "pico" ]; then
     printf "%s${clear_line}\n" "p${padd_text} ${pico_status}"
@@ -712,23 +735,28 @@ PrintLogo() {
   elif [ "$1" = "mini" ]; then
     printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
   elif [ "$1" = "tiny" ]; then
-    printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
+    printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   ${version_info}${reset_text}"
     printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
   elif [ "$1" = "slim" ]; then
     printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
   elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
     printf "%s${clear_line}\n" "${padd_logo_1}"
-    printf "%s${clear_line}\n" "${padd_logo_2}Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
+    printf "%s${clear_line}\n" "${padd_logo_2}${version_info}${reset_text}"
     printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
   # normal or not defined
   else
     printf "%s${clear_line}\n" "${padd_logo_retro_1}"
-    printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
+    printf "%s${clear_line}\n" "${padd_logo_retro_2}   ${version_info}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
     printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_retro_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
   fi
 }
 
 PrintDashboard() {
+    if [ -n "${DOCKER_VERSION}" ]; then
+      version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
+    else
+      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}"
+    fi
     # Move cursor to (0,0).
     printf '\e[H'
 
@@ -751,7 +779,7 @@ PrintDashboard() {
         # nano is a screen at least 24x12 (columns x lines)
         moveXOffset; printf "%s${clear_line}\n" "n${padd_text} ${mini_status}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ================${reset_text}"
-        moveXOffset; printf "%s${clear_line}\n" " DNS:  ${dns_check_box}      FTL: ${ftl_check_box}"
+        moveXOffset; printf "%s${clear_line}\n" " DNS: ${dns_check_box}      FTL: ${ftl_check_box}"
         moveXOffset; printf "%s${clear_line}\n" " Blk: [${ads_blocked_bar}] ${ads_percentage_today}%"
         moveXOffset; printf "%s${clear_line}\n" " Blk: ${ads_blocked_today} / ${dns_queries_today}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ================${reset_text}"
@@ -806,11 +834,11 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}" " Memory:  [${memory_heatmap}${memory_bar}${reset_text}] ${memory_percent}%"
     elif [ "$1" = "tiny" ]; then
          # tiny is a screen at least 53x20 (columns x lines)
-        moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   ${version_info}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
-        moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ============================================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE =============================================${reset_text}"
         moveXOffset; printf " %-10s${dns_heatmap}%-16s${reset_text} %-8s${ftl_heatmap}%-10s${reset_text}${clear_line}\n" "DNS:" "${dns_status}" "FTL:" "${ftl_status}"
-        moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ==============================================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ===============================================${reset_text}"
         moveXOffset; printf " %-10s%-29s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains"
         moveXOffset; printf " %-10s[%-30s] %-5s${clear_line}\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today}"
@@ -820,7 +848,7 @@ PrintDashboard() {
             moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
             moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
         fi
-        moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ============================================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK =============================================${reset_text}"
         moveXOffset; printf " %-10s%-16s %-8s%-16s${clear_line}\n" "Hostname:" "${full_hostname}" "IP:  " "${pi_ip4_addr}"
         moveXOffset; printf " %-10s%-16s %-4s%-7s %-4s%-5s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
         moveXOffset; printf " %-10s%-16s %-8s${dnssec_heatmap}%-16s${reset_text}${clear_line}\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_status}"
@@ -828,7 +856,7 @@ PrintDashboard() {
             moveXOffset; printf " %-10s${dhcp_heatmap}%-16s${reset_text} %-8s${dhcp_ipv6_heatmap}%-10s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
             moveXOffset; printf "%s${clear_line}\n" "${dhcp_info}"
         fi
-        moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =============================================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM ==============================================${reset_text}"
         moveXOffset; printf " %-10s%-29s${clear_line}\n" "Uptime:" "${system_uptime}"
         moveXOffset; printf " %-10s${temp_heatmap}%-17s${reset_text} %-8s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
         moveXOffset; printf " %-10s[${memory_heatmap}%-7s${reset_text}] %-6s %-8s[${cpu_load_1_heatmap}%-7s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU:" "${cpu_bar}" "${cpu_percent}%"
@@ -836,18 +864,18 @@ PrintDashboard() {
         # slim is a screen with at least 60 columns and exactly 21 lines
         # regular is a screen at least 60x22 (columns x lines)
         if [ "$1" = "slim" ]; then
-           moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
+           moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${version_info}${reset_text}"
            moveXOffset; printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
            moveXOffset; printf "%s${clear_line}\n" ""
         else
             moveXOffset; printf "%s${clear_line}\n" "${padd_logo_1}"
-            moveXOffset; printf "%s${clear_line}\n" "${padd_logo_2}Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
+            moveXOffset; printf "%s${clear_line}\n" "${padd_logo_2}${version_info}${reset_text}"
             moveXOffset; printf "%s${clear_line}\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
             moveXOffset; printf "%s${clear_line}\n" ""
         fi
-        moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ===================================================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ====================================================${reset_text}"
         moveXOffset; printf " %-10s${dns_heatmap}%-19s${reset_text} %-10s${ftl_heatmap}%-19s${reset_text}${clear_line}\n" "DNS:" "${dns_status}" "FTL:" "${ftl_status}"
-        moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS =====================================================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ======================================================${reset_text}"
         moveXOffset; printf " %-10s%-49s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains"
         moveXOffset; printf " %-10s[%-40s] %-5s${clear_line}\n" "Pi-holed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
         moveXOffset; printf " %-10s%-49s${clear_line}\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today} queries"
@@ -857,7 +885,7 @@ PrintDashboard() {
             moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
             moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
         fi
-        moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ===================================================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ====================================================${reset_text}"
         moveXOffset; printf " %-10s%-15s %-4s%-17s%-6s%s${clear_line}\n" "Hostname:" "${full_hostname}" "IP:" "${pi_ip4_addr}" "IPv6:" "${ipv6_check_box}"
         moveXOffset; printf " %-10s%-15s %-4s%-17s%-4s%s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
         moveXOffset; printf " %-10s%-15s %-10s${dnssec_heatmap}%-19s${reset_text}${clear_line}\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_status}"
@@ -865,35 +893,35 @@ PrintDashboard() {
             moveXOffset; printf " %-10s${dhcp_heatmap}%-15s${reset_text} %-10s${dhcp_ipv6_heatmap}%-19s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
             moveXOffset; printf "%s${clear_line}\n" "${dhcp_info}"
         fi
-        moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM ====================================================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =====================================================${reset_text}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Uptime:" "${system_uptime}"
         moveXOffset; printf " %-10s${temp_heatmap}%-21s${reset_text}%-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
         moveXOffset; printf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
     else # ${padd_size} = mega
          # mega is a screen with at least 80 columns and 26 lines
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_1}"
-        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_2}   Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_2}   ${version_info}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" ""
-        moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS =========================================================================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ==========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-19s %-10s[%-40s] %-5s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
         moveXOffset; printf " %-10s%-30s%-29s${clear_line}\n" "Clients:" "${clients}" " ${ads_blocked_today} out of ${dns_queries_today} queries"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Latest:" "${latest_blocked}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Ad:" "${top_blocked}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
-        moveXOffset; printf "%s${clear_line}\n" "${bold_text}FTL ===========================================================================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}FTL ============================================================================${reset_text}"
         moveXOffset; printf " %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}" "Mem. Use:" "${ftl_mem_percentage}"
         moveXOffset; printf " %-10s%-69s${clear_line}\n" "DNSCache:" "${cache_inserts} insertions, ${cache_deletes} deletions, ${cache_size} total entries"
-        moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK =======================================================================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-19s${clear_line}\n" "Hostname:" "${full_hostname}"
         moveXOffset; printf " %-10s%-15s %-4s%-9s %-4s%-9s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
         moveXOffset; printf " %-6s%-19s %-10s%-29s${clear_line}\n" "IPv4:" "${pi_ip4_addr}" "IPv6:" "${pi_ip6_addr}"
-        moveXOffset; printf "%s${clear_line}\n" "${bold_text}DNS ==========================DHCP=============================================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}DNS ==========================DHCP==============================================${reset_text}"
         moveXOffset; printf " %-10s%-19s %-6s${dhcp_heatmap}%-19s${reset_text}${clear_line}\n" "Servers:" "${dns_information}" "DHCP:" "${dhcp_status}"
         moveXOffset; printf " %-10s${dnssec_heatmap}%-19s${reset_text} %-10s${dhcp_ipv6_heatmap}%-9s${reset_text}${clear_line}\n" "DNSSEC:" "${dnssec_status}" "IPv6 Spt:" "${dhcp_ipv6_status}"
         moveXOffset; printf " %-10s${conditional_forwarding_heatmap}%-19s${reset_text}%s${clear_line}\n" "CdFwding:" "${conditional_forwarding_status}" "${dhcp_info}"
-        moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM ========================================================================${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Device:" "${sys_model}"
         moveXOffset; printf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
         moveXOffset; printf " %-10s${temp_heatmap}%-10s${reset_text} %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-7s${reset_text} %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
@@ -1139,6 +1167,27 @@ filterModel() {
     echo "$1" | awk -v list="$FILTERLIST" '{IGNORECASE=1; gsub(list,"")}; {$1=$1}1'
 }
 
+# Truncates a given string and appends three '...'
+# takes two parameters
+# $1: string to truncate
+# $2: max length of the string
+truncateString() {
+    local truncatedString length shorted
+
+    length=${#1}
+    shorted=$(($2-3)) # shorten max allowed length by 3 to make room for the dots
+    if [ "${length}" -gt "$2" ]; then
+        # if length of the string is larger then the specified max length
+        # cut every char from the string exceeding length $shorted and add three dots
+        truncatedString=$(echo "$1" | cut -c1-$shorted)"..."
+        echo "${truncatedString}"
+    else
+        echo "$1"
+    fi
+}
+
+
+
 ########################################## MAIN FUNCTIONS ##########################################
 
 OutputJSON() {
@@ -1203,9 +1252,12 @@ StartupRoutine(){
     moveXOffset; echo "- Gathering version info."
     GetVersionInformation
     GetPADDInformation
-    moveXOffset; echo "  - Core $CORE_VERSION, Web $WEB_VERSION"
-    moveXOffset; echo "  - FTL $FTL_VERSION, PADD $padd_version"
-
+    if [ -n "${DOCKER_VERSION}" ]; then
+      moveXOffset; echo "  - Docker Tag ${DOCKER_VERSION}"
+    else
+      moveXOffset; echo "  - Core $CORE_VERSION, Web $WEB_VERSION"
+      moveXOffset; echo "  - FTL $FTL_VERSION, PADD $padd_version"
+    fi
 
   else
     moveXOffset; printf "%b" "${padd_logo_retro_1}\n"
@@ -1228,10 +1280,14 @@ StartupRoutine(){
     moveXOffset; echo "- Gathering version information..."
     GetVersionInformation
     GetPADDInformation
-    moveXOffset; echo "  - Pi-hole Core $CORE_VERSION"
-    moveXOffset; echo "  - Web Admin $WEB_VERSION"
-    moveXOffset; echo "  - FTL $FTL_VERSION"
-    moveXOffset; echo "  - PADD $padd_version"
+    if [ -n "${DOCKER_VERSION}" ]; then
+      moveXOffset; echo "  - Docker Tag ${DOCKER_VERSION}"
+    else
+      moveXOffset; echo "  - Pi-hole Core $CORE_VERSION"
+      moveXOffset; echo "  - Web Admin $WEB_VERSION"
+      moveXOffset; echo "  - FTL $FTL_VERSION"
+      moveXOffset; echo "  - PADD $padd_version"
+    fi
   fi
 
   moveXOffset; printf "%s" "- Starting in "
