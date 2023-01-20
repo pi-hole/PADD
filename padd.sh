@@ -103,7 +103,7 @@ padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${gre
 ConstructAPI() {
 	# If no arguments were supplied set them to default
 	if [ -z "${URL}" ]; then
-		URL=pi.hole
+		URL=127.0.0.1
 	fi
 	if [ -z "${PORT}" ]; then
 		PORT=8080
@@ -1475,7 +1475,7 @@ DisplayHelp() {
 :::  -xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
 :::  -yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
 :::
-:::  -u <URL|IP>             URL or address of your Pi-hole (default: pi.hole)
+:::  -u <URL|IP>             URL or address of your Pi-hole (default: 127.0.0.1)
 :::  -p <port>               Port of your Pi-hole's API (default: 8080)
 :::  -a <api>                Path where your  Pi-hole's API is hosted (default: api)
 :::  -s <secret password>    Your Pi-hole's password, required to access the API
