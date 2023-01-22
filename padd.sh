@@ -52,7 +52,7 @@ pico_status_ok="${check_box_good} Sys. OK"
 pico_status_update="${check_box_info} Update"
 pico_status_hot="${check_box_bad} Sys. Hot!"
 pico_status_off="${check_box_info} No blck"
-pico_status_ftl_down="${check_box_bad} FTL Down"
+pico_status_ftl_down="${check_box_bad} No CXN"
 pico_status_dns_down="${check_box_bad} DNS Down"
 
 # MINI STATUS
@@ -60,7 +60,7 @@ mini_status_ok="${check_box_good} System OK"
 mini_status_update="${check_box_info} Update avail."
 mini_status_hot="${check_box_bad} System is hot!"
 mini_status_off="${check_box_info} No blocking!"
-mini_status_ftl_down="${check_box_bad} FTL down!"
+mini_status_ftl_down="${check_box_bad} No connection!"
 mini_status_dns_down="${check_box_bad} DNS off!"
 
 # REGULAR STATUS
@@ -68,7 +68,7 @@ full_status_ok="${check_box_good} System is healthy"
 full_status_update="${check_box_info} Updates are available"
 full_status_hot="${check_box_bad} System is hot!"
 full_status_off="${check_box_info} Blocking is disabled"
-full_status_ftl_down="${check_box_bad} FTL is down!"
+full_status_ftl_down="${check_box_bad} No connection!"
 full_status_dns_down="${check_box_bad} DNS is off!"
 
 # MEGA STATUS
@@ -76,7 +76,7 @@ mega_status_ok="${check_box_good} Your system is healthy"
 mega_status_update="${check_box_info} Updates are available"
 mega_status_hot="${check_box_bad} Your system is hot!"
 mega_status_off="${check_box_info} Blocking is disabled!"
-mega_status_ftl_down="${check_box_bad} FTLDNS service is not running!"
+mega_status_ftl_down="${check_box_bad} No connection to FTL!"
 mega_status_dns_down="${check_box_bad} Pi-hole's DNS server is off!"
 
 # TINY STATUS
@@ -84,7 +84,7 @@ tiny_status_ok="${check_box_good} System is healthy"
 tiny_status_update="${check_box_info} Updates are available"
 tiny_status_hot="${check_box_bad} System is hot!"
 tiny_status_off="${check_box_info} Blocking is disabled"
-tiny_status_ftl_down="${check_box_bad} FTL is down!"
+tiny_status_ftl_down="${check_box_bad} No connection to FTL!"
 tiny_status_dns_down="${check_box_bad} DNS is off!"
 
 # Text only "logos"
@@ -172,6 +172,7 @@ DeleteSession() {
 
 ChallengeResponse() {
 	# Challenge-response authentication
+  local response
 
 	# Compute password hash from user password
 	# Compute password hash twice to avoid rainbow table vulnerability
@@ -182,7 +183,7 @@ ChallengeResponse() {
 	# Get challenge from FTL
 	# Calculate response based on challenge and password hash
 	# Send response & get session response
-	challenge="$(curl --silent -X GET "http://${URL}:${PORT}/${APIPATH}/auth" | jq --raw-output .challenge)"
+	challenge="$(curl --silent -X GET "http://${URL}:${PORT}/${APIPATH}/auth" | jq --raw-output .challenge 2>/dev/null)"
 	response="$(printf "%b" "${challenge}:${pwhash}" | sha256sum | sed 's/\s.*$//')"
 	sessionResponse="$(curl --silent -X POST "http://${URL}:${PORT}/${APIPATH}/auth" --data "{\"response\":\"${response}\"}" )"
 
@@ -192,13 +193,29 @@ ChallengeResponse() {
     exit 1
   fi
 	# obtain validity and session ID from session response
-	validSession=$(echo "${sessionResponse}"| jq .session.valid)
-	SID=$(echo "${sessionResponse}"| jq --raw-output .session.sid)
+	validSession=$(echo "${sessionResponse}"| jq .session.valid 2>/dev/null)
+	SID=$(echo "${sessionResponse}"| jq --raw-output .session.sid 2>/dev/null)
 }
 
 GetFTLData() {
-	data=$(curl -sS -X GET "http://${URL}:${PORT}/${APIPATH}$1" -H "Accept: application/json" -H "sid: ${SID}" )
-	echo "${data}"
+  local response
+  # get the data from querying the API as well as the http status code
+	response=$(curl -s -w "%{http_code}" -X GET "http://${URL}:${PORT}/${APIPATH}$1" -H "Accept: application/json" -H "sid: ${SID}" )
+
+  # status are the last 3 characters
+  status=$(printf %s "${response#"${response%???}"}")
+  # data is everything from repsonse without the last 3 characters
+  data=$(printf %s "${response%???}")
+
+  if [ "${status}" = 200 ]; then
+    echo "${data}"
+  elif [ "${status}" = 000 ]; then
+    # connection lost
+    echo "000"
+  elif [ "${status}" = 401 ]; then
+    # unauthorized
+    echo "401"
+  fi
 }
 
 
@@ -210,36 +227,36 @@ GetSummaryInformation() {
   ftl_info=$(GetFTLData "/info/ftl")
   dns_blocking=$(GetFTLData "/dns/blocking")
 
-  clients=$(echo "${ftl_info}" | jq .ftl.clients.active )
+  clients=$(echo "${ftl_info}" | jq .ftl.clients.active 2>/dev/null)
 
-  blocking_enabled=$(echo "${dns_blocking}" | jq .blocking )
+  blocking_enabled=$(echo "${dns_blocking}" | jq .blocking 2>/dev/null)
 
-  domains_being_blocked_raw=$(echo "${ftl_info}" | jq .ftl.database.gravity)
+  domains_being_blocked_raw=$(echo "${ftl_info}" | jq .ftl.database.gravity 2>/dev/null)
   domains_being_blocked=$(printf "%.f" "${domains_being_blocked_raw}")
 
-  dns_queries_today_raw=$(echo "$summary" | jq .queries.total )
+  dns_queries_today_raw=$(echo "$summary" | jq .queries.total 2>/dev/null)
   dns_queries_today=$(printf "%.f" "${dns_queries_today_raw}")
 
-  ads_blocked_today_raw=$(echo "$summary" | jq .queries.blocked )
+  ads_blocked_today_raw=$(echo "$summary" | jq .queries.blocked 2>/dev/null)
   ads_blocked_today=$(printf "%.f" "${ads_blocked_today_raw}")
 
-  ads_percentage_today_raw=$(echo "$summary" | jq .queries.percent_blocked)
+  ads_percentage_today_raw=$(echo "$summary" | jq .queries.percent_blocked 2>/dev/null)
   ads_percentage_today=$(printf "%.1f" "${ads_percentage_today_raw}")
 
-  cache_size=$(echo "$cache_info" | jq .cache.size)
-  cache_evictions=$(echo "$cache_info" | jq .cache.evicted)
-  cache_inserts=$(echo "$cache_info"| jq .cache.inserted)
+  cache_size=$(echo "$cache_info" | jq .cache.size 2>/dev/null)
+  cache_evictions=$(echo "$cache_info" | jq .cache.evicted 2>/dev/null)
+  cache_inserts=$(echo "$cache_info"| jq .cache.inserted 2>/dev/null)
 
-  latest_blocked_raw=$(GetFTLData "/stats/recent_blocked?show=1" | jq --raw-output .blocked[0])
+  latest_blocked_raw=$(GetFTLData "/stats/recent_blocked?show=1" | jq --raw-output .blocked[0] 2>/dev/null)
 
-  top_blocked_raw=$(GetFTLData "/stats/top_domains?blocked=true" | jq --raw-output .domains[0].domain)
+  top_blocked_raw=$(GetFTLData "/stats/top_domains?blocked=true" | jq --raw-output .domains[0].domain 2>/dev/null)
 
-  top_domain_raw=$(GetFTLData "/stats/top_domains" | jq --raw-output .domains[0].domain)
+  top_domain_raw=$(GetFTLData "/stats/top_domains" | jq --raw-output .domains[0].domain 2>/dev/null)
 
-  top_client_raw=$(GetFTLData "/stats/top_clients" | jq --raw-output .clients[0].name)
+  top_client_raw=$(GetFTLData "/stats/top_clients" | jq --raw-output .clients[0].name 2>/dev/null)
   if [ -z "${top_client_raw}" ]; then
     # if no hostname was supplied, use IP
-    top_client_raw=$(GetFTLData "/stats/top_clients" | jq --raw-output .clients[0].ip)
+    top_client_raw=$(GetFTLData "/stats/top_clients" | jq --raw-output .clients[0].ip 2>/dev/null)
   fi
 }
 
@@ -247,12 +264,17 @@ GetSystemInformation() {
     sysinfo=$(GetFTLData "/info/system")
 
     # System uptime
-    system_uptime_raw=$(echo "${sysinfo}" | jq .system.uptime )
+    if [ "${sysinfo}" = 000 ]; then
+      # in case FTL connection is down, system_uptime_raw need to be set to 0 otherwise convertUptime() will complain
+      system_uptime_raw=0
+    else
+      system_uptime_raw=$(echo "${sysinfo}" | jq .system.uptime 2>/dev/null)
+    fi
 
     # CPU temperature and unit
-    cpu_temp_raw=$(GetFTLData "/info/sensors" | jq .sensors[0].value)
+    cpu_temp_raw=$(GetFTLData "/info/sensors" | jq .sensors[0].value 2>/dev/null)
     cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
-    temp_unit=$(GetFTLData "/info/sensors"  | jq --raw-output .sensors[0].unit)
+    temp_unit=$(GetFTLData "/info/sensors"  | jq --raw-output .sensors[0].unit 2>/dev/null)
 
     # Temp + Unit
     if [ "${temp_unit}" = "C" ]; then
@@ -286,22 +308,22 @@ GetSystemInformation() {
     fi
 
     # CPU, load, heatmap
-    core_count=$(echo "${sysinfo}" | jq .system.cpu.nprocs)
-    cpu_load_1=$(printf %.2f "$(echo "${sysinfo}" | jq .system.cpu.load.raw[0])")
-    cpu_load_5=$(printf %.2f "$(echo "${sysinfo}" | jq .system.cpu.load.raw[1])")
-    cpu_load_15=$(printf %.2f "$(echo "${sysinfo}" | jq .system.cpu.load.raw[2])")
+    core_count=$(echo "${sysinfo}" | jq .system.cpu.nprocs 2>/dev/null)
+    cpu_load_1=$(printf %.2f "$(echo "${sysinfo}" | jq .system.cpu.load.raw[0] 2>/dev/null)")
+    cpu_load_5=$(printf %.2f "$(echo "${sysinfo}" | jq .system.cpu.load.raw[1] 2>/dev/null)")
+    cpu_load_15=$(printf %.2f "$(echo "${sysinfo}" | jq .system.cpu.load.raw[2] 2>/dev/null)")
     cpu_load_1_heatmap=$(HeatmapGenerator "${cpu_load_1}" "${core_count}")
     cpu_load_5_heatmap=$(HeatmapGenerator "${cpu_load_5}" "${core_count}")
     cpu_load_15_heatmap=$(HeatmapGenerator "${cpu_load_15}" "${core_count}")
-    cpu_percent=$(printf %.1f "$(echo "${sysinfo}" | jq .system.cpu.load.percent[0])")
+    cpu_percent=$(printf %.1f "$(echo "${sysinfo}" | jq .system.cpu.load.percent[0] 2>/dev/null)")
 
     # Memory use, heatmap and bar
-    memory_percent_raw="$(echo "${sysinfo}" | jq '.system.memory.ram."%used"')"
+    memory_percent_raw="$(echo "${sysinfo}" | jq '.system.memory.ram."%used"' 2>/dev/null)"
     memory_percent=$(printf %.1f "${memory_percent_raw}")
     memory_heatmap="$(HeatmapGenerator "${memory_percent}")"
 
     # Get device model
-    sys_model="$(GetFTLData "/info/host" | jq --raw-output .host.model)"
+    sys_model="$(GetFTLData "/info/host" | jq --raw-output .host.model 2>/dev/null)"
 
     # DOCKER_VERSION is set during GetVersionInformation, so this needs to run first during startup
     if [ ! "${DOCKER_VERSION}" = "null" ]; then
@@ -322,40 +344,40 @@ GetNetworkInformation() {
     config=$(GetFTLData "/config")
 
     # Get pi IPv4 address  of the default interface
-    pi_ip4_addrs="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv4[]' | wc -w)"
+    pi_ip4_addrs="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv4[]' 2>/dev/null  | wc -w)"
     if [ "${pi_ip4_addrs}" -eq 0 ]; then
         # No IPv4 address available
         pi_ip4_addr="N/A"
     elif [ "${pi_ip4_addrs}" -eq 1 ]; then
         # One IPv4 address available
-        pi_ip4_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv4[0]')"
+        pi_ip4_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv4[0]' 2>/dev/null)"
     else
         # More than one IPv4 address available
-        pi_ip4_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv4[0]')+"
+        pi_ip4_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv4[0]' 2>/dev/null)+"
     fi
 
     # Get pi IPv6 address of the default interface
-    pi_ip6_addrs="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv6[]' | wc -w)"
+    pi_ip6_addrs="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv6[]' 2>/dev/null  | wc -w)"
     if [ "${pi_ip6_addrs}" -eq 0 ]; then
         # No IPv6 address available
         pi_ip6_addr="N/A"
         ipv6_check_box=${check_box_bad}
     elif [ "${pi_ip6_addrs}" -eq 1 ]; then
         # One IPv6 address available
-        pi_ip6_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv6[0]' | cut -f1 -d "%" )"
+        pi_ip6_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv6[0]' 2>/dev/null  | cut -f1 -d "%" )"
         ipv6_check_box=${check_box_good}
     else
         # More than one IPv6 address available
-        pi_ip6_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv6[0]' | cut -f1 -d "%" )+"
+        pi_ip6_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv6[0]' 2>/dev/null  | cut -f1 -d "%" )+"
         ipv6_check_box=${check_box_good}
     fi
 
     # Is Pi-Hole acting as the DHCP server?
-    DHCP_ACTIVE="$(echo "${config}" | jq .config.dnsmasq.dhcp.active)"
+    DHCP_ACTIVE="$(echo "${config}" | jq .config.dnsmasq.dhcp.active 2>/dev/null )"
 
     if [ "${DHCP_ACTIVE}" = "true" ]; then
-        DHCP_START="$(echo "${config}" | jq --raw-output .config.dnsmasq.dhcp.start)"
-        DHCP_END="$(echo "${config}" | jq --raw-output .config.dnsmasq.dhcp.end)"
+        DHCP_START="$(echo "${config}" | jq --raw-output .config.dnsmasq.dhcp.start 2>/dev/null)"
+        DHCP_END="$(echo "${config}" | jq --raw-output .config.dnsmasq.dhcp.end 2>/dev/null)"
 
         dhcp_status="Enabled"
         dhcp_info=" Range:    ${DHCP_START} - ${DHCP_END}"
@@ -363,7 +385,7 @@ GetNetworkInformation() {
         dhcp_check_box=${check_box_good}
 
         # Is DHCP handling IPv6?
-        DHCP_IPv6="$(echo "${config}" | jq --raw-output .config.dnsmasq.dhcp.ipv6)"
+        DHCP_IPv6="$(echo "${config}" | jq --raw-output .config.dnsmasq.dhcp.ipv6 2>/dev/null)"
         if [ "${DHCP_IPv6}" = "true" ]; then
             dhcp_ipv6_status="Enabled"
             dhcp_ipv6_heatmap=${green_text}
@@ -378,7 +400,7 @@ GetNetworkInformation() {
         dhcp_heatmap=${red_text}
         dhcp_check_box=${check_box_bad}
 
-        GATEWAY="$(GetFTLData "/network/gateway" | jq --raw-output .address)"
+        GATEWAY="$(GetFTLData "/network/gateway" | jq --raw-output .address 2>/dev/null)"
         dhcp_info=" Router:   ${GATEWAY}"
         dhcp_ipv6_status="N/A"
         dhcp_ipv6_heatmap=${yellow_text}
@@ -386,11 +408,11 @@ GetNetworkInformation() {
     fi
 
     # Get hostname
-    pi_hostname="$(GetFTLData "/info/host" | jq --raw-output .host.uname.nodename)"
+    pi_hostname="$(GetFTLData "/info/host" | jq --raw-output .host.uname.nodename 2>/dev/null)"
     full_hostname=${pi_hostname}
     # when PI-hole is the DHCP server, append the domain to the hostname
     if [ "${DHCP_ACTIVE}" = "true" ]; then
-        PIHOLE_DOMAIN="$(echo "${config}" | jq --raw-output .config.dnsmasq.domain)"
+        PIHOLE_DOMAIN="$(echo "${config}" | jq --raw-output .config.dnsmasq.domain 2>/dev/null)"
         if [  -n "${PIHOLE_DOMAIN}" ]; then
             count=${pi_hostname}"."${PIHOLE_DOMAIN}
             count=${#count}
@@ -401,7 +423,7 @@ GetNetworkInformation() {
     fi
 
     # Get the number of configured upstream DNS servers
-    dns_count="$(echo "${config}" | jq --raw-output .config.dnsmasq.upstreams[] | sed '/^\s*$/d' | wc -l)"
+    dns_count="$(echo "${config}" | jq --raw-output .config.dnsmasq.upstreams[] 2>/dev/null  | sed '/^\s*$/d' | wc -l)"
     # if there's only one DNS server
     if [ "${dns_count}" -eq 1 ]; then
         dns_information="1 server"
@@ -411,7 +433,7 @@ GetNetworkInformation() {
 
 
     # DNSSEC
-    DNSSEC="$(echo "${config}" | jq .config.dnsmasq.dnssec)"
+    DNSSEC="$(echo "${config}" | jq .config.dnsmasq.dnssec 2>/dev/null)"
     if [ "${DNSSEC}" = "true" ]; then
         dnssec_status="Enabled"
         dnssec_heatmap=${green_text}
@@ -421,7 +443,7 @@ GetNetworkInformation() {
     fi
 
     # Conditional forwarding
-    CONDITIONAL_FORWARDING="$(echo "${config}" | jq .config.dnsmasq.rev_server.active)"
+    CONDITIONAL_FORWARDING="$(echo "${config}" | jq .config.dnsmasq.rev_server.active 2>/dev/null)"
     if [ "${CONDITIONAL_FORWARDING}" = "true" ]; then
         conditional_forwarding_status="Enabled"
         conditional_forwarding_heatmap=${green_text}
@@ -431,30 +453,27 @@ GetNetworkInformation() {
     fi
 
     # Default interface data
-    iface_name="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .name')"
-    tx_bytes="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .tx.num')"
-    tx_bytes_unit="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .tx.unit')"
+    iface_name="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .name' 2>/dev/null)"
+    tx_bytes="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .tx.num' 2>/dev/null)"
+    tx_bytes_unit="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .tx.unit' 2>/dev/null)"
     tx_bytes=$(printf "%.1f %b" "${tx_bytes}" "${tx_bytes_unit}")
 
-    rx_bytes="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .rx.num')"
-    rx_bytes_unit="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .rx.unit')"
+    rx_bytes="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .rx.num' 2>/dev/null)"
+    rx_bytes_unit="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .rx.unit' 2>/dev/null)"
     rx_bytes=$(printf "%.1f %b" "${rx_bytes}" "${rx_bytes_unit}")
 }
 
 GetPiholeInformation() {
     sysinfo=$(GetFTLData "/info/ftl")
 
-    # Get FTL's current PID
-    ftlPID="$(echo "${sysinfo}" | jq .ftl.pid)"
-
-  # If FTL is not running (ftlPID is -1), set all variables to "not running"
-  ftl_down_flag=false
-  if [ "${ftlPID}" = "-1" ]; then
-    ftl_status="Not running"
+  # If FTL is not running (sysinfo is 000), set all variables to "not running"
+  connection_down_flag=false
+  if [ "${sysinfo}" = "000" ]; then
+    ftl_status="No connection"
     ftl_heatmap=${red_text}
     ftl_check_box=${check_box_bad}
     # set flag to change the status message in SetStatusMessage()
-    ftl_down_flag=true
+    connection_down_flag=true
     ftl_cpu="N/A"
     ftl_mem_percentage="N/A"
   else
@@ -462,19 +481,21 @@ GetPiholeInformation() {
     ftl_heatmap=${green_text}
     ftl_check_box=${check_box_good}
     # Get FTL CPU and memory usage
-    ftl_cpu_raw="$(echo "${sysinfo}" | jq '.ftl."%cpu"')"
-    ftl_mem_percentage_raw="$(echo "${sysinfo}" | jq '.ftl."%mem"')"
+    ftl_cpu_raw="$(echo "${sysinfo}" | jq '.ftl."%cpu"' 2>/dev/null)"
+    ftl_mem_percentage_raw="$(echo "${sysinfo}" | jq '.ftl."%mem"' 2>/dev/null)"
     ftl_cpu="$(printf "%.1f" "${ftl_cpu_raw}")%"
     ftl_mem_percentage="$(printf "%.1f" "${ftl_mem_percentage_raw}")%"
     # Get Pi-hole (blocking) status
-    ftl_dns_port=$(GetFTLData "/config" | jq .config.dnsmasq.port)
+    ftl_dns_port=$(GetFTLData "/config" | jq .config.dnsmasq.port 2>/dev/null)
+    # Get FTL's current PID
+    ftlPID="$(echo "${sysinfo}" | jq .ftl.pid 2>/dev/null)"
   fi
 
 
 
-  # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled, ${ftl_status} == "Not running" no ftlPID found
+  # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled
   dns_down_flag=false
-  if [ "${ftl_dns_port}" = 0 ] || [ "${ftl_status}" = "Not running" ]; then
+  if [ "${ftl_dns_port}" = 0 ] || [ "${ftl_status}" = "No connection" ]; then
     dns_status="DNS offline"
     dns_heatmap=${red_text}
     dns_check_box=${check_box_bad}
@@ -494,11 +515,11 @@ GetVersionInformation() {
 
     # Gather DOCKER version information...
     # returns "null" if not running Pi-hole in Docker container
-    DOCKER_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.docker.local)"
+    DOCKER_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.docker.local 2>/dev/null)"
 
     # If PADD is running inside docker, immediately return without checking for updated component versions
     if [ ! "${DOCKER_VERSION}" = "null" ] ; then
-        GITHUB_DOCKER_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.docker.remote)"
+        GITHUB_DOCKER_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.docker.remote 2>/dev/null)"
         docker_version_converted="$(VersionConverter "${DOCKER_VERSION}")"
         docker_version_latest_converted="$(VersionConverter "${GITHUB_DOCKER_VERSION}")"
 
@@ -512,11 +533,11 @@ GetVersionInformation() {
     fi
 
     # Gather core version information...
-    CORE_BRANCH="$(echo "${versions_raw}" | jq --raw-output .version.core.local.branch)"
-    CORE_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.core.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    GITHUB_CORE_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.core.remmote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    CORE_HASH="$(echo "${versions_raw}" | jq --raw-output .version.core.local.hash)"
-    GITHUB_CORE_HASH="$(echo "${versions_raw}" | jq --raw-output .version.core.remote.hash)"
+    CORE_BRANCH="$(echo "${versions_raw}" | jq --raw-output .version.core.local.branch 2>/dev/null)"
+    CORE_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.core.local.version 2>/dev/null | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    GITHUB_CORE_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.core.remmote.version  2>/dev/null | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    CORE_HASH="$(echo "${versions_raw}" | jq --raw-output .version.core.local.hash 2>/dev/null)"
+    GITHUB_CORE_HASH="$(echo "${versions_raw}" | jq --raw-output .version.core.remote.hash 2>/dev/null)"
 
     if [ "${CORE_BRANCH}" = "master" ]; then
         core_version_converted="$(VersionConverter "${CORE_VERSION}")"
@@ -550,14 +571,14 @@ GetVersionInformation() {
     fi
 
   # Gather web version information...
-    WEB_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.web.local.version)"
+    WEB_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.web.local.version 2>/dev/null)"
 
     if [ ! "$WEB_VERSION" = "null" ]; then
-        WEB_BRANCH="$(echo "${versions_raw}" | jq --raw-output .version.web.local.branch)"
-        WEB_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.web.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-        GITHUB_WEB_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.web.remmote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-        WEB_HASH="$(echo "${versions_raw}" | jq --raw-output .version.web.local.hash)"
-        GITHUB_WEB_HASH="$(echo "${versions_raw}" | jq --raw-output .version.web.remote.hash)"
+        WEB_BRANCH="$(echo "${versions_raw}" | jq --raw-output .version.web.local.branch 2>/dev/null)"
+        WEB_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.web.local.version 2>/dev/null | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+        GITHUB_WEB_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.web.remmote.version 2>/dev/null | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+        WEB_HASH="$(echo "${versions_raw}" | jq --raw-output .version.web.local.hash 2>/dev/null)"
+        GITHUB_WEB_HASH="$(echo "${versions_raw}" | jq --raw-output .version.web.remote.hash 2>/dev/null)"
 
         if [ "${WEB_BRANCH}" = "master" ]; then
             web_version_converted="$(VersionConverter "${WEB_VERSION}")"
@@ -597,11 +618,11 @@ GetVersionInformation() {
     fi
 
     # Gather FTL version information...
-    FTL_BRANCH="$(echo "${versions_raw}" | jq --raw-output .version.ftl.local.branch)"
-    FTL_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.ftl.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    GITHUB_FTL_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.ftl.remmote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    FTL_HASH="$(echo "${versions_raw}" | jq --raw-output .version.ftl.local.hash)"
-    GITHUB_FTL_HASH="$(echo "${versions_raw}" | jq --raw-output .version.ftl.remote.hash)"
+    FTL_BRANCH="$(echo "${versions_raw}" | jq --raw-output .version.ftl.local.branch 2>/dev/null)"
+    FTL_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.ftl.local.version 2>/dev/null | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    GITHUB_FTL_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.ftl.remmote.version 2>/dev/null | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    FTL_HASH="$(echo "${versions_raw}" | jq --raw-output .version.ftl.local.hash 2>/dev/null)"
+    GITHUB_FTL_HASH="$(echo "${versions_raw}" | jq --raw-output .version.ftl.remote.hash 2>/dev/null)"
 
 
     if [ "${FTL_BRANCH}" = "master" ]; then
@@ -744,7 +765,7 @@ SetStatusMessage() {
         full_status="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
         mega_status="${mega_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
 
-    elif [ "${ftl_down_flag}" = true ]; then
+    elif [ "${connection_down_flag}" = true ]; then
         # Check if FTL is down
         pico_status=${pico_status_ftl_down}
         mini_status=${mini_status_ftl_down}
@@ -1431,6 +1452,14 @@ NormalPADD() {
 
     # Start getting our information for next round
     now=$(date +%s)
+
+    # check if a new authentication is required (e.g. after connection to FTL has re-established)
+    # GetFTLData() will return a 401 if a 401 http status code is returned
+    # as $password should be set already, PADD should automatically re-authenticate
+    authenthication_required=$(GetFTLData "/info/ftl")
+    if [ "${authenthication_required}" = 401 ]; then
+      ChallengeResponse
+    fi
 
     # Get uptime, CPU load, temp, etc. every 5 seconds
     if [ $((now - LastCheckSystemInformation)) -ge 5 ]; then
