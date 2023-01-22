@@ -207,14 +207,14 @@ GetFTLData() {
 GetSummaryInformation() {
   summary=$(GetFTLData "/stats/summary")
   cache_info=$(GetFTLData "/dns/cache")
-  sysinfo=$(GetFTLData "/ftl/sysinfo")
+  ftl_info=$(GetFTLData "/info/ftl")
   dns_blocking=$(GetFTLData "/dns/blocking")
 
-  clients=$(echo "${sysinfo}" | jq .ftl.clients.active )
+  clients=$(echo "${ftl_info}" | jq .ftl.clients.active )
 
   blocking_enabled=$(echo "${dns_blocking}" | jq .blocking )
 
-  domains_being_blocked_raw=$(echo "${sysinfo}" | jq .ftl.database.gravity)
+  domains_being_blocked_raw=$(echo "${ftl_info}" | jq .ftl.database.gravity)
   domains_being_blocked=$(printf "%.f" "${domains_being_blocked_raw}")
 
   dns_queries_today_raw=$(echo "$summary" | jq .queries.total )
@@ -244,15 +244,15 @@ GetSummaryInformation() {
 }
 
 GetSystemInformation() {
-    sysinfo=$(GetFTLData "/ftl/sysinfo")
+    sysinfo=$(GetFTLData "/info/system")
 
     # System uptime
     system_uptime_raw=$(echo "${sysinfo}" | jq .system.uptime )
 
     # CPU temperature and unit
-    cpu_temp_raw=$(echo "${sysinfo}" | jq .system.sensors[0].value)
+    cpu_temp_raw=$(GetFTLData "/info/sensors" | jq .sensors[0].value)
     cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
-    temp_unit=$(echo "${sysinfo}" | jq --raw-output .system.sensors[0].unit)
+    temp_unit=$(GetFTLData "/info/sensors"  | jq --raw-output .sensors[0].unit)
 
     # Temp + Unit
     if [ "${temp_unit}" = "C" ]; then
@@ -301,7 +301,7 @@ GetSystemInformation() {
     memory_heatmap="$(HeatmapGenerator "${memory_percent}")"
 
     # Get device model
-    sys_model="$(echo "${sysinfo}" | jq --raw-output .system.model)"
+    sys_model="$(GetFTLData "/info/host" | jq --raw-output .host.model)"
 
     # DOCKER_VERSION is set during GetVersionInformation, so this needs to run first during startup
     if [ ! "${DOCKER_VERSION}" = "null" ]; then
@@ -319,7 +319,6 @@ GetSystemInformation() {
 
 GetNetworkInformation() {
     interfaces_raw=$(GetFTLData "/network/interfaces")
-    sysinfo=$(GetFTLData "/ftl/sysinfo")
     config=$(GetFTLData "/config")
 
     # Get pi IPv4 address  of the default interface
@@ -387,7 +386,7 @@ GetNetworkInformation() {
     fi
 
     # Get hostname
-    pi_hostname="$(echo "${sysinfo}" | jq --raw-output .system.uname.nodename)"
+    pi_hostname="$(GetFTLData "/info/host" | jq --raw-output .host.uname.nodename)"
     full_hostname=${pi_hostname}
     # when PI-hole is the DHCP server, append the domain to the hostname
     if [ "${DHCP_ACTIVE}" = "true" ]; then
@@ -443,7 +442,7 @@ GetNetworkInformation() {
 }
 
 GetPiholeInformation() {
-    sysinfo=$(GetFTLData "/ftl/sysinfo")
+    sysinfo=$(GetFTLData "/info/ftl")
 
     # Get FTL's current PID
     ftlPID="$(echo "${sysinfo}" | jq .ftl.pid)"
@@ -491,7 +490,7 @@ fi
 GetVersionInformation() {
 
     out_of_date_flag=false
-    versions_raw=$(GetFTLData "/version")
+    versions_raw=$(GetFTLData "/info/version")
 
     # Gather DOCKER version information...
     # returns "null" if not running Pi-hole in Docker container
@@ -1297,6 +1296,9 @@ StartupRoutine(){
     moveXOffset; PrintLogo "$1"
     moveXOffset; printf "%b" "START-UP ===========\n"
 
+    # Test if the authentication endpoint is availabe
+    TestAPIAvailability
+
     # Authenticate with the FTL server
     moveXOffset; printf "%b" "Establishing connection with FTL...\n"
     Authenthication
@@ -1327,6 +1329,8 @@ StartupRoutine(){
   elif [ "$1" = "mini" ]; then
     moveXOffset; PrintLogo "$1"
     moveXOffset; echo "START UP ====================="
+    # Test if the authentication endpoint is availabe
+    TestAPIAvailability
     # Authenticate with the FTL server
     moveXOffset; printf "%b" "Establishing connection with FTL...\n"
     Authenthication
@@ -1359,6 +1363,8 @@ StartupRoutine(){
       moveXOffset; echo "START UP ==================================================="
     fi
 
+    # Test if the authentication endpoint is availabe
+    TestAPIAvailability
 
     # Authenticate with the FTL server
     moveXOffset; printf "%b" "Establishing connection with FTL...\n"
@@ -1557,12 +1563,8 @@ main(){
     # Save current terminal settings (needed for later restore after password prompt)
     stty_orig=$(stty -g)
 
-
     # Construct FTL's API address depending on the arguments supplied
     ConstructAPI
-
-    # Test if the authentication endpoint is availabe
-    TestAPIAvailability
 
     SizeChecker
 
