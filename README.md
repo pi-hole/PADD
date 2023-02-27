@@ -50,7 +50,7 @@ cd ~ ; echo "if [ \"\$TERM\" == \"linux\" ] ; then\n  while :\n  do\n    ./padd.
 - Reboot your Pi-Hole by running `sudo reboot`. PADD should now run when your Pi-Hole has completed booting.
 
 ## Updating PADD
-- Simply run 
+- Simply run
 
 ```bash
 ./padd.sh -u
