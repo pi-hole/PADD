@@ -1377,7 +1377,7 @@ Update() {
         echo "${full_status_update}"
 
         # Get script path
-        padd_script_path="${BASH_SOURCE}"
+        padd_script_path="${BASH_SOURCE:-$0}"
         while [ -L "${padd_script_path}" ]; do
           padd_script_dir="$(cd -P "$(dirname "${padd_script_path}")" > /dev/null 2>&1 && pwd)"
           padd_script_path="$(readlink "${padd_script_path}")"
