@@ -15,7 +15,7 @@ export LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.1.1"
+padd_version="v3.10.1"
 
 # LastChecks
 LastCheckVersionInformation=$(date +%s)
@@ -1391,7 +1391,7 @@ Update() {
                 exit 1
             fi
             pad_script_file_name="$(basename -- "${padd_script_path}")"
-            [ "${padd_script_file_name}" = '/' ] && "${padd_script_file_name}"=''
+            [ "${padd_script_file_name}" = '/' ] && padd_script_file_name=''
             if [ -L "${padd_script_file_name}" ]; then
                 padd_script_path="$(ls -l "${pad_script_file_name}")"
                 padd_script_path="${padd_script_path#* -> }"
