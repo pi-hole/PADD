@@ -15,7 +15,7 @@ export LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.10.1"
+padd_version="v3.1.1"
 
 # LastChecks
 LastCheckVersionInformation=$(date +%s)
@@ -1373,29 +1373,47 @@ NormalPADD() {
 Update() {
     GetPADDInformation
 
-    if [ "${padd_out_of_date_flag}" = "true" ]; then
+   if [ "${padd_out_of_date_flag}" = "true" ]; then
         echo "${full_status_update}"
 
-        # Get script path
-        padd_script_path="${BASH_SOURCE:-$0}"
-        while [ -L "${padd_script_path}" ]; do
-          padd_script_dir="$(cd -P "$(dirname "${padd_script_path}")" > /dev/null 2>&1 && pwd)"
-          padd_script_path="$(readlink "${padd_script_path}")"
-          [[ ${padd_script_path} != /* ]] && padd_script_path="${padd_script_dir}/${padd_script_path}"
-        done
-        padd_script_path="$(readlink -f "${padd_script_path}")"
+        padd_script_path="$0"
+        padd_script_file_name="padd.sh"
+        padd_script_directory="$(pwd -P)"
 
-        if which wget 2>&1 /dev/null; then
+        # Resolve potential symlinks until the script path is found
+        while :; do
+            if [ ! -L "${padd_script_path}" ] && [ ! -e "${padd_script_path}" ]; then
+                echo "${check_box_bad} Cannot locate script to update"
+                exit 1
+            fi
+            if ! cd "$(dirname -- "${padd_script_path}")"; then
+                echo "${check_box_bad} Cannot locate script to update"
+                exit 1
+            fi
+            pad_script_file_name="$(basename -- "${padd_script_path}")"
+            [ "${padd_script_file_name}" = "/" ] && "${padd_script_file_name}" = ""
+            if [ -L "${padd_script_file_name}" ]; then
+                padd_script_path="$(ls -l "${pad_script_file_name}")"
+                padd_script_path="${padd_script_path#* -> }"
+                continue
+            fi
+            break
+        done
+
+        padd_script_path="${padd_script_directory%/}"/"${padd_script_file_name}"
+
+        if which wget > /dev/null 2>&1; then
             echo "${check_box_info} Downloading via wget ..."
             wget -O "${padd_script_path}" https://install.padd.sh
             echo "${check_box_good} ... done"
-        elif which curl 2>&1 /dev/null; then
+        elif which curl > /dev/null 2>&1; then
             echo "${check_box_info} Downloading via curl ..."
             curl -sSL https://install.padd.sh -o "${padd_script_path}"
             echo "${check_box_good} ... done"
         else
             echo "${check_box_bad} Cannot download, neither wget nor curl is available"
             echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
+            exit 1
         fi
     else
         echo "${check_box_good} You are using the latest version"
