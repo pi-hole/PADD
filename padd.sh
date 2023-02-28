@@ -1373,7 +1373,7 @@ NormalPADD() {
 Update() {
     GetPADDInformation
 
-   if [ "${padd_out_of_date_flag}" = "true" ]; then
+    if [ "${padd_out_of_date_flag}" = "true" ]; then
         echo "${full_status_update}"
 
         padd_script_path="$0"
