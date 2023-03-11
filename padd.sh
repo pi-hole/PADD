@@ -1205,7 +1205,7 @@ ShowVersion() {
   if [ -n "${DOCKER_VERSION}" ]; then
     # Check for latest Docker version
     GetVersionInformation
-    printf "%s${clear_line}\n" "  PADD version is ${padd_version}$ as part of Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text} (Latest Docker: ${GITHUB_DOCKER_VERSION})"
+    printf "%s${clear_line}\n" "  PADD version is ${padd_version} as part of Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text} (Latest Docker: ${GITHUB_DOCKER_VERSION})"
     version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
   else
     printf "%s${clear_line}\n" "  PADD version is ${padd_version_heatmap}${padd_version}${reset_text} (Latest: ${padd_version_latest})"
@@ -1398,6 +1398,7 @@ DisplayHelp() {
 :::  -xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
 :::  -yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
 :::  -j, --json     output stats as JSON formatted string and exit
+:::  -v, --version  show PADD version info
 :::  -h, --help     display this help text
 
 EOM
