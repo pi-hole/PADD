@@ -1281,6 +1281,32 @@ secretRead() {
 ########################################## MAIN FUNCTIONS ##########################################
 
 OutputJSON() {
+    # Hiding the cursor.
+    # https://vt100.net/docs/vt510-rm/DECTCEM.html
+    printf '\e[?25l'
+    # Traps for graceful shutdown
+    # https://unix.stackexchange.com/a/681201
+    trap CleanExit EXIT
+    trap sig_cleanup INT QUIT TERM
+    # Save current terminal settings (needed for later restore after password prompt)
+    stty_orig=$(stty -g)
+
+    # Construct FTL's API address depending on the arguments supplied
+    ConstructAPI
+    # Test if the authentication endpoint is availabe
+    TestAPIAvailability
+    # Authenticate with the FTL server
+    printf "%b" "Establishing connection with FTL...\n"
+    Authenthication
+
+    GetSummaryInformation
+    printf "%b" "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today},\"clients\": ${clients}}"
+}
+
+ShowVersion() {
+    # Hiding the cursor.
+    # https://vt100.net/docs/vt510-rm/DECTCEM.html
+    printf '\e[?25l'
     # Traps for graceful shutdown
     # https://unix.stackexchange.com/a/681201
     trap CleanExit EXIT
@@ -1288,17 +1314,27 @@ OutputJSON() {
 
     # Save current terminal settings (needed for later restore after password prompt)
     stty_orig=$(stty -g)
+
     # Construct FTL's API address depending on the arguments supplied
     ConstructAPI
     # Test if the authentication endpoint is availabe
     TestAPIAvailability
     # Authenticate with the FTL server
-    moveXOffset; printf "%b" "Establishing connection with FTL...\n"
+    printf "%b" "Establishing connection with FTL...\n"
     Authenthication
 
-    GetSummaryInformation
-    echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today},\"clients\": ${clients}}"
-    exit 0
+    GetVersionInformation
+    GetPADDInformation
+    if [ -z "${padd_version_latest}" ]; then
+        padd_version_latest="N/A"
+    fi
+    if [ ! "${DOCKER_VERSION}" = "null" ]; then
+        # Check for latest Docker version
+        printf "%s${clear_line}\n" "PADD version is ${padd_version} as part of Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text} (Latest Docker: ${GITHUB_DOCKER_VERSION})"
+        version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
+    else
+        printf "%s${clear_line}\n" "PADD version is ${padd_version_heatmap}${padd_version}${reset_text} (Latest: ${padd_version_latest})"
+  fi
 }
 
 StartupRoutine(){
@@ -1515,11 +1551,10 @@ DisplayHelp() {
 :::  -a <api>                Path where your  Pi-hole's API is hosted (default: api)
 :::  -s <secret password>    Your Pi-hole's password, required to access the API
 :::  -j                      output stats as JSON formatted string and exit and exit
+:::  -v, --version           show PADD version info
 :::  -h                      display this help text
 
 EOM
-    # exit with the supplied argument
-    exit "$1"
 }
 
 # Called on signals INT QUIT TERM
@@ -1579,7 +1614,6 @@ TerminalResize(){
 }
 
 main(){
-
     # Hiding the cursor.
     # https://vt100.net/docs/vt510-rm/DECTCEM.html
     printf '\e[?25l'
@@ -1606,15 +1640,16 @@ main(){
 # Process all options (if present)
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    "-j" | "--json"     ) OutputJSON;;
-    "-h" | "--help"     ) DisplayHelp "0";;
+    "-j" | "--json"     ) xOffset=0; OutputJSON; exit 0;;
+    "-h" | "--help"     ) DisplayHelp; exit 0;;
+    "-v" | "--version"  ) xOffset=0; ShowVersion; exit 0;;
     "-xoff"             ) xOffset="$2"; xOffOrig="$2"; shift;;
     "-yoff"             ) yOffset="$2"; yOffOrig="$2"; shift;;
     "-u"                ) URL="$2"; shift;;
     "-p"                ) PORT="$2"; shift;;
     "-a"                ) APIPATH="$2"; shift;;
     "-s"                ) password="$2"; shift;;
-    *                   ) DisplayHelp "1";;
+    *                   ) DisplayHelp; exit 1;;
   esac
   shift
 done
