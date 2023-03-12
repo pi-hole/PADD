@@ -722,7 +722,7 @@ PrintLogo() {
   if [ -n "${DOCKER_VERSION}" ]; then
       version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
     else
-      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}"
+      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
   fi
 
   # Screen size checks
@@ -755,7 +755,7 @@ PrintDashboard() {
     if [ -n "${DOCKER_VERSION}" ]; then
       version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
     else
-      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}"
+      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
     fi
     # Move cursor to (0,0).
     printf '\e[H'
