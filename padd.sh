@@ -223,7 +223,7 @@ GetFTLData() {
 
 GetSummaryInformation() {
   summary=$(GetFTLData "/stats/summary")
-  cache_info=$(GetFTLData "/dns/cache")
+  cache_info=$(GetFTLData "/info/metrics")
   ftl_info=$(GetFTLData "/info/ftl")
   dns_blocking=$(GetFTLData "/dns/blocking")
 
@@ -243,9 +243,9 @@ GetSummaryInformation() {
   ads_percentage_today_raw=$(echo "$summary" | jq .queries.percent_blocked 2>/dev/null)
   ads_percentage_today=$(printf "%.1f" "${ads_percentage_today_raw}")
 
-  cache_size=$(echo "$cache_info" | jq .cache.size 2>/dev/null)
-  cache_evictions=$(echo "$cache_info" | jq .cache.evicted 2>/dev/null)
-  cache_inserts=$(echo "$cache_info"| jq .cache.inserted 2>/dev/null)
+  cache_size=$(echo "$cache_info" | jq .metrics.dns.cache.size 2>/dev/null)
+  cache_evictions=$(echo "$cache_info" | jq .metrics.dns.cache.evicted 2>/dev/null)
+  cache_inserts=$(echo "$cache_info"| jq .metrics.dns.cache.inserted 2>/dev/null)
 
   latest_blocked_raw=$(GetFTLData "/stats/recent_blocked?show=1" | jq --raw-output .blocked[0] 2>/dev/null)
 
@@ -813,7 +813,7 @@ PrintLogo() {
   if [ ! "${DOCKER_VERSION}" = "null" ]; then
       version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
     else
-      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}"
+      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
   fi
 
   # Screen size checks
@@ -846,7 +846,7 @@ PrintDashboard() {
     if [ ! "${DOCKER_VERSION}" = "null" ]; then
       version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
     else
-      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}"
+      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
     fi
     # Move cursor to (0,0).
     printf '\e[H'
