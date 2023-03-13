@@ -272,9 +272,10 @@ GetSystemInformation() {
     fi
 
     # CPU temperature and unit
-    cpu_temp_raw=$(GetFTLData "/info/sensors" | jq .sensors[0].value 2>/dev/null)
+    # in case .sensors.cpu_temp returns 'null' we substitute with 0
+    cpu_temp_raw=$(GetFTLData "/info/sensors" | jq '(.sensors.cpu_temp // 0)' 2>/dev/null)
     cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
-    temp_unit=$(GetFTLData "/info/sensors"  | jq --raw-output .sensors[0].unit 2>/dev/null)
+    temp_unit=$(GetFTLData "/info/sensors"  | jq --raw-output .sensors.unit 2>/dev/null)
 
     # Temp + Unit
     if [ "${temp_unit}" = "C" ]; then
