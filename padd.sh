@@ -1407,7 +1407,7 @@ Update() {
                 echo "${check_box_bad} Cannot locate script to update"
                 exit 1
             fi
-            pad_script_file_name="$(basename -- "${padd_script_path}")"
+            padd_script_file_name="$(basename -- "${padd_script_path}")"
             [ "${padd_script_file_name}" = '/' ] && padd_script_file_name=''
             if [ -L "${padd_script_file_name}" ]; then
                 padd_script_path="$(ls -l "${pad_script_file_name}")"
