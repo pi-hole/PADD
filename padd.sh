@@ -1422,11 +1422,11 @@ Update() {
         if which wget > /dev/null 2>&1; then
             echo "${check_box_info} Downloading via wget ..."
             wget -O "${padd_script_path}" https://install.padd.sh
-            echo "${check_box_good} ... done"
+            echo "${check_box_good} ... done. Restart PADD for the update to take effect"
         elif which curl > /dev/null 2>&1; then
             echo "${check_box_info} Downloading via curl ..."
             curl -sSL https://install.padd.sh -o "${padd_script_path}"
-            echo "${check_box_good} ... done"
+            echo "${check_box_good} ... done. Restart PADD for the update to take effect"
         else
             echo "${check_box_bad} Cannot download, neither wget nor curl is available"
             echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
