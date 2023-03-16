@@ -1393,31 +1393,7 @@ Update() {
     if [ "${padd_out_of_date_flag}" = "true" ]; then
         echo "${full_status_update}"
 
-        padd_script_path="$0"
-        padd_script_file_name="padd.sh"
-        padd_script_directory="$(pwd -P)"
-
-        # Resolve potential symlinks until the script path is found
-        while :; do
-            if [ ! -L "${padd_script_path}" ] && [ ! -e "${padd_script_path}" ]; then
-                echo "${check_box_bad} Cannot locate script to update"
-                exit 1
-            fi
-            if ! cd "$(dirname -- "${padd_script_path}")"; then
-                echo "${check_box_bad} Cannot locate script to update"
-                exit 1
-            fi
-            padd_script_file_name="$(basename -- "${padd_script_path}")"
-            [ "${padd_script_file_name}" = '/' ] && padd_script_file_name=''
-            if [ -L "${padd_script_file_name}" ]; then
-                padd_script_path="$(ls -l "${padd_script_file_name}")"
-                padd_script_path="${padd_script_path#* -> }"
-                continue
-            fi
-            break
-        done
-
-        padd_script_path="${padd_script_directory%/}"/"${padd_script_file_name}"
+        padd_script_path=$(realpath "$0")
 
         if which wget > /dev/null 2>&1; then
             echo "${check_box_info} Downloading via wget ..."
