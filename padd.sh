@@ -1388,6 +1388,11 @@ NormalPADD() {
 }
 
 Update() {
+    if [ -n "${DOCKER_VERSION}" ]; then
+        echo "${check_box_info} Update is not supported for Docker"
+        exit 1
+    fi
+
     GetPADDInformation
 
     if [ "${padd_out_of_date_flag}" = "true" ]; then
