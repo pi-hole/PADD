@@ -19,7 +19,7 @@ jobs:
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_ENV
 
       - name: Checkout code
-        uses: actions/checkout@v3.3.0
+        uses: actions/checkout@v3.5.0
         with:
           ref: 'development'
 
