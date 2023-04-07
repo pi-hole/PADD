@@ -162,12 +162,15 @@ GetSystemInformation() {
 
   # CPU temperature
   if [ -d "/sys/devices/platform/coretemp.0/hwmon/" ]; then
-    cpu=$(cat "$(find /sys/devices/platform/coretemp.0/hwmon/ -maxdepth 2 -name "temp1_input" 2>/dev/null | head -1)")
-  elif [ -f /sys/class/thermal/thermal_zone0/temp ]; then
+    cpu=$(cat "$(find /sys/devices/platform/coretemp.0/hwmon/ -maxdepth 2 -name "temp1_input" 2>/dev/null | head -1)" 2>/dev/null)
+  fi
+  if [ -z "${cpu}" ] && [ -f /sys/class/thermal/thermal_zone0/temp ]; then
     cpu=$(cat /sys/class/thermal/thermal_zone0/temp)
-  elif [ -f /sys/class/hwmon/hwmon0/temp1_input ]; then
+  fi
+  if [ -z "${cpu}" ] && [ -f /sys/class/hwmon/hwmon0/temp1_input ]; then
     cpu=$(cat /sys/class/hwmon/hwmon0/temp1_input)
-  else
+  fi
+  if [ -z "${cpu}" ]; then
     cpu=0
   fi
 
