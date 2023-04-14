@@ -162,12 +162,15 @@ GetSystemInformation() {
 
   # CPU temperature
   if [ -d "/sys/devices/platform/coretemp.0/hwmon/" ]; then
-    cpu=$(cat "$(find /sys/devices/platform/coretemp.0/hwmon/ -maxdepth 2 -name "temp1_input" 2>/dev/null | head -1)")
-  elif [ -f /sys/class/thermal/thermal_zone0/temp ]; then
+    cpu=$(cat "$(find /sys/devices/platform/coretemp.0/hwmon/ -maxdepth 2 -name "temp1_input" 2>/dev/null | head -1)" 2>/dev/null)
+  fi
+  if [ -z "${cpu}" ] && [ -f /sys/class/thermal/thermal_zone0/temp ]; then
     cpu=$(cat /sys/class/thermal/thermal_zone0/temp)
-  elif [ -f /sys/class/hwmon/hwmon0/temp1_input ]; then
+  fi
+  if [ -z "${cpu}" ] && [ -f /sys/class/hwmon/hwmon0/temp1_input ]; then
     cpu=$(cat /sys/class/hwmon/hwmon0/temp1_input)
-  else
+  fi
+  if [ -z "${cpu}" ]; then
     cpu=0
   fi
 
@@ -722,7 +725,7 @@ PrintLogo() {
   if [ -n "${DOCKER_VERSION}" ]; then
       version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
     else
-      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}"
+      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
   fi
 
   # Screen size checks
@@ -755,7 +758,7 @@ PrintDashboard() {
     if [ -n "${DOCKER_VERSION}" ]; then
       version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
     else
-      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}"
+      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
     fi
     # Move cursor to (0,0).
     printf '\e[H'
