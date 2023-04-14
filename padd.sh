@@ -1402,25 +1402,35 @@ Update() {
     GetPADDInformation
 
     if [ "${padd_out_of_date_flag}" = "true" ]; then
-        echo "${full_status_update}"
+        echo "${check_box_info} Updating PADD from ${padd_version} to ${padd_version_latest}"
 
         padd_script_path=$(realpath "$0")
 
         if which wget > /dev/null 2>&1; then
-            echo "${check_box_info} Downloading via wget ..."
-            wget -O "${padd_script_path}" https://install.padd.sh
-            echo "${check_box_good} ... done. Restart PADD for the update to take effect"
+            echo "${check_box_info} Downloading PADD update via wget ..."
+            if wget -qO "${padd_script_path}" https://install.padd.sh > /dev/null 2>&1; then
+                echo "${check_box_good} ... done. Restart PADD for the update to take effect"
+            else
+                echo "${check_box_bad} Cannot download PADD update via wget"
+                echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
+                exit 1
+            fi
         elif which curl > /dev/null 2>&1; then
-            echo "${check_box_info} Downloading via curl ..."
-            curl -sSL https://install.padd.sh -o "${padd_script_path}"
-            echo "${check_box_good} ... done. Restart PADD for the update to take effect"
+            echo "${check_box_info} Downloading PADD update via curl ..."
+            if  curl -sSL https://install.padd.sh -o "${padd_script_path}" > /dev/null 2>&1; then
+                echo "${check_box_good} ... done. Restart PADD for the update to take effect"
+            else
+                echo "${check_box_bad} Cannot download PADD update via curl"
+                echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
+                exit 1
+            fi
         else
             echo "${check_box_bad} Cannot download, neither wget nor curl are available"
             echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
             exit 1
         fi
     else
-        echo "${check_box_good} You are using the latest version"
+        echo "${check_box_good} You are already using the latest PADD version ${padd_version}"
     fi
 
     exit 0
