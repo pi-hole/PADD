@@ -1412,7 +1412,7 @@ Update() {
             curl -sSL https://install.padd.sh -o "${padd_script_path}"
             echo "${check_box_good} ... done. Restart PADD for the update to take effect"
         else
-            echo "${check_box_bad} Cannot download, neither wget nor curl is available"
+            echo "${check_box_bad} Cannot download, neither wget nor curl are available"
             echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
             exit 1
         fi
@@ -1502,7 +1502,7 @@ main(){
 while [ "$#" -gt 0 ]; do
   case "$1" in
     "-j" | "--json"     ) OutputJSON; exit 0;;
-    "-u" | "--update"   ) Update; exit 0;;
+    "-u" | "--update"   ) Update;;
     "-h" | "--help"     ) DisplayHelp; exit 0;;
     "-v" | "--version"  ) ShowVersion; exit 0;;
     "-xoff"             ) xOffset="$2"; xOffOrig="$2"; shift;;
