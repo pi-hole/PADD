@@ -1390,6 +1390,52 @@ NormalPADD() {
   done
 }
 
+Update() {
+    # source version file to check if $DOCKER_VERSION is set
+    . /etc/pihole/versions
+
+    if [ -n "${DOCKER_VERSION}" ]; then
+        echo "${check_box_info} Update is not supported for Docker"
+        exit 1
+    fi
+
+    GetPADDInformation
+
+    if [ "${padd_out_of_date_flag}" = "true" ]; then
+        echo "${check_box_info} Updating PADD from ${padd_version} to ${padd_version_latest}"
+
+        padd_script_path=$(realpath "$0")
+
+        if which wget > /dev/null 2>&1; then
+            echo "${check_box_info} Downloading PADD update via wget ..."
+            if wget -qO "${padd_script_path}" https://install.padd.sh > /dev/null 2>&1; then
+                echo "${check_box_good} ... done. Restart PADD for the update to take effect"
+            else
+                echo "${check_box_bad} Cannot download PADD update via wget"
+                echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
+                exit 1
+            fi
+        elif which curl > /dev/null 2>&1; then
+            echo "${check_box_info} Downloading PADD update via curl ..."
+            if  curl -sSL https://install.padd.sh -o "${padd_script_path}" > /dev/null 2>&1; then
+                echo "${check_box_good} ... done. Restart PADD for the update to take effect"
+            else
+                echo "${check_box_bad} Cannot download PADD update via curl"
+                echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
+                exit 1
+            fi
+        else
+            echo "${check_box_bad} Cannot download, neither wget nor curl are available"
+            echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
+            exit 1
+        fi
+    else
+        echo "${check_box_good} You are already using the latest PADD version ${padd_version}"
+    fi
+
+    exit 0
+}
+
 DisplayHelp() {
     cat << EOM
 
@@ -1401,6 +1447,7 @@ DisplayHelp() {
 :::  -xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
 :::  -yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
 :::  -j, --json     output stats as JSON formatted string and exit
+:::  -u, --update   update to the latest version
 :::  -v, --version  show PADD version info
 :::  -h, --help     display this help text
 
@@ -1468,6 +1515,7 @@ main(){
 while [ "$#" -gt 0 ]; do
   case "$1" in
     "-j" | "--json"     ) OutputJSON; exit 0;;
+    "-u" | "--update"   ) Update;;
     "-h" | "--help"     ) DisplayHelp; exit 0;;
     "-v" | "--version"  ) ShowVersion; exit 0;;
     "-xoff"             ) xOffset="$2"; xOffOrig="$2"; shift;;
