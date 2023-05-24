@@ -185,7 +185,7 @@ ChallengeResponse() {
 	# Send response & get session response
 	challenge="$(curl --silent -X GET "http://${URL}:${PORT}/${APIPATH}/auth" | jq --raw-output .challenge 2>/dev/null)"
 	response="$(printf "%b" "${challenge}:${pwhash}" | sha256sum | sed 's/\s.*$//')"
-	sessionResponse="$(curl --silent -X POST "http://${URL}:${PORT}/${APIPATH}/auth" --data "{\"response\":\"${response}\"}" )"
+	sessionResponse="$(curl --silent -X POST "http://${URL}:${PORT}/${APIPATH}/auth" --user-agent "PADD ${padd_version}" --data "{\"response\":\"${response}\"}" )"
 
   if [ -z "${sessionResponse}" ]; then
     moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
