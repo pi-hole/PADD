@@ -1537,6 +1537,52 @@ NormalPADD() {
   done
 }
 
+Update() {
+    # source version file to check if $DOCKER_VERSION is set
+    . /etc/pihole/versions
+
+    if [ -n "${DOCKER_VERSION}" ]; then
+        echo "${check_box_info} Update is not supported for Docker"
+        exit 1
+    fi
+
+    GetPADDInformation
+
+    if [ "${padd_out_of_date_flag}" = "true" ]; then
+        echo "${check_box_info} Updating PADD from ${padd_version} to ${padd_version_latest}"
+
+        padd_script_path=$(realpath "$0")
+
+        if which wget > /dev/null 2>&1; then
+            echo "${check_box_info} Downloading PADD update via wget ..."
+            if wget -qO "${padd_script_path}" https://install.padd.sh > /dev/null 2>&1; then
+                echo "${check_box_good} ... done. Restart PADD for the update to take effect"
+            else
+                echo "${check_box_bad} Cannot download PADD update via wget"
+                echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
+                exit 1
+            fi
+        elif which curl > /dev/null 2>&1; then
+            echo "${check_box_info} Downloading PADD update via curl ..."
+            if  curl -sSL https://install.padd.sh -o "${padd_script_path}" > /dev/null 2>&1; then
+                echo "${check_box_good} ... done. Restart PADD for the update to take effect"
+            else
+                echo "${check_box_bad} Cannot download PADD update via curl"
+                echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
+                exit 1
+            fi
+        else
+            echo "${check_box_bad} Cannot download, neither wget nor curl are available"
+            echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
+            exit 1
+        fi
+    else
+        echo "${check_box_good} You are already using the latest PADD version ${padd_version}"
+    fi
+
+    exit 0
+}
+
 DisplayHelp() {
     cat << EOM
 
@@ -1547,13 +1593,14 @@ DisplayHelp() {
 :::  -xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
 :::  -yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
 :::
-:::  -u <URL|IP>             URL or address of your Pi-hole (default: 127.0.0.1)
-:::  -p <port>               Port of your Pi-hole's API (default: 8080)
-:::  -a <api>                Path where your  Pi-hole's API is hosted (default: api)
-:::  -s <secret password>    Your Pi-hole's password, required to access the API
-:::  -j                      output stats as JSON formatted string and exit and exit
+:::  --server <URL|IP>       url or address of your Pi-hole (default: 127.0.0.1)
+:::  --port <port>           port of your Pi-hole's API (default: 8080)
+:::  --api <api>             path where your Pi-hole's API is hosted (default: api)
+:::  --secret <password>     your Pi-hole's password, required to access the API
+:::  -j, --json              output stats as JSON formatted string and exit and exit
+:::  -u, --update            update to the latest version
 :::  -v, --version           show PADD version info
-:::  -h                      display this help text
+:::  -h, --help              display this help text
 
 EOM
 }
@@ -1642,14 +1689,15 @@ main(){
 while [ "$#" -gt 0 ]; do
   case "$1" in
     "-j" | "--json"     ) xOffset=0; OutputJSON; exit 0;;
+    "-u" | "--update"   ) Update;;
     "-h" | "--help"     ) DisplayHelp; exit 0;;
     "-v" | "--version"  ) xOffset=0; ShowVersion; exit 0;;
-    "-xoff"             ) xOffset="$2"; xOffOrig="$2"; shift;;
-    "-yoff"             ) yOffset="$2"; yOffOrig="$2"; shift;;
-    "-u"                ) URL="$2"; shift;;
-    "-p"                ) PORT="$2"; shift;;
-    "-a"                ) APIPATH="$2"; shift;;
-    "-s"                ) password="$2"; shift;;
+    "--xoff"            ) xOffset="$2"; xOffOrig="$2"; shift;;
+    "--yoff"            ) yOffset="$2"; yOffOrig="$2"; shift;;
+    "--server"          ) URL="$2"; shift;;
+    "--port"            ) PORT="$2"; shift;;
+    "--api"             ) APIPATH="$2"; shift;;
+    "--secret"          ) password="$2"; shift;;
     *                   ) DisplayHelp; exit 1;;
   esac
   shift
