@@ -15,7 +15,7 @@ export LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.10.1"
+padd_version="v3.11.0"
 
 # LastChecks
 LastCheckVersionInformation=$(date +%s)
@@ -162,12 +162,15 @@ GetSystemInformation() {
 
   # CPU temperature
   if [ -d "/sys/devices/platform/coretemp.0/hwmon/" ]; then
-    cpu=$(cat "$(find /sys/devices/platform/coretemp.0/hwmon/ -maxdepth 2 -name "temp1_input" 2>/dev/null | head -1)")
-  elif [ -f /sys/class/thermal/thermal_zone0/temp ]; then
+    cpu=$(cat "$(find /sys/devices/platform/coretemp.0/hwmon/ -maxdepth 2 -name "temp1_input" 2>/dev/null | head -1)" 2>/dev/null)
+  fi
+  if [ -z "${cpu}" ] && [ -f /sys/class/thermal/thermal_zone0/temp ]; then
     cpu=$(cat /sys/class/thermal/thermal_zone0/temp)
-  elif [ -f /sys/class/hwmon/hwmon0/temp1_input ]; then
+  fi
+  if [ -z "${cpu}" ] && [ -f /sys/class/hwmon/hwmon0/temp1_input ]; then
     cpu=$(cat /sys/class/hwmon/hwmon0/temp1_input)
-  else
+  fi
+  if [ -z "${cpu}" ]; then
     cpu=0
   fi
 
@@ -722,7 +725,7 @@ PrintLogo() {
   if [ -n "${DOCKER_VERSION}" ]; then
       version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
     else
-      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}"
+      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
   fi
 
   # Screen size checks
@@ -755,7 +758,7 @@ PrintDashboard() {
     if [ -n "${DOCKER_VERSION}" ]; then
       version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
     else
-      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}"
+      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
     fi
     # Move cursor to (0,0).
     printf '\e[H'
@@ -1195,6 +1198,23 @@ OutputJSON() {
   echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw},\"clients\": ${clients}}"
 }
 
+ShowVersion() {
+  # source version file to check if $DOCKER_VERSION is set
+  . /etc/pihole/versions
+  GetPADDInformation
+  if [ -z "${padd_version_latest}" ]; then
+    padd_version_latest="N/A"
+  fi
+  if [ -n "${DOCKER_VERSION}" ]; then
+    # Check for latest Docker version
+    GetVersionInformation
+    printf "%s${clear_line}\n" "  PADD version is ${padd_version} as part of Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text} (Latest Docker: ${GITHUB_DOCKER_VERSION})"
+    version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
+  else
+    printf "%s${clear_line}\n" "  PADD version is ${padd_version_heatmap}${padd_version}${reset_text} (Latest: ${padd_version_latest})"
+  fi
+}
+
 StartupRoutine(){
   # Get config variables
   . /etc/pihole/setupVars.conf
@@ -1370,6 +1390,52 @@ NormalPADD() {
   done
 }
 
+Update() {
+    # source version file to check if $DOCKER_VERSION is set
+    . /etc/pihole/versions
+
+    if [ -n "${DOCKER_VERSION}" ]; then
+        echo "${check_box_info} Update is not supported for Docker"
+        exit 1
+    fi
+
+    GetPADDInformation
+
+    if [ "${padd_out_of_date_flag}" = "true" ]; then
+        echo "${check_box_info} Updating PADD from ${padd_version} to ${padd_version_latest}"
+
+        padd_script_path=$(realpath "$0")
+
+        if which wget > /dev/null 2>&1; then
+            echo "${check_box_info} Downloading PADD update via wget ..."
+            if wget -qO "${padd_script_path}" https://install.padd.sh > /dev/null 2>&1; then
+                echo "${check_box_good} ... done. Restart PADD for the update to take effect"
+            else
+                echo "${check_box_bad} Cannot download PADD update via wget"
+                echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
+                exit 1
+            fi
+        elif which curl > /dev/null 2>&1; then
+            echo "${check_box_info} Downloading PADD update via curl ..."
+            if  curl -sSL https://install.padd.sh -o "${padd_script_path}" > /dev/null 2>&1; then
+                echo "${check_box_good} ... done. Restart PADD for the update to take effect"
+            else
+                echo "${check_box_bad} Cannot download PADD update via curl"
+                echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
+                exit 1
+            fi
+        else
+            echo "${check_box_bad} Cannot download, neither wget nor curl are available"
+            echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
+            exit 1
+        fi
+    else
+        echo "${check_box_good} You are already using the latest PADD version ${padd_version}"
+    fi
+
+    exit 0
+}
+
 DisplayHelp() {
     cat << EOM
 
@@ -1381,10 +1447,11 @@ DisplayHelp() {
 :::  -xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
 :::  -yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
 :::  -j, --json     output stats as JSON formatted string and exit
+:::  -u, --update   update to the latest version
+:::  -v, --version  show PADD version info
 :::  -h, --help     display this help text
 
 EOM
-    exit 0
 }
 
 CleanExit(){
@@ -1448,7 +1515,9 @@ main(){
 while [ "$#" -gt 0 ]; do
   case "$1" in
     "-j" | "--json"     ) OutputJSON; exit 0;;
+    "-u" | "--update"   ) Update;;
     "-h" | "--help"     ) DisplayHelp; exit 0;;
+    "-v" | "--version"  ) ShowVersion; exit 0;;
     "-xoff"             ) xOffset="$2"; xOffOrig="$2"; shift;;
     "-yoff"             ) yOffset="$2"; yOffOrig="$2"; shift;;
     *                   ) DisplayHelp; exit 1;;
