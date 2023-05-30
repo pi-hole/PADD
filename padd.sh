@@ -118,7 +118,7 @@ TestAPIAvailability() {
     availabilityResonse=$(curl -s -o /dev/null -w "%{http_code}" "http://${URL}:${PORT}/${APIPATH}/auth")
 
     # test if http status code was 200 (OK)
-    if [ "${availabilityResonse}" = 200 ]; then
+    if [ "${availabilityResonse}" = 200 ] || [ "${availabilityResonse}" = 401 ]; then
         moveXOffset; printf "%b" "API available at: http://${URL}:${PORT}/${APIPATH}\n"
     else
         moveXOffset; echo "API not available at: http://${URL}:${PORT}/${APIPATH}"
@@ -129,7 +129,7 @@ TestAPIAvailability() {
 
 Authenthication() {
     # Try to authenticate
-    ChallengeResponse
+    LoginAPI
 
     while [ "${validSession}" = false ] || [ -z "${validSession}" ] ; do
         moveXOffset; echo "Authentication failed."
@@ -145,7 +145,7 @@ Authenthication() {
         moveXOffset; secretRead; printf '\n'
 
         # Try to authenticate again
-        ChallengeResponse
+        LoginAPI
     done
 
     # Loop exited, authentication was successful
@@ -170,22 +170,8 @@ DeleteSession() {
 
 }
 
-ChallengeResponse() {
-	# Challenge-response authentication
-  local response
-
-	# Compute password hash from user password
-	# Compute password hash twice to avoid rainbow table vulnerability
-    hash1=$(printf "%b" "$password" | sha256sum | sed 's/\s.*$//')
-    pwhash=$(printf "%b" "$hash1" | sha256sum | sed 's/\s.*$//')
-
-
-	# Get challenge from FTL
-	# Calculate response based on challenge and password hash
-	# Send response & get session response
-	challenge="$(curl --silent -X GET "http://${URL}:${PORT}/${APIPATH}/auth" | jq --raw-output .challenge 2>/dev/null)"
-	response="$(printf "%b" "${challenge}:${pwhash}" | sha256sum | sed 's/\s.*$//')"
-	sessionResponse="$(curl --silent -X POST "http://${URL}:${PORT}/${APIPATH}/auth" --user-agent "PADD ${padd_version}" --data "{\"response\":\"${response}\"}" )"
+LoginAPI() {
+	sessionResponse="$(curl --silent -X POST "http://${URL}:${PORT}/${APIPATH}/auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
 
   if [ -z "${sessionResponse}" ]; then
     moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
@@ -374,11 +360,11 @@ GetNetworkInformation() {
     fi
 
     # Is Pi-Hole acting as the DHCP server?
-    DHCP_ACTIVE="$(echo "${config}" | jq .config.dnsmasq.dhcp.active 2>/dev/null )"
+    DHCP_ACTIVE="$(echo "${config}" | jq .config.dns.dhcp.active 2>/dev/null )"
 
     if [ "${DHCP_ACTIVE}" = "true" ]; then
-        DHCP_START="$(echo "${config}" | jq --raw-output .config.dnsmasq.dhcp.start 2>/dev/null)"
-        DHCP_END="$(echo "${config}" | jq --raw-output .config.dnsmasq.dhcp.end 2>/dev/null)"
+        DHCP_START="$(echo "${config}" | jq --raw-output .config.dns.dhcp.start 2>/dev/null)"
+        DHCP_END="$(echo "${config}" | jq --raw-output .config.dns.dhcp.end 2>/dev/null)"
 
         dhcp_status="Enabled"
         dhcp_info=" Range:    ${DHCP_START} - ${DHCP_END}"
@@ -386,7 +372,7 @@ GetNetworkInformation() {
         dhcp_check_box=${check_box_good}
 
         # Is DHCP handling IPv6?
-        DHCP_IPv6="$(echo "${config}" | jq --raw-output .config.dnsmasq.dhcp.ipv6 2>/dev/null)"
+        DHCP_IPv6="$(echo "${config}" | jq --raw-output .config.dns.dhcp.ipv6 2>/dev/null)"
         if [ "${DHCP_IPv6}" = "true" ]; then
             dhcp_ipv6_status="Enabled"
             dhcp_ipv6_heatmap=${green_text}
@@ -413,7 +399,7 @@ GetNetworkInformation() {
     full_hostname=${pi_hostname}
     # when PI-hole is the DHCP server, append the domain to the hostname
     if [ "${DHCP_ACTIVE}" = "true" ]; then
-        PIHOLE_DOMAIN="$(echo "${config}" | jq --raw-output .config.dnsmasq.domain 2>/dev/null)"
+        PIHOLE_DOMAIN="$(echo "${config}" | jq --raw-output .config.dns.domain 2>/dev/null)"
         if [  -n "${PIHOLE_DOMAIN}" ]; then
             count=${pi_hostname}"."${PIHOLE_DOMAIN}
             count=${#count}
@@ -424,7 +410,7 @@ GetNetworkInformation() {
     fi
 
     # Get the number of configured upstream DNS servers
-    dns_count="$(echo "${config}" | jq --raw-output .config.dnsmasq.upstreams[] 2>/dev/null  | sed '/^\s*$/d' | wc -l)"
+    dns_count="$(echo "${config}" | jq --raw-output .config.dns.upstreams[] 2>/dev/null  | sed '/^\s*$/d' | wc -l)"
     # if there's only one DNS server
     if [ "${dns_count}" -eq 1 ]; then
         dns_information="1 server"
@@ -434,7 +420,7 @@ GetNetworkInformation() {
 
 
     # DNSSEC
-    DNSSEC="$(echo "${config}" | jq .config.dnsmasq.dnssec 2>/dev/null)"
+    DNSSEC="$(echo "${config}" | jq .config.dns.dnssec 2>/dev/null)"
     if [ "${DNSSEC}" = "true" ]; then
         dnssec_status="Enabled"
         dnssec_heatmap=${green_text}
@@ -444,7 +430,7 @@ GetNetworkInformation() {
     fi
 
     # Conditional forwarding
-    CONDITIONAL_FORWARDING="$(echo "${config}" | jq .config.dnsmasq.rev_server.active 2>/dev/null)"
+    CONDITIONAL_FORWARDING="$(echo "${config}" | jq .config.dns.rev_server.active 2>/dev/null)"
     if [ "${CONDITIONAL_FORWARDING}" = "true" ]; then
         conditional_forwarding_status="Enabled"
         conditional_forwarding_heatmap=${green_text}
@@ -487,7 +473,7 @@ GetPiholeInformation() {
     ftl_cpu="$(printf "%.1f" "${ftl_cpu_raw}")%"
     ftl_mem_percentage="$(printf "%.1f" "${ftl_mem_percentage_raw}")%"
     # Get Pi-hole (blocking) status
-    ftl_dns_port=$(GetFTLData "/config" | jq .config.dnsmasq.port 2>/dev/null)
+    ftl_dns_port=$(GetFTLData "/config" | jq .config.dns.port 2>/dev/null)
     # Get FTL's current PID
     ftlPID="$(echo "${sysinfo}" | jq .ftl.pid 2>/dev/null)"
   fi
@@ -1495,7 +1481,7 @@ NormalPADD() {
     # as $password should be set already, PADD should automatically re-authenticate
     authenthication_required=$(GetFTLData "/info/ftl")
     if [ "${authenthication_required}" = 401 ]; then
-      ChallengeResponse
+      LoginAPI
     fi
 
     # Get uptime, CPU load, temp, etc. every 5 seconds
