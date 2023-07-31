@@ -106,7 +106,7 @@ ConstructAPI() {
 		URL=127.0.0.1
 	fi
 	if [ -z "${PORT}" ]; then
-		PORT=8080
+		PORT=80
 	fi
 	if [ -z "${APIPATH}" ]; then
 		APIPATH=api
@@ -1583,7 +1583,7 @@ DisplayHelp() {
 :::  -yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
 :::
 :::  --server <URL|IP>       url or address of your Pi-hole (default: 127.0.0.1)
-:::  --port <port>           port of your Pi-hole's API (default: 8080)
+:::  --port <port>           port of your Pi-hole's API (default: 80)
 :::  --api <api>             path where your Pi-hole's API is hosted (default: api)
 :::  --secret <password>     your Pi-hole's password, required to access the API
 :::  -j, --json              output stats as JSON formatted string and exit and exit
