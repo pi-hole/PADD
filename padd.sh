@@ -441,6 +441,9 @@ GetVersionInformation() {
     docker_version_converted="$(VersionConverter "${DOCKER_VERSION}")"
     docker_version_latest_converted="$(VersionConverter "${GITHUB_DOCKER_VERSION}")"
 
+    # Note: the version comparison will fail for any Docker tag not following a 'YYYY.MM.VV' scheme
+    #       e.g. 'nightly', 'beta', 'v6-pre-alpha' and might set a false out_of_date_flag
+    #       As those versions are not meant to be used in production, we ignore this small bug
     if [ "${docker_version_converted}" -lt "${docker_version_latest_converted}" ]; then
       out_of_date_flag="true"
       docker_version_heatmap=${red_text}
