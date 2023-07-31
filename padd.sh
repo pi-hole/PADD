@@ -1579,8 +1579,8 @@ DisplayHelp() {
 :::
 :::
 ::: Options:
-:::  -xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
-:::  -yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
+:::  --xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
+:::  --yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
 :::
 :::  --server <URL|IP>       url or address of your Pi-hole (default: 127.0.0.1)
 :::  --port <port>           port of your Pi-hole's API (default: 80)
