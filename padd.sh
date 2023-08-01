@@ -157,7 +157,7 @@ DeleteSession() {
     # if a valid Session exists (no password required or successful authenthication) and
     # SID is not null (successful authenthication only), delete the session
     if [ "${validSession}" = true ] && [ ! "${SID}" = null ]; then
-        # Try to delte the session. Omitt the output, but get the http status code
+        # Try to delete the session. Omit the output, but get the http status code
         deleteResponse=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "http://${URL}:${PORT}/${APIPATH}/auth"  -H "Accept: application/json" -H "sid: ${SID}")
 
         printf "\n\n"
@@ -190,7 +190,7 @@ GetFTLData() {
 
   # status are the last 3 characters
   status=$(printf %s "${response#"${response%???}"}")
-  # data is everything from repsonse without the last 3 characters
+  # data is everything from response without the last 3 characters
   data=$(printf %s "${response%???}")
 
   if [ "${status}" = 200 ]; then
@@ -1214,8 +1214,8 @@ truncateString() {
     fi
 }
 
-# Converts seconds to days, hours, minuts
-#https://unix.stackexchange.com/a/338844
+# Converts seconds to days, hours, minutes
+# https://unix.stackexchange.com/a/338844
 convertUptime() {
     # shellcheck disable=SC2016
     eval "echo $(date -ud "@$1" +'$((%s/3600/24)) days, %H hours, %M minutes')"
@@ -1233,12 +1233,12 @@ secretRead() {
 
     # This workaround changes the terminal characteristics to not echo input and later rests this option
     # credits https://stackoverflow.com/a/4316765
-    # showing astrix instead of password
+    # showing asterisk instead of password
     # https://stackoverflow.com/a/24600839
     # https://unix.stackexchange.com/a/464963
 
     stty -echo # do not echo user input
-    stty -icanon min 1 time 0 # disable cannonical mode https://man7.org/linux/man-pages/man3/termios.3.html
+    stty -icanon min 1 time 0 # disable canonical mode https://man7.org/linux/man-pages/man3/termios.3.html
 
     unset password
     unset key
@@ -1283,7 +1283,7 @@ OutputJSON() {
 
     # Construct FTL's API address depending on the arguments supplied
     ConstructAPI
-    # Test if the authentication endpoint is availabe
+    # Test if the authentication endpoint is available
     TestAPIAvailability
     # Authenticate with the FTL server
     printf "%b" "Establishing connection with FTL...\n"
@@ -1307,7 +1307,7 @@ ShowVersion() {
 
     # Construct FTL's API address depending on the arguments supplied
     ConstructAPI
-    # Test if the authentication endpoint is availabe
+    # Test if the authentication endpoint is available
     TestAPIAvailability
     # Authenticate with the FTL server
     printf "%b" "Establishing connection with FTL...\n"
@@ -1343,7 +1343,7 @@ StartupRoutine(){
     moveXOffset; PrintLogo "$1"
     moveXOffset; printf "%b" "START-UP ===========\n"
 
-    # Test if the authentication endpoint is availabe
+    # Test if the authentication endpoint is available
     TestAPIAvailability
 
     # Authenticate with the FTL server
@@ -1376,7 +1376,7 @@ StartupRoutine(){
   elif [ "$1" = "mini" ]; then
     moveXOffset; PrintLogo "$1"
     moveXOffset; echo "START UP ====================="
-    # Test if the authentication endpoint is availabe
+    # Test if the authentication endpoint is available
     TestAPIAvailability
     # Authenticate with the FTL server
     moveXOffset; printf "%b" "Establishing connection with FTL...\n"
@@ -1410,7 +1410,7 @@ StartupRoutine(){
       moveXOffset; echo "START UP ==================================================="
     fi
 
-    # Test if the authentication endpoint is availabe
+    # Test if the authentication endpoint is available
     TestAPIAvailability
 
     # Authenticate with the FTL server
@@ -1579,8 +1579,8 @@ DisplayHelp() {
 :::
 :::
 ::: Options:
-:::  -xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
-:::  -yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
+:::  --xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
+:::  --yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
 :::
 :::  --server <URL|IP>       url or address of your Pi-hole (default: 127.0.0.1)
 :::  --port <port>           port of your Pi-hole's API (default: 80)
@@ -1615,7 +1615,7 @@ CleanExit() {
     # reset trap for all signals to not interrupt clean_tempfiles() on any next signal
     trap '' EXIT INT QUIT TERM
 
-    # restore terminal settings if they have been changed (e.g. user cancled script while at password  input prompt)
+    # restore terminal settings if they have been changed (e.g. user canceled script while at password input prompt)
     if [ "$(stty -g)" != "${stty_orig}" ]; then
         stty "${stty_orig}"
     fi
