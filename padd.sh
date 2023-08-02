@@ -105,7 +105,7 @@ ConstructAPI() {
 	if [ -z "${URL}" ]; then
 		URL=127.0.0.1
         # when no $URL is set we assume PADD is running locally and we can get the port value from FTL directly
-        PORT="$(pihole-FTL  --config webserver.port)"
+        PORT="$(pihole-FTL --config webserver.port)"
         PORT="${PORT%%,*}"
 	fi
 	if [ -z "${PORT}" ]; then
