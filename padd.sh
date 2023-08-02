@@ -104,6 +104,9 @@ ConstructAPI() {
 	# If no arguments were supplied set them to default
 	if [ -z "${URL}" ]; then
 		URL=127.0.0.1
+        # when no $URL is set we assume PADD is running locally and we can get the port value from FTL directly
+        PORT="$(pihole-FTL  --config webserver.port)"
+        PORT="${PORT%%,*}"
 	fi
 	if [ -z "${PORT}" ]; then
 		PORT=80
@@ -1231,7 +1234,7 @@ secretRead() {
     # `-n` option (reading n chars)
 
 
-    # This workaround changes the terminal characteristics to not echo input and later rests this option
+    # This workaround changes the terminal characteristics to not echo input and later resets this option
     # credits https://stackoverflow.com/a/4316765
     # showing astrix instead of password
     # https://stackoverflow.com/a/24600839
