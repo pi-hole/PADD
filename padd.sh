@@ -160,6 +160,9 @@ GetSystemInformation() {
   # System uptime
     system_uptime_raw=$(uptime)
 
+  # reset $cpu variable
+  unset cpu
+
   # CPU temperature
   if [ -d "/sys/devices/platform/coretemp.0/hwmon/" ]; then
     cpu=$(cat "$(find /sys/devices/platform/coretemp.0/hwmon/ -maxdepth 2 -name "temp1_input" 2>/dev/null | head -1)" 2>/dev/null)
