@@ -15,7 +15,7 @@ export LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.11.0"
+padd_version="v3.11.1"
 
 # LastChecks
 LastCheckVersionInformation=$(date +%s)
@@ -159,6 +159,9 @@ GetSummaryInformation() {
 GetSystemInformation() {
   # System uptime
     system_uptime_raw=$(uptime)
+
+  # reset $cpu variable
+  unset cpu
 
   # CPU temperature
   if [ -d "/sys/devices/platform/coretemp.0/hwmon/" ]; then
@@ -441,6 +444,9 @@ GetVersionInformation() {
     docker_version_converted="$(VersionConverter "${DOCKER_VERSION}")"
     docker_version_latest_converted="$(VersionConverter "${GITHUB_DOCKER_VERSION}")"
 
+    # Note: the version comparison will fail for any Docker tag not following a 'YYYY.MM.VV' scheme
+    #       e.g. 'nightly', 'beta', 'v6-pre-alpha' and might set a false out_of_date_flag
+    #       As those versions are not meant to be used in production, we ignore this small bug
     if [ "${docker_version_converted}" -lt "${docker_version_latest_converted}" ]; then
       out_of_date_flag="true"
       docker_version_heatmap=${red_text}
