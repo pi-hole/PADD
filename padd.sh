@@ -104,12 +104,21 @@ ConstructAPI() {
 	# If no arguments were supplied set them to default
 	if [ -z "${URL}" ]; then
 		URL=127.0.0.1
-        # when no $URL is set we assume PADD is running locally and we can get the port value from FTL directly
-        PORT="$(pihole-FTL --config webserver.port)"
-        PORT="${PORT%%,*}"
+		if [ -z "${PORT}" ] && [ -z "${PROTOCOL}" ]; then
+			# when no $URL is set we assume PADD is running locally and we can get the port value from FTL directly
+			PORT="$(pihole-FTL --config webserver.port)"
+			PORT="${PORT%%,*}"
+		fi
+	fi
+	if [ -z "${PROTOCOL}" ]; then
+		PROTOCOL="http"
 	fi
 	if [ -z "${PORT}" ]; then
-		PORT=80
+		if [ "${PROTOCOL}" = "https" ]; then
+			PORT=443
+		else
+			PORT=80
+		fi
 	fi
 	if [ -z "${APIPATH}" ]; then
 		APIPATH=api
@@ -118,13 +127,13 @@ ConstructAPI() {
 
 TestAPIAvailability() {
 
-    availabilityResonse=$(curl -s -o /dev/null -w "%{http_code}" "http://${URL}:${PORT}/${APIPATH}/auth")
+    availabilityResonse=$(curl ${CURL_EXTRAS} -s -o /dev/null -w "%{http_code}" "${PROTOCOL}://${URL}:${PORT}/${APIPATH}/auth")
 
-    # test if http status code was 200 (OK)
+    # test if HTTP status code was 200 (OK)
     if [ "${availabilityResonse}" = 200 ] || [ "${availabilityResonse}" = 401 ]; then
-        moveXOffset; printf "%b" "API available at: http://${URL}:${PORT}/${APIPATH}\n"
+        moveXOffset; printf "%b" "API available at: ${PROTOCOL}://${URL}:${PORT}/${APIPATH}\n"
     else
-        moveXOffset; echo "API not available at: http://${URL}:${PORT}/${APIPATH}"
+        moveXOffset; echo "API not available at: ${PROTOCOL}://${URL}:${PORT}/${APIPATH}"
         moveXOffset; echo "Exiting."
         exit 1
     fi
@@ -161,7 +170,7 @@ DeleteSession() {
     # SID is not null (successful authenthication only), delete the session
     if [ "${validSession}" = true ] && [ ! "${SID}" = null ]; then
         # Try to delete the session. Omit the output, but get the http status code
-        deleteResponse=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "http://${URL}:${PORT}/${APIPATH}/auth"  -H "Accept: application/json" -H "sid: ${SID}")
+        deleteResponse=$(curl ${CURL_EXTRAS} -s -o /dev/null -w "%{http_code}" -X DELETE "${PROTOCOL}://${URL}:${PORT}/${APIPATH}/auth"  -H "Accept: application/json" -H "sid: ${SID}")
 
         printf "\n\n"
         case "${deleteResponse}" in
@@ -174,11 +183,11 @@ DeleteSession() {
 }
 
 LoginAPI() {
-	sessionResponse="$(curl --silent -X POST "http://${URL}:${PORT}/${APIPATH}/auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
+	sessionResponse="$(curl ${CURL_EXTRAS} --silent -X POST "${PROTOCOL}://${URL}:${PORT}/${APIPATH}/auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
 
   if [ -z "${sessionResponse}" ]; then
     moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
-    moveXOffset; echo "Usage: $0 [-u <URL>] [-p <port>] [-a <path>] "
+    moveXOffset; echo "Usage: $0 [-s] [-u <URL>] [-p <port>] [-a <path>] "
     exit 1
   fi
 	# obtain validity and session ID from session response
@@ -189,7 +198,7 @@ LoginAPI() {
 GetFTLData() {
   local response
   # get the data from querying the API as well as the http status code
-	response=$(curl -s -w "%{http_code}" -X GET "http://${URL}:${PORT}/${APIPATH}$1" -H "Accept: application/json" -H "sid: ${SID}" )
+	response=$(curl ${CURL_EXTRAS} -s -w "%{http_code}" -X GET "${PROTOCOL}://${URL}:${PORT}/${APIPATH}$1" -H "Accept: application/json" -H "sid: ${SID}" )
 
   # status are the last 3 characters
   status=$(printf %s "${response#"${response%???}"}")
@@ -658,7 +667,7 @@ GetPADDInformation() {
   fi
 
   # PADD version information...
-  padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
+  padd_version_latest="$(curl ${CURL_EXTRAS} --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
   # is PADD up-to-date?
   padd_out_of_date_flag=false
   if [ -z "${padd_version_latest}" ]; then
@@ -1589,6 +1598,8 @@ DisplayHelp() {
 :::  --port <port>           port of your Pi-hole's API (default: 80)
 :::  --api <api>             path where your Pi-hole's API is hosted (default: api)
 :::  --secret <password>     your Pi-hole's password, required to access the API
+:::  -s, --https             use HTTPS to connect to the API
+:::  -k, --insecure          allow self-signed certificates when using HTTPS
 :::  -j, --json              output stats as JSON formatted string and exit and exit
 :::  -u, --update            update to the latest version
 :::  -v, --version           show PADD version info
@@ -1684,6 +1695,8 @@ while [ "$#" -gt 0 ]; do
     "-u" | "--update"   ) Update;;
     "-h" | "--help"     ) DisplayHelp; exit 0;;
     "-v" | "--version"  ) xOffset=0; ShowVersion; exit 0;;
+    "-s" | "--https"    ) PROTOCOL="https";;
+    "-k" | "--insecure" ) CURL_EXTRAS="-k";;
     "--xoff"            ) xOffset="$2"; xOffOrig="$2"; shift;;
     "--yoff"            ) yOffset="$2"; yOffOrig="$2"; shift;;
     "--server"          ) URL="$2"; shift;;
