@@ -100,32 +100,63 @@ padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${gre
 
 ############################################# FTL ##################################################
 
-ConstructAPI() {
-	# If no arguments were supplied set them to default
-	if [ -z "${URL}" ]; then
-		URL=127.0.0.1
-        # when no $URL is set we assume PADD is running locally and we can get the port value from FTL directly
-        PORT="$(pihole-FTL --config webserver.port)"
-        PORT="${PORT%%,*}"
-	fi
-	if [ -z "${PORT}" ]; then
-		PORT=80
-	fi
-	if [ -z "${APIPATH}" ]; then
-		APIPATH=api
-	fi
-}
-
 TestAPIAvailability() {
 
-    availabilityResonse=$(curl -s -o /dev/null -w "%{http_code}" "http://${URL}:${PORT}/${APIPATH}/auth")
+    local chaos_api_list availabilityResonse
 
-    # test if http status code was 200 (OK)
-    if [ "${availabilityResonse}" = 200 ] || [ "${availabilityResonse}" = 401 ]; then
-        moveXOffset; printf "%b" "API available at: http://${URL}:${PORT}/${APIPATH}\n"
+    # Query the API URLs from FTL using CHAOS TXT
+    # The result is a space-separated enumeration of full URLs
+    # e.g., "http://localhost:80/api" or "https://domain.com:443/api"
+    if [ -z "${SERVER}" ]; then
+        # --server was not set, assuming we're running locally
+        chaos_api_list="$(dig +short chaos txt local.api.ftl @localhost)"
     else
-        moveXOffset; echo "API not available at: http://${URL}:${PORT}/${APIPATH}"
-        moveXOffset; echo "Exiting."
+        # --server was set, try to get response from there
+        chaos_api_list="$(dig +short chaos txt domain.api.ftl @"${SERVER}")"
+    fi
+
+    # If the query was not successful, the variable is empty
+    if [ -z "${chaos_api_list}" ]; then
+        echo "API not available. Please check connectivity"
+        exit 1
+    fi
+
+    # Iterate over space-separated list of URLs
+    while [ -n "${chaos_api_list}" ]; do
+        # Get the first URL
+        API_URL="${chaos_api_list%% *}"
+        # Strip leading and trailing quotes
+        API_URL="${API_URL%\"}"
+        API_URL="${API_URL#\"}"
+
+        # Test if the API is available at this URL
+        availabilityResonse=$(curl -skS -o /dev/null -w "%{http_code}" "${API_URL}auth")
+
+        # Test if http status code was 200 (OK) or 401 (authentication required)
+        if [ ! "${availabilityResonse}" = 200 ] && [ ! "${availabilityResonse}" = 401 ]; then
+            # API is not available at this port/protocol combination
+            API_PORT=""
+        else
+            # API is available at this URL combination
+            break
+        fi
+
+        # Remove the first URL from the list
+        local last_api_list
+        last_api_list="${chaos_api_list}"
+        chaos_api_list="${chaos_api_list#* }"
+
+        # If the list did not change, we are at the last element
+        if [ "${last_api_list}" = "${chaos_api_list}" ]; then
+            # Remove the last element
+            chaos_api_list=""
+        fi
+    done
+
+    # if API_PORT is empty, no working API port was found
+    if [ -n "${API_PORT}" ]; then
+        echo "API not available at: ${API_URL}"
+        echo "Exiting."
         exit 1
     fi
 }
@@ -161,7 +192,7 @@ DeleteSession() {
     # SID is not null (successful authenthication only), delete the session
     if [ "${validSession}" = true ] && [ ! "${SID}" = null ]; then
         # Try to delete the session. Omit the output, but get the http status code
-        deleteResponse=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "http://${URL}:${PORT}/${APIPATH}/auth"  -H "Accept: application/json" -H "sid: ${SID}")
+        deleteResponse=$(curl -skS -o /dev/null -w "%{http_code}" -X DELETE "${API_URL}/auth"  -H "Accept: application/json" -H "sid: ${SID}")
 
         printf "\n\n"
         case "${deleteResponse}" in
@@ -174,7 +205,7 @@ DeleteSession() {
 }
 
 LoginAPI() {
-	sessionResponse="$(curl --silent -X POST "http://${URL}:${PORT}/${APIPATH}/auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
+	sessionResponse="$(curl -skS -X POST "${API_URL}/auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
 
   if [ -z "${sessionResponse}" ]; then
     moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
@@ -189,7 +220,7 @@ LoginAPI() {
 GetFTLData() {
   local response
   # get the data from querying the API as well as the http status code
-	response=$(curl -s -w "%{http_code}" -X GET "http://${URL}:${PORT}/${APIPATH}$1" -H "Accept: application/json" -H "sid: ${SID}" )
+	response=$(curl -skS -w "%{http_code}" -X GET "${API_URL}$1" -H "Accept: application/json" -H "sid: ${SID}" )
 
   # status are the last 3 characters
   status=$(printf %s "${response#"${response%???}"}")
@@ -1284,8 +1315,6 @@ OutputJSON() {
     # Save current terminal settings (needed for later restore after password prompt)
     stty_orig=$(stty -g)
 
-    # Construct FTL's API address depending on the arguments supplied
-    ConstructAPI
     # Test if the authentication endpoint is available
     TestAPIAvailability
     # Authenticate with the FTL server
@@ -1308,8 +1337,6 @@ ShowVersion() {
     # Save current terminal settings (needed for later restore after password prompt)
     stty_orig=$(stty -g)
 
-    # Construct FTL's API address depending on the arguments supplied
-    ConstructAPI
     # Test if the authentication endpoint is available
     TestAPIAvailability
     # Authenticate with the FTL server
@@ -1585,9 +1612,7 @@ DisplayHelp() {
 :::  --xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
 :::  --yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
 :::
-:::  --server <URL|IP>       url or address of your Pi-hole (default: 127.0.0.1)
-:::  --port <port>           port of your Pi-hole's API (default: 80)
-:::  --api <api>             path where your Pi-hole's API is hosted (default: api)
+:::  --server <DOMAIN|IP>    domain or IP of your Pi-hole (default: localhost)
 :::  --secret <password>     your Pi-hole's password, required to access the API
 :::  -j, --json              output stats as JSON formatted string and exit and exit
 :::  -u, --update            update to the latest version
@@ -1666,8 +1691,6 @@ main(){
     # Save current terminal settings (needed for later restore after password prompt)
     stty_orig=$(stty -g)
 
-    # Construct FTL's API address depending on the arguments supplied
-    ConstructAPI
 
     SizeChecker
 
@@ -1686,9 +1709,7 @@ while [ "$#" -gt 0 ]; do
     "-v" | "--version"  ) xOffset=0; ShowVersion; exit 0;;
     "--xoff"            ) xOffset="$2"; xOffOrig="$2"; shift;;
     "--yoff"            ) yOffset="$2"; yOffOrig="$2"; shift;;
-    "--server"          ) URL="$2"; shift;;
-    "--port"            ) PORT="$2"; shift;;
-    "--api"             ) APIPATH="$2"; shift;;
+    "--server"          ) SERVER="$2"; shift;;
     "--secret"          ) password="$2"; shift;;
     *                   ) DisplayHelp; exit 1;;
   esac
