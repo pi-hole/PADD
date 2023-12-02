@@ -192,7 +192,7 @@ DeleteSession() {
     # SID is not null (successful authenthication only), delete the session
     if [ "${validSession}" = true ] && [ ! "${SID}" = null ]; then
         # Try to delete the session. Omit the output, but get the http status code
-        deleteResponse=$(curl -skS -o /dev/null -w "%{http_code}" -X DELETE "${API_URL}/auth"  -H "Accept: application/json" -H "sid: ${SID}")
+        deleteResponse=$(curl -skS -o /dev/null -w "%{http_code}" -X DELETE "${API_URL}auth"  -H "Accept: application/json" -H "sid: ${SID}")
 
         printf "\n\n"
         case "${deleteResponse}" in
@@ -205,11 +205,11 @@ DeleteSession() {
 }
 
 LoginAPI() {
-	sessionResponse="$(curl -skS -X POST "${API_URL}/auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
+	sessionResponse="$(curl -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
 
   if [ -z "${sessionResponse}" ]; then
     moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
-    moveXOffset; echo "Usage: $0 [-u <URL>] [-p <port>] [-a <path>] "
+    moveXOffset; echo "Usage: $0 [--server <domain|IP>]"
     exit 1
   fi
 	# obtain validity and session ID from session response
@@ -242,10 +242,10 @@ GetFTLData() {
 ############################################# GETTERS ##############################################
 
 GetSummaryInformation() {
-  summary=$(GetFTLData "/stats/summary")
-  cache_info=$(GetFTLData "/info/metrics")
-  ftl_info=$(GetFTLData "/info/ftl")
-  dns_blocking=$(GetFTLData "/dns/blocking")
+  summary=$(GetFTLData "stats/summary")
+  cache_info=$(GetFTLData "info/metrics")
+  ftl_info=$(GetFTLData "info/ftl")
+  dns_blocking=$(GetFTLData "dns/blocking")
 
   clients=$(echo "${ftl_info}" | jq .ftl.clients.active 2>/dev/null)
 
@@ -267,21 +267,21 @@ GetSummaryInformation() {
   cache_evictions=$(echo "$cache_info" | jq .metrics.dns.cache.evicted 2>/dev/null)
   cache_inserts=$(echo "$cache_info"| jq .metrics.dns.cache.inserted 2>/dev/null)
 
-  latest_blocked_raw=$(GetFTLData "/stats/recent_blocked?show=1" | jq --raw-output .blocked[0] 2>/dev/null)
+  latest_blocked_raw=$(GetFTLData "stats/recent_blocked?show=1" | jq --raw-output .blocked[0] 2>/dev/null)
 
-  top_blocked_raw=$(GetFTLData "/stats/top_domains?blocked=true" | jq --raw-output .domains[0].domain 2>/dev/null)
+  top_blocked_raw=$(GetFTLData "stats/top_domains?blocked=true" | jq --raw-output .domains[0].domain 2>/dev/null)
 
-  top_domain_raw=$(GetFTLData "/stats/top_domains" | jq --raw-output .domains[0].domain 2>/dev/null)
+  top_domain_raw=$(GetFTLData "stats/top_domains" | jq --raw-output .domains[0].domain 2>/dev/null)
 
-  top_client_raw=$(GetFTLData "/stats/top_clients" | jq --raw-output .clients[0].name 2>/dev/null)
+  top_client_raw=$(GetFTLData "stats/top_clients" | jq --raw-output .clients[0].name 2>/dev/null)
   if [ -z "${top_client_raw}" ]; then
     # if no hostname was supplied, use IP
-    top_client_raw=$(GetFTLData "/stats/top_clients" | jq --raw-output .clients[0].ip 2>/dev/null)
+    top_client_raw=$(GetFTLData "stats/top_clients" | jq --raw-output .clients[0].ip 2>/dev/null)
   fi
 }
 
 GetSystemInformation() {
-    sysinfo=$(GetFTLData "/info/system")
+    sysinfo=$(GetFTLData "info/system")
 
     # System uptime
     if [ "${sysinfo}" = 000 ]; then
@@ -293,9 +293,9 @@ GetSystemInformation() {
 
     # CPU temperature and unit
     # in case .sensors.cpu_temp returns 'null' we substitute with 0
-    cpu_temp_raw=$(GetFTLData "/info/sensors" | jq '(.sensors.cpu_temp // 0)' 2>/dev/null)
+    cpu_temp_raw=$(GetFTLData "info/sensors" | jq '(.sensors.cpu_temp // 0)' 2>/dev/null)
     cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
-    temp_unit=$(GetFTLData "/info/sensors"  | jq --raw-output .sensors.unit 2>/dev/null)
+    temp_unit=$(GetFTLData "info/sensors"  | jq --raw-output .sensors.unit 2>/dev/null)
 
     # Temp + Unit
     if [ "${temp_unit}" = "C" ]; then
@@ -344,7 +344,7 @@ GetSystemInformation() {
     memory_heatmap="$(HeatmapGenerator "${memory_percent}")"
 
     # Get device model
-    sys_model="$(GetFTLData "/info/host" | jq --raw-output .host.model 2>/dev/null)"
+    sys_model="$(GetFTLData "info/host" | jq --raw-output .host.model 2>/dev/null)"
 
     # DOCKER_VERSION is set during GetVersionInformation, so this needs to run first during startup
     if [ ! "${DOCKER_VERSION}" = "null" ]; then
@@ -361,8 +361,8 @@ GetSystemInformation() {
 }
 
 GetNetworkInformation() {
-    interfaces_raw=$(GetFTLData "/network/interfaces")
-    config=$(GetFTLData "/config")
+    interfaces_raw=$(GetFTLData "network/interfaces")
+    config=$(GetFTLData "config")
 
     # Get pi IPv4 address  of the default interface
     pi_ip4_addrs="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv4[]' 2>/dev/null  | wc -w)"
@@ -421,7 +421,7 @@ GetNetworkInformation() {
         dhcp_heatmap=${red_text}
         dhcp_check_box=${check_box_bad}
 
-        GATEWAY="$(GetFTLData "/network/gateway" | jq --raw-output .address 2>/dev/null)"
+        GATEWAY="$(GetFTLData "network/gateway" | jq --raw-output .address 2>/dev/null)"
         dhcp_info=" Router:   ${GATEWAY}"
         dhcp_ipv6_status="N/A"
         dhcp_ipv6_heatmap=${yellow_text}
@@ -429,7 +429,7 @@ GetNetworkInformation() {
     fi
 
     # Get hostname
-    pi_hostname="$(GetFTLData "/info/host" | jq --raw-output .host.uname.nodename 2>/dev/null)"
+    pi_hostname="$(GetFTLData "info/host" | jq --raw-output .host.uname.nodename 2>/dev/null)"
     full_hostname=${pi_hostname}
     # when PI-hole is the DHCP server, append the domain to the hostname
     if [ "${DHCP_ACTIVE}" = "true" ]; then
@@ -485,7 +485,7 @@ GetNetworkInformation() {
 }
 
 GetPiholeInformation() {
-    sysinfo=$(GetFTLData "/info/ftl")
+    sysinfo=$(GetFTLData "info/ftl")
 
   # If FTL is not running (sysinfo is 000), set all variables to "not running"
   connection_down_flag=false
@@ -507,7 +507,7 @@ GetPiholeInformation() {
     ftl_cpu="$(printf "%.1f" "${ftl_cpu_raw}")%"
     ftl_mem_percentage="$(printf "%.1f" "${ftl_mem_percentage_raw}")%"
     # Get Pi-hole (blocking) status
-    ftl_dns_port=$(GetFTLData "/config" | jq .config.dns.port 2>/dev/null)
+    ftl_dns_port=$(GetFTLData "config" | jq .config.dns.port 2>/dev/null)
     # Get FTL's current PID
     ftlPID="$(echo "${sysinfo}" | jq .ftl.pid 2>/dev/null)"
   fi
@@ -532,7 +532,7 @@ fi
 GetVersionInformation() {
 
     out_of_date_flag=false
-    versions_raw=$(GetFTLData "/info/version")
+    versions_raw=$(GetFTLData "info/version")
 
     # Gather DOCKER version information...
     # returns "null" if not running Pi-hole in Docker container
@@ -1512,7 +1512,7 @@ NormalPADD() {
     # check if a new authentication is required (e.g. after connection to FTL has re-established)
     # GetFTLData() will return a 401 if a 401 http status code is returned
     # as $password should be set already, PADD should automatically re-authenticate
-    authenthication_required=$(GetFTLData "/info/ftl")
+    authenthication_required=$(GetFTLData "info/ftl")
     if [ "${authenthication_required}" = 401 ]; then
       LoginAPI
     fi
