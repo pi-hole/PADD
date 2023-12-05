@@ -102,23 +102,30 @@ padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${gre
 
 TestAPIAvailability() {
 
-    local chaos_api_list availabilityResonse
+    local chaos_api_list availabilityResonse cmdResult digReturnCode
 
     # Query the API URLs from FTL using CHAOS TXT
     # The result is a space-separated enumeration of full URLs
     # e.g., "http://localhost:80/api" or "https://domain.com:443/api"
     if [ -z "${SERVER}" ] || [ "${SERVER}" = "localhost" ] || [ "${SERVER}" = "127.0.0.1" ]; then
-        # --server was not set, assuming we're running locally
-        chaos_api_list="$(dig +short chaos txt local.api.ftl @localhost)"
+        # --server was not set or set to local, assuming we're running locally
+        cmdResult="$(dig +short chaos txt local.api.ftl @localhost 2>&1; echo $?)"
     else
         # --server was set, try to get response from there
-        chaos_api_list="$(dig +short chaos txt domain.api.ftl @"${SERVER}")"
+        cmdResult="$(dig +short chaos txt domain.api.ftl @"${SERVER}" 2>&1; echo $?)"
     fi
 
-    # If the query was not successful, the variable is empty
-    if [ -z "${chaos_api_list}" ]; then
-        echo "API not available. Please check connectivity"
+    # Gets the return code of the dig command (last line)
+    # We can't use${cmdResult##*$'\n'*} here as $'..' is not POSIX
+    digReturnCode="$(echo "${cmdResult}" | tail -n 1)"
+
+    if [ ! "${digReturnCode}" = "0" ]; then
+        # If the query was not successful
+        echo "API not available. Please check server address and connectivity"
         exit 1
+    else
+      # Dig returned 0 (success), so get the actual response (first line)
+      chaos_api_list="$(echo "${cmdResult}" | head -n 1)"
     fi
 
     # Iterate over space-separated list of URLs
