@@ -107,7 +107,7 @@ TestAPIAvailability() {
     # Query the API URLs from FTL using CHAOS TXT
     # The result is a space-separated enumeration of full URLs
     # e.g., "http://localhost:80/api" or "https://domain.com:443/api"
-    if [ -z "${SERVER}" ]; then
+    if [ -z "${SERVER}" ] || [ "${SERVER}" = "localhost" ] || [ "${SERVER}" = "127.0.0.1" ]; then
         # --server was not set, assuming we're running locally
         chaos_api_list="$(dig +short chaos txt local.api.ftl @localhost)"
     else
