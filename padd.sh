@@ -166,8 +166,8 @@ DeleteSession() {
         printf "\n\n"
         case "${deleteResponse}" in
             "200") moveXOffset; printf "%b" "A session that was not created cannot be deleted (e.g., empty API password).\n";;
+            "204") moveXOffset; printf "%b" "Session successfully deleted.\n";;
             "401") moveXOffset; printf "%b" "Logout attempt without a valid session. Unauthorized!\n";;
-            "410") moveXOffset; printf "%b" "Session successfully deleted.\n";;
          esac;
     fi
 
@@ -1353,7 +1353,7 @@ StartupRoutine(){
     moveXOffset; printf "%b" "Establishing connection with FTL...\n"
     Authenthication
 
-    printf "%b" "Starting PADD...\n"
+    moveXOffset; printf "%b" "Starting PADD...\n"
 
     moveXOffset; printf "%b" " [■·········]  10%\r"
 
