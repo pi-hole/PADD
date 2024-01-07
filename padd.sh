@@ -362,8 +362,9 @@ GetSystemInformation() {
     # Cleaning device model from useless OEM information
     sys_model=$(filterModel "${sys_model}")
 
-    if [  -z "$sys_model" ]; then
-        sys_model="Unknown"
+    # FTL returns null if device information is not available
+    if [  -z "$sys_model" ] || [  "$sys_model" = "null" ]; then
+        sys_model="N/A"
     fi
 }
 
