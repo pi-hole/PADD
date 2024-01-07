@@ -168,6 +168,9 @@ DeleteSession() {
             "204") moveXOffset; printf "%b" "Session successfully deleted.\n";;
             "401") moveXOffset; printf "%b" "Logout attempt without a valid session. Unauthorized!\n";;
          esac;
+    else
+      # no session to delete, just print a newline for nicer output
+      echo
     fi
 
 }
