@@ -121,7 +121,7 @@ TestAPIAvailability() {
 
     if [ ! "${digReturnCode}" = "0" ]; then
         # If the query was not successful
-        echo "API not available. Please check server address and connectivity"
+        moveXOffset;  echo "API not available. Please check server address and connectivity"
         exit 1
     else
       # Dig returned 0 (success), so get the actual response (first line)
@@ -162,8 +162,8 @@ TestAPIAvailability() {
 
     # if API_PORT is empty, no working API port was found
     if [ -n "${API_PORT}" ]; then
-        echo "API not available at: ${API_URL}"
-        echo "Exiting."
+        moveXOffset; echo "API not available at: ${API_URL}"
+        moveXOffset; echo "Exiting."
         exit 1
     fi
 }
