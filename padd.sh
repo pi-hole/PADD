@@ -433,7 +433,7 @@ GetNetworkInformation() {
     fi
 
     # Conditional forwarding
-    CONDITIONAL_FORWARDING="$(echo "${config}" | jq .config.dns.rev_server.active 2>/dev/null)"
+    CONDITIONAL_FORWARDING="$(echo "${config}" | jq .config.dns.revServer.active 2>/dev/null)"
     if [ "${CONDITIONAL_FORWARDING}" = "true" ]; then
         conditional_forwarding_status="Enabled"
         conditional_forwarding_heatmap=${green_text}
