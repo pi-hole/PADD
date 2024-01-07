@@ -100,31 +100,69 @@ padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${gre
 
 ############################################# FTL ##################################################
 
-ConstructAPI() {
-	# If no arguments were supplied set them to default
-	if [ -z "${URL}" ]; then
-		URL=127.0.0.1
-        # when no $URL is set we assume PADD is running locally and we can get the port value from FTL directly
-        PORT="$(pihole-FTL --config webserver.port)"
-        PORT="${PORT%%,*}"
-	fi
-	if [ -z "${PORT}" ]; then
-		PORT=80
-	fi
-	if [ -z "${APIPATH}" ]; then
-		APIPATH=api
-	fi
-}
-
 TestAPIAvailability() {
 
-    availabilityResonse=$(curl -s -o /dev/null -w "%{http_code}" "http://${URL}:${PORT}/${APIPATH}/auth")
+    local chaos_api_list availabilityResonse cmdResult digReturnCode
 
-    # test if http status code was 200 (OK)
-    if [ "${availabilityResonse}" = 200 ] || [ "${availabilityResonse}" = 401 ]; then
-        moveXOffset; printf "%b" "API available at: http://${URL}:${PORT}/${APIPATH}\n"
+    # Query the API URLs from FTL using CHAOS TXT
+    # The result is a space-separated enumeration of full URLs
+    # e.g., "http://localhost:80/api" or "https://domain.com:443/api"
+    if [ -z "${SERVER}" ] || [ "${SERVER}" = "localhost" ] || [ "${SERVER}" = "127.0.0.1" ]; then
+        # --server was not set or set to local, assuming we're running locally
+        cmdResult="$(dig +short chaos txt local.api.ftl @localhost 2>&1; echo $?)"
     else
-        moveXOffset; echo "API not available at: http://${URL}:${PORT}/${APIPATH}"
+        # --server was set, try to get response from there
+        cmdResult="$(dig +short chaos txt domain.api.ftl @"${SERVER}" 2>&1; echo $?)"
+    fi
+
+    # Gets the return code of the dig command (last line)
+    # We can't use${cmdResult##*$'\n'*} here as $'..' is not POSIX
+    digReturnCode="$(echo "${cmdResult}" | tail -n 1)"
+
+    if [ ! "${digReturnCode}" = "0" ]; then
+        # If the query was not successful
+        moveXOffset;  echo "API not available. Please check server address and connectivity"
+        exit 1
+    else
+      # Dig returned 0 (success), so get the actual response (first line)
+      chaos_api_list="$(echo "${cmdResult}" | head -n 1)"
+    fi
+
+    # Iterate over space-separated list of URLs
+    while [ -n "${chaos_api_list}" ]; do
+        # Get the first URL
+        API_URL="${chaos_api_list%% *}"
+        # Strip leading and trailing quotes
+        API_URL="${API_URL%\"}"
+        API_URL="${API_URL#\"}"
+
+        # Test if the API is available at this URL
+        availabilityResonse=$(curl -skS -o /dev/null -w "%{http_code}" "${API_URL}auth")
+
+        # Test if http status code was 200 (OK) or 401 (authentication required)
+        if [ ! "${availabilityResonse}" = 200 ] && [ ! "${availabilityResonse}" = 401 ]; then
+            # API is not available at this port/protocol combination
+            API_PORT=""
+        else
+            # API is available at this URL combination
+            break
+        fi
+
+        # Remove the first URL from the list
+        local last_api_list
+        last_api_list="${chaos_api_list}"
+        chaos_api_list="${chaos_api_list#* }"
+
+        # If the list did not change, we are at the last element
+        if [ "${last_api_list}" = "${chaos_api_list}" ]; then
+            # Remove the last element
+            chaos_api_list=""
+        fi
+    done
+
+    # if API_PORT is empty, no working API port was found
+    if [ -n "${API_PORT}" ]; then
+        moveXOffset; echo "API not available at: ${API_URL}"
         moveXOffset; echo "Exiting."
         exit 1
     fi
@@ -161,7 +199,7 @@ DeleteSession() {
     # SID is not null (successful authenthication only), delete the session
     if [ "${validSession}" = true ] && [ ! "${SID}" = null ]; then
         # Try to delete the session. Omit the output, but get the http status code
-        deleteResponse=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "http://${URL}:${PORT}/${APIPATH}/auth"  -H "Accept: application/json" -H "sid: ${SID}")
+        deleteResponse=$(curl -skS -o /dev/null -w "%{http_code}" -X DELETE "${API_URL}auth"  -H "Accept: application/json" -H "sid: ${SID}")
 
         printf "\n\n"
         case "${deleteResponse}" in
@@ -174,11 +212,11 @@ DeleteSession() {
 }
 
 LoginAPI() {
-	sessionResponse="$(curl --silent -X POST "http://${URL}:${PORT}/${APIPATH}/auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
+	sessionResponse="$(curl -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
 
   if [ -z "${sessionResponse}" ]; then
     moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
-    moveXOffset; echo "Usage: $0 [-u <URL>] [-p <port>] [-a <path>] "
+    moveXOffset; echo "Usage: $0 [--server <domain|IP>]"
     exit 1
   fi
 	# obtain validity and session ID from session response
@@ -189,7 +227,7 @@ LoginAPI() {
 GetFTLData() {
   local response
   # get the data from querying the API as well as the http status code
-	response=$(curl -s -w "%{http_code}" -X GET "http://${URL}:${PORT}/${APIPATH}$1" -H "Accept: application/json" -H "sid: ${SID}" )
+	response=$(curl -skS -w "%{http_code}" -X GET "${API_URL}$1" -H "Accept: application/json" -H "sid: ${SID}" )
 
   # status are the last 3 characters
   status=$(printf %s "${response#"${response%???}"}")
@@ -211,10 +249,10 @@ GetFTLData() {
 ############################################# GETTERS ##############################################
 
 GetSummaryInformation() {
-  summary=$(GetFTLData "/stats/summary")
-  cache_info=$(GetFTLData "/info/metrics")
-  ftl_info=$(GetFTLData "/info/ftl")
-  dns_blocking=$(GetFTLData "/dns/blocking")
+  summary=$(GetFTLData "stats/summary")
+  cache_info=$(GetFTLData "info/metrics")
+  ftl_info=$(GetFTLData "info/ftl")
+  dns_blocking=$(GetFTLData "dns/blocking")
 
   clients=$(echo "${ftl_info}" | jq .ftl.clients.active 2>/dev/null)
 
@@ -236,21 +274,21 @@ GetSummaryInformation() {
   cache_evictions=$(echo "$cache_info" | jq .metrics.dns.cache.evicted 2>/dev/null)
   cache_inserts=$(echo "$cache_info"| jq .metrics.dns.cache.inserted 2>/dev/null)
 
-  latest_blocked_raw=$(GetFTLData "/stats/recent_blocked?show=1" | jq --raw-output .blocked[0] 2>/dev/null)
+  latest_blocked_raw=$(GetFTLData "stats/recent_blocked?show=1" | jq --raw-output .blocked[0] 2>/dev/null)
 
-  top_blocked_raw=$(GetFTLData "/stats/top_domains?blocked=true" | jq --raw-output .domains[0].domain 2>/dev/null)
+  top_blocked_raw=$(GetFTLData "stats/top_domains?blocked=true" | jq --raw-output .domains[0].domain 2>/dev/null)
 
-  top_domain_raw=$(GetFTLData "/stats/top_domains" | jq --raw-output .domains[0].domain 2>/dev/null)
+  top_domain_raw=$(GetFTLData "stats/top_domains" | jq --raw-output .domains[0].domain 2>/dev/null)
 
-  top_client_raw=$(GetFTLData "/stats/top_clients" | jq --raw-output .clients[0].name 2>/dev/null)
+  top_client_raw=$(GetFTLData "stats/top_clients" | jq --raw-output .clients[0].name 2>/dev/null)
   if [ -z "${top_client_raw}" ]; then
     # if no hostname was supplied, use IP
-    top_client_raw=$(GetFTLData "/stats/top_clients" | jq --raw-output .clients[0].ip 2>/dev/null)
+    top_client_raw=$(GetFTLData "stats/top_clients" | jq --raw-output .clients[0].ip 2>/dev/null)
   fi
 }
 
 GetSystemInformation() {
-    sysinfo=$(GetFTLData "/info/system")
+    sysinfo=$(GetFTLData "info/system")
 
     # System uptime
     if [ "${sysinfo}" = 000 ]; then
@@ -262,9 +300,9 @@ GetSystemInformation() {
 
     # CPU temperature and unit
     # in case .sensors.cpu_temp returns 'null' we substitute with 0
-    cpu_temp_raw=$(GetFTLData "/info/sensors" | jq '(.sensors.cpu_temp // 0)' 2>/dev/null)
+    cpu_temp_raw=$(GetFTLData "info/sensors" | jq '(.sensors.cpu_temp // 0)' 2>/dev/null)
     cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
-    temp_unit=$(GetFTLData "/info/sensors"  | jq --raw-output .sensors.unit 2>/dev/null)
+    temp_unit=$(GetFTLData "info/sensors"  | jq --raw-output .sensors.unit 2>/dev/null)
 
     # Temp + Unit
     if [ "${temp_unit}" = "C" ]; then
@@ -313,7 +351,7 @@ GetSystemInformation() {
     memory_heatmap="$(HeatmapGenerator "${memory_percent}")"
 
     # Get device model
-    sys_model="$(GetFTLData "/info/host" | jq --raw-output .host.model 2>/dev/null)"
+    sys_model="$(GetFTLData "info/host" | jq --raw-output .host.model 2>/dev/null)"
 
     # DOCKER_VERSION is set during GetVersionInformation, so this needs to run first during startup
     if [ ! "${DOCKER_VERSION}" = "null" ]; then
@@ -324,14 +362,15 @@ GetSystemInformation() {
     # Cleaning device model from useless OEM information
     sys_model=$(filterModel "${sys_model}")
 
-    if [  -z "$sys_model" ]; then
-        sys_model="Unknown"
+    # FTL returns null if device information is not available
+    if [  -z "$sys_model" ] || [  "$sys_model" = "null" ]; then
+        sys_model="N/A"
     fi
 }
 
 GetNetworkInformation() {
-    interfaces_raw=$(GetFTLData "/network/interfaces")
-    config=$(GetFTLData "/config")
+    interfaces_raw=$(GetFTLData "network/interfaces")
+    config=$(GetFTLData "config")
 
     # Get pi IPv4 address  of the default interface
     pi_ip4_addrs="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv4[]' 2>/dev/null  | wc -w)"
@@ -390,7 +429,7 @@ GetNetworkInformation() {
         dhcp_heatmap=${red_text}
         dhcp_check_box=${check_box_bad}
 
-        GATEWAY="$(GetFTLData "/network/gateway" | jq --raw-output .address 2>/dev/null)"
+        GATEWAY="$(GetFTLData "network/gateway" | jq --raw-output .address 2>/dev/null)"
         dhcp_info=" Router:   ${GATEWAY}"
         dhcp_ipv6_status="N/A"
         dhcp_ipv6_heatmap=${yellow_text}
@@ -398,7 +437,7 @@ GetNetworkInformation() {
     fi
 
     # Get hostname
-    pi_hostname="$(GetFTLData "/info/host" | jq --raw-output .host.uname.nodename 2>/dev/null)"
+    pi_hostname="$(GetFTLData "info/host" | jq --raw-output .host.uname.nodename 2>/dev/null)"
     full_hostname=${pi_hostname}
     # when PI-hole is the DHCP server, append the domain to the hostname
     if [ "${DHCP_ACTIVE}" = "true" ]; then
@@ -454,7 +493,7 @@ GetNetworkInformation() {
 }
 
 GetPiholeInformation() {
-    sysinfo=$(GetFTLData "/info/ftl")
+    sysinfo=$(GetFTLData "info/ftl")
 
   # If FTL is not running (sysinfo is 000), set all variables to "not running"
   connection_down_flag=false
@@ -476,7 +515,7 @@ GetPiholeInformation() {
     ftl_cpu="$(printf "%.1f" "${ftl_cpu_raw}")%"
     ftl_mem_percentage="$(printf "%.1f" "${ftl_mem_percentage_raw}")%"
     # Get Pi-hole (blocking) status
-    ftl_dns_port=$(GetFTLData "/config" | jq .config.dns.port 2>/dev/null)
+    ftl_dns_port=$(GetFTLData "config" | jq .config.dns.port 2>/dev/null)
     # Get FTL's current PID
     ftlPID="$(echo "${sysinfo}" | jq .ftl.pid 2>/dev/null)"
   fi
@@ -501,7 +540,7 @@ fi
 GetVersionInformation() {
 
     out_of_date_flag=false
-    versions_raw=$(GetFTLData "/info/version")
+    versions_raw=$(GetFTLData "info/version")
 
     # Gather DOCKER version information...
     # returns "null" if not running Pi-hole in Docker container
@@ -1284,8 +1323,6 @@ OutputJSON() {
     # Save current terminal settings (needed for later restore after password prompt)
     stty_orig=$(stty -g)
 
-    # Construct FTL's API address depending on the arguments supplied
-    ConstructAPI
     # Test if the authentication endpoint is available
     TestAPIAvailability
     # Authenticate with the FTL server
@@ -1308,8 +1345,6 @@ ShowVersion() {
     # Save current terminal settings (needed for later restore after password prompt)
     stty_orig=$(stty -g)
 
-    # Construct FTL's API address depending on the arguments supplied
-    ConstructAPI
     # Test if the authentication endpoint is available
     TestAPIAvailability
     # Authenticate with the FTL server
@@ -1485,7 +1520,7 @@ NormalPADD() {
     # check if a new authentication is required (e.g. after connection to FTL has re-established)
     # GetFTLData() will return a 401 if a 401 http status code is returned
     # as $password should be set already, PADD should automatically re-authenticate
-    authenthication_required=$(GetFTLData "/info/ftl")
+    authenthication_required=$(GetFTLData "info/ftl")
     if [ "${authenthication_required}" = 401 ]; then
       LoginAPI
     fi
@@ -1585,9 +1620,7 @@ DisplayHelp() {
 :::  --xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
 :::  --yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
 :::
-:::  --server <URL|IP>       url or address of your Pi-hole (default: 127.0.0.1)
-:::  --port <port>           port of your Pi-hole's API (default: 80)
-:::  --api <api>             path where your Pi-hole's API is hosted (default: api)
+:::  --server <DOMAIN|IP>    domain or IP of your Pi-hole (default: localhost)
 :::  --secret <password>     your Pi-hole's password, required to access the API
 :::  -j, --json              output stats as JSON formatted string and exit and exit
 :::  -u, --update            update to the latest version
@@ -1666,8 +1699,6 @@ main(){
     # Save current terminal settings (needed for later restore after password prompt)
     stty_orig=$(stty -g)
 
-    # Construct FTL's API address depending on the arguments supplied
-    ConstructAPI
 
     SizeChecker
 
@@ -1686,9 +1717,7 @@ while [ "$#" -gt 0 ]; do
     "-v" | "--version"  ) xOffset=0; ShowVersion; exit 0;;
     "--xoff"            ) xOffset="$2"; xOffOrig="$2"; shift;;
     "--yoff"            ) yOffset="$2"; yOffOrig="$2"; shift;;
-    "--server"          ) URL="$2"; shift;;
-    "--port"            ) PORT="$2"; shift;;
-    "--api"             ) APIPATH="$2"; shift;;
+    "--server"          ) SERVER="$2"; shift;;
     "--secret"          ) password="$2"; shift;;
     *                   ) DisplayHelp; exit 1;;
   esac
