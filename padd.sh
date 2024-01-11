@@ -15,7 +15,7 @@ export LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v3.11.1"
+padd_version="v4.0.0"
 
 # LastChecks
 LastCheckVersionInformation=$(date +%s)
@@ -24,9 +24,6 @@ LastCheckSummaryInformation=$(date +%s)
 LastCheckPiholeInformation=$(date +%s)
 LastCheckSystemInformation=$(date +%s)
 LastCheckPADDInformation=$(date +%s)
-
-# CORES
-core_count=$(nproc --all 2> /dev/null)
 
 # COLORS
 CSI="$(printf '\033')["  # Control Sequence Introducer
@@ -55,45 +52,40 @@ pico_status_ok="${check_box_good} Sys. OK"
 pico_status_update="${check_box_info} Update"
 pico_status_hot="${check_box_bad} Sys. Hot!"
 pico_status_off="${check_box_info} No blck"
-pico_status_ftl_down="${check_box_bad} FTL Down"
+pico_status_ftl_down="${check_box_bad} No CXN"
 pico_status_dns_down="${check_box_bad} DNS Down"
-pico_status_unknown="${check_box_question} Stat. Unk."
 
 # MINI STATUS
 mini_status_ok="${check_box_good} System OK"
 mini_status_update="${check_box_info} Update avail."
 mini_status_hot="${check_box_bad} System is hot!"
 mini_status_off="${check_box_info} No blocking!"
-mini_status_ftl_down="${check_box_bad} FTL down!"
+mini_status_ftl_down="${check_box_bad} No connection!"
 mini_status_dns_down="${check_box_bad} DNS off!"
-mini_status_unknown="${check_box_question} Status unknown"
 
 # REGULAR STATUS
 full_status_ok="${check_box_good} System is healthy"
 full_status_update="${check_box_info} Updates are available"
 full_status_hot="${check_box_bad} System is hot!"
 full_status_off="${check_box_info} Blocking is disabled"
-full_status_ftl_down="${check_box_bad} FTL is down!"
+full_status_ftl_down="${check_box_bad} No connection!"
 full_status_dns_down="${check_box_bad} DNS is off!"
-full_status_unknown="${check_box_question} Status unknown!"
 
 # MEGA STATUS
 mega_status_ok="${check_box_good} Your system is healthy"
 mega_status_update="${check_box_info} Updates are available"
 mega_status_hot="${check_box_bad} Your system is hot!"
 mega_status_off="${check_box_info} Blocking is disabled!"
-mega_status_ftl_down="${check_box_bad} FTLDNS service is not running!"
+mega_status_ftl_down="${check_box_bad} No connection to FTL!"
 mega_status_dns_down="${check_box_bad} Pi-hole's DNS server is off!"
-mega_status_unknown="${check_box_question} Unable to determine Pi-hole status!"
 
 # TINY STATUS
 tiny_status_ok="${check_box_good} System is healthy"
 tiny_status_update="${check_box_info} Updates are available"
 tiny_status_hot="${check_box_bad} System is hot!"
 tiny_status_off="${check_box_info} Blocking is disabled"
-tiny_status_ftl_down="${check_box_bad} FTL is down!"
+tiny_status_ftl_down="${check_box_bad} No connection to FTL!"
 tiny_status_dns_down="${check_box_bad} DNS is off!"
-tiny_status_unknown="${check_box_question} Status unknown!"
 
 # Text only "logos"
 padd_text="${green_text}${bold_text}PADD${reset_text}"
@@ -106,305 +98,413 @@ padd_logo_retro_1="${bold_text} ${yellow_text}_${green_text}_      ${blue_text}_
 padd_logo_retro_2="${bold_text}${yellow_text}|${green_text}_${blue_text}_${cyan_text}) ${red_text}/${yellow_text}\\ ${blue_text}|  ${red_text}\\${yellow_text}|  ${cyan_text}\\  ${reset_text}"
 padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${green_text}-${blue_text}\\${cyan_text}|${magenta_text}_${red_text}_${yellow_text}/${green_text}|${blue_text}_${cyan_text}_${magenta_text}/  ${reset_text}"
 
+############################################# FTL ##################################################
 
-############################################# GETTERS ##############################################
+TestAPIAvailability() {
 
-GetFTLData() {
-    local ftl_port data
-    ftl_port=$(getFTLAPIPort)
-    if [ -n "$ftl_port" ]; then
-      # Send command to FTL and ask to quit when finished
-      data="$(echo ">$1 >quit" | nc 127.0.0.1 "${ftl_port}")"
-      echo "${data}"
+    local chaos_api_list availabilityResonse cmdResult digReturnCode
+
+    # Query the API URLs from FTL using CHAOS TXT
+    # The result is a space-separated enumeration of full URLs
+    # e.g., "http://localhost:80/api" or "https://domain.com:443/api"
+    if [ -z "${SERVER}" ] || [ "${SERVER}" = "localhost" ] || [ "${SERVER}" = "127.0.0.1" ]; then
+        # --server was not set or set to local, assuming we're running locally
+        cmdResult="$(dig +short chaos txt local.api.ftl @localhost 2>&1; echo $?)"
+    else
+        # --server was set, try to get response from there
+        cmdResult="$(dig +short chaos txt domain.api.ftl @"${SERVER}" 2>&1; echo $?)"
+    fi
+
+    # Gets the return code of the dig command (last line)
+    # We can't use${cmdResult##*$'\n'*} here as $'..' is not POSIX
+    digReturnCode="$(echo "${cmdResult}" | tail -n 1)"
+
+    if [ ! "${digReturnCode}" = "0" ]; then
+        # If the query was not successful
+        moveXOffset;  echo "API not available. Please check server address and connectivity"
+        exit 1
+    else
+      # Dig returned 0 (success), so get the actual response (first line)
+      chaos_api_list="$(echo "${cmdResult}" | head -n 1)"
+    fi
+
+    # Iterate over space-separated list of URLs
+    while [ -n "${chaos_api_list}" ]; do
+        # Get the first URL
+        API_URL="${chaos_api_list%% *}"
+        # Strip leading and trailing quotes
+        API_URL="${API_URL%\"}"
+        API_URL="${API_URL#\"}"
+
+        # Test if the API is available at this URL
+        availabilityResonse=$(curl -skS -o /dev/null -w "%{http_code}" "${API_URL}auth")
+
+        # Test if http status code was 200 (OK) or 401 (authentication required)
+        if [ ! "${availabilityResonse}" = 200 ] && [ ! "${availabilityResonse}" = 401 ]; then
+            # API is not available at this port/protocol combination
+            API_PORT=""
+        else
+            # API is available at this URL combination
+            break
+        fi
+
+        # Remove the first URL from the list
+        local last_api_list
+        last_api_list="${chaos_api_list}"
+        chaos_api_list="${chaos_api_list#* }"
+
+        # If the list did not change, we are at the last element
+        if [ "${last_api_list}" = "${chaos_api_list}" ]; then
+            # Remove the last element
+            chaos_api_list=""
+        fi
+    done
+
+    # if API_PORT is empty, no working API port was found
+    if [ -n "${API_PORT}" ]; then
+        moveXOffset; echo "API not available at: ${API_URL}"
+        moveXOffset; echo "Exiting."
+        exit 1
     fi
 }
 
+Authenthication() {
+    # Try to authenticate
+    LoginAPI
+
+    while [ "${validSession}" = false ] || [ -z "${validSession}" ] ; do
+        moveXOffset; echo "Authentication failed."
+
+        # no password was supplied as argument
+        if [ -z "${password}" ]; then
+            moveXOffset; echo "No password supplied. Please enter your password:"
+        else
+            moveXOffset; echo "Wrong password supplied, please enter the correct password:"
+        fi
+
+        # secretly read the password
+        moveXOffset; secretRead; printf '\n'
+
+        # Try to authenticate again
+        LoginAPI
+    done
+
+    # Loop exited, authentication was successful
+    moveXOffset; echo "Authentication successful."
+
+}
+
+DeleteSession() {
+    # if a valid Session exists (no password required or successful authenthication) and
+    # SID is not null (successful authenthication only), delete the session
+    if [ "${validSession}" = true ] && [ ! "${SID}" = null ]; then
+        # Try to delete the session. Omit the output, but get the http status code
+        deleteResponse=$(curl -skS -o /dev/null -w "%{http_code}" -X DELETE "${API_URL}auth"  -H "Accept: application/json" -H "sid: ${SID}")
+
+        printf "\n\n"
+        case "${deleteResponse}" in
+            "204") moveXOffset; printf "%b" "Session successfully deleted.\n";;
+            "401") moveXOffset; printf "%b" "Logout attempt without a valid session. Unauthorized!\n";;
+         esac;
+    else
+      # no session to delete, just print a newline for nicer output
+      echo
+    fi
+
+}
+
+LoginAPI() {
+	sessionResponse="$(curl -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
+
+  if [ -z "${sessionResponse}" ]; then
+    moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
+    moveXOffset; echo "Usage: $0 [--server <domain|IP>]"
+    exit 1
+  fi
+	# obtain validity and session ID from session response
+	validSession=$(echo "${sessionResponse}"| jq .session.valid 2>/dev/null)
+	SID=$(echo "${sessionResponse}"| jq --raw-output .session.sid 2>/dev/null)
+}
+
+GetFTLData() {
+  local response
+  # get the data from querying the API as well as the http status code
+	response=$(curl -skS -w "%{http_code}" -X GET "${API_URL}$1" -H "Accept: application/json" -H "sid: ${SID}" )
+
+  # status are the last 3 characters
+  status=$(printf %s "${response#"${response%???}"}")
+  # data is everything from response without the last 3 characters
+  data=$(printf %s "${response%???}")
+
+  if [ "${status}" = 200 ]; then
+    echo "${data}"
+  elif [ "${status}" = 000 ]; then
+    # connection lost
+    echo "000"
+  elif [ "${status}" = 401 ]; then
+    # unauthorized
+    echo "401"
+  fi
+}
+
+
+############################################# GETTERS ##############################################
+
 GetSummaryInformation() {
-  summary=$(GetFTLData "stats")
-  cache_info=$(GetFTLData "cacheinfo")
+  summary=$(GetFTLData "stats/summary")
+  cache_info=$(GetFTLData "info/metrics")
+  ftl_info=$(GetFTLData "info/ftl")
+  dns_blocking=$(GetFTLData "dns/blocking")
 
-  clients=$(echo "${summary}" | grep "unique_clients" | grep -Eo "[0-9]+$")
+  clients=$(echo "${ftl_info}" | jq .ftl.clients.active 2>/dev/null)
 
-  blocking_status=$(echo "${summary}" | grep "status" | grep -Eo "enabled|disabled|unknown" )
+  blocking_enabled=$(echo "${dns_blocking}" | jq .blocking 2>/dev/null)
 
-  domains_being_blocked_raw=$(echo "${summary}" | grep "domains_being_blocked" | grep -Eo "[0-9]+$")
+  domains_being_blocked_raw=$(echo "${ftl_info}" | jq .ftl.database.gravity 2>/dev/null)
   domains_being_blocked=$(printf "%.f" "${domains_being_blocked_raw}")
 
-  dns_queries_today_raw=$(echo "$summary" | grep "dns_queries_today" | grep -Eo "[0-9]+$")
+  dns_queries_today_raw=$(echo "$summary" | jq .queries.total 2>/dev/null)
   dns_queries_today=$(printf "%.f" "${dns_queries_today_raw}")
 
-  ads_blocked_today_raw=$(echo "$summary" | grep "ads_blocked_today" | grep -Eo "[0-9]+$")
+  ads_blocked_today_raw=$(echo "$summary" | jq .queries.blocked 2>/dev/null)
   ads_blocked_today=$(printf "%.f" "${ads_blocked_today_raw}")
 
-  ads_percentage_today_raw=$(echo "$summary" | grep "ads_percentage_today" | grep -Eo "[0-9.]+$")
+  ads_percentage_today_raw=$(echo "$summary" | jq .queries.percent_blocked 2>/dev/null)
   ads_percentage_today=$(printf "%.1f" "${ads_percentage_today_raw}")
 
-  cache_size=$(echo "$cache_info" | grep "cache-size" | grep -Eo "[0-9.]+$")
-  cache_deletes=$(echo "$cache_info" | grep "cache-live-freed" | grep -Eo "[0-9.]+$")
-  cache_inserts=$(echo "$cache_info"| grep "cache-inserted" | grep -Eo "[0-9.]+$")
+  cache_size=$(echo "$cache_info" | jq .metrics.dns.cache.size 2>/dev/null)
+  cache_evictions=$(echo "$cache_info" | jq .metrics.dns.cache.evicted 2>/dev/null)
+  cache_inserts=$(echo "$cache_info"| jq .metrics.dns.cache.inserted 2>/dev/null)
 
-  latest_blocked_raw=$(GetFTLData recentBlocked)
+  latest_blocked_raw=$(GetFTLData "stats/recent_blocked?show=1" | jq --raw-output .blocked[0] 2>/dev/null)
 
-  top_blocked_raw=$(GetFTLData "top-ads (1)" | awk '{print $3}')
+  top_blocked_raw=$(GetFTLData "stats/top_domains?blocked=true" | jq --raw-output .domains[0].domain 2>/dev/null)
 
-  top_domain_raw=$(GetFTLData "top-domains (1)" | awk '{print $3}')
+  top_domain_raw=$(GetFTLData "stats/top_domains" | jq --raw-output .domains[0].domain 2>/dev/null)
 
-  top_client_raw=$(GetFTLData "top-clients (1)" | awk '{print $4}')
+  top_client_raw=$(GetFTLData "stats/top_clients" | jq --raw-output .clients[0].name 2>/dev/null)
   if [ -z "${top_client_raw}" ]; then
     # if no hostname was supplied, use IP
-    top_client_raw=$(GetFTLData "top-clients (1)" | awk '{print $3}')
+    top_client_raw=$(GetFTLData "stats/top_clients" | jq --raw-output .clients[0].ip 2>/dev/null)
   fi
 }
 
 GetSystemInformation() {
-  # System uptime
-    system_uptime_raw=$(uptime)
+    sysinfo=$(GetFTLData "info/system")
 
-  # reset $cpu variable
-  unset cpu
-
-  # CPU temperature
-  if [ -d "/sys/devices/platform/coretemp.0/hwmon/" ]; then
-    cpu=$(cat "$(find /sys/devices/platform/coretemp.0/hwmon/ -maxdepth 2 -name "temp1_input" 2>/dev/null | head -1)" 2>/dev/null)
-  fi
-  if [ -z "${cpu}" ] && [ -f /sys/class/thermal/thermal_zone0/temp ]; then
-    cpu=$(cat /sys/class/thermal/thermal_zone0/temp)
-  fi
-  if [ -z "${cpu}" ] && [ -f /sys/class/hwmon/hwmon0/temp1_input ]; then
-    cpu=$(cat /sys/class/hwmon/hwmon0/temp1_input)
-  fi
-  if [ -z "${cpu}" ]; then
-    cpu=0
-  fi
-
-  # Convert CPU temperature to correct unit
-  if [ "${TEMPERATUREUNIT}" = "F" ]; then
-    temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 * 9 / 5000 + 32}')")°F"
-  elif [ "${TEMPERATUREUNIT}" = "K" ]; then
-    temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 / 1000 + 273.15}')")°K"
-  else
-    temperature="$(printf %.1f "$(echo "${cpu}" | awk '{print $1 / 1000}')")°C"
-  fi
-
-  # CPU load, heatmap
-  cpu_load_1=$(awk '{print $1}' < /proc/loadavg)
-  cpu_load_5=$(awk '{print $2}' < /proc/loadavg)
-  cpu_load_15=$(awk '{print $3}' < /proc/loadavg)
-  cpu_load_1_heatmap=$(HeatmapGenerator "${cpu_load_1}" "${core_count}")
-  cpu_load_5_heatmap=$(HeatmapGenerator "${cpu_load_5}" "${core_count}")
-  cpu_load_15_heatmap=$(HeatmapGenerator "${cpu_load_15}" "${core_count}")
-  cpu_percent=$(printf %.1f "$(echo "${cpu_load_1} ${core_count}" | awk '{print ($1 / $2) * 100}')")
-
-  # CPU temperature heatmap
-  hot_flag=false
-  # If we're getting close to 85°C... (https://www.raspberrypi.org/blog/introducing-turbo-mode-up-to-50-more-performance-for-free/)
-  if [ ${cpu} -gt 80000 ]; then
-    temp_heatmap=${blinking_text}${red_text}
-    # set flag to change the status message in SetStatusMessage()
-    hot_flag=true
-  elif [ ${cpu} -gt 70000 ]; then
-    temp_heatmap=${magenta_text}
-  elif [ ${cpu} -gt 60000 ]; then
-    temp_heatmap=${blue_text}
-  else
-    temp_heatmap=${cyan_text}
-  fi
-
-  # Memory use, heatmap and bar
-  memory_percent=$(awk '/MemTotal:/{total=$2} /MemFree:/{free=$2} /Buffers:/{buffers=$2} /^Cached:/{cached=$2} END {printf "%.1f", (total-free-buffers-cached)*100/total}' '/proc/meminfo')
-  memory_heatmap=$(HeatmapGenerator "${memory_percent}")
-
-  # Get product name and family
-  product_name=
-  product_family=
-  if [ -f /sys/devices/virtual/dmi/id/product_name ]; then
-    # Get product name, remove possible null byte
-    product_name=$(tr -d '\0' < /sys/devices/virtual/dmi/id/product_name)
-  fi
-  if [ -f /sys/devices/virtual/dmi/id/product_family ]; then
-    # Get product family, remove possible null byte
-    product_family=$(tr -d '\0' < /sys/devices/virtual/dmi/id/product_family)
-  fi
-
-  board_vendor=
-  board_name=
-  if [ -f /sys/devices/virtual/dmi/id/board_vendor ]; then
-    board_vendor=$(tr -d '\0' < /sys/devices/virtual/dmi/id/board_vendor)
-  fi
-  if [ -f /sys/devices/virtual/dmi/id/board_name ]; then
-    board_name="$(tr -d '\0' < /sys/devices/virtual/dmi/id/board_name)"
-  fi
-
-
-  if [ -n "$product_name" ] || [ -n "$product_family" ]; then
-    if echo "$product_family" | grep -q "$product_name"; then
-      # If product_name is contained in product_family, only show product_family
-      sys_model="${product_family}"
+    # System uptime
+    if [ "${sysinfo}" = 000 ]; then
+      # in case FTL connection is down, system_uptime_raw need to be set to 0 otherwise convertUptime() will complain
+      system_uptime_raw=0
     else
-      # If product_name is not contained in product_family, both are shown
-      sys_model="${product_family} ${product_name}"
+      system_uptime_raw=$(echo "${sysinfo}" | jq .system.uptime 2>/dev/null)
     fi
-  elif [ -f /sys/firmware/devicetree/base/model ]; then
-    sys_model=$(tr -d '\0' < /sys/firmware/devicetree/base/model)
-  elif [ -n "$board_vendor" ] || [ -n "$board_name" ]; then
-    sys_model="${board_vendor} ${board_name}"
-  elif [ -f /tmp/sysinfo/model ]; then
-    sys_model=$(tr -d '\0' < /tmp/sysinfo/model)
-  elif [ -n "${DOCKER_VERSION}" ]; then
-    # Docker image. DOCKER_VERSION is read from /etc/pihole/versions
-    sys_model="Container"
-  fi
 
-  # Cleaning device model from useless OEM information
-  sys_model=$(filterModel "${sys_model}")
+    # CPU temperature and unit
+    # in case .sensors.cpu_temp returns 'null' we substitute with 0
+    cpu_temp_raw=$(GetFTLData "info/sensors" | jq '(.sensors.cpu_temp // 0)' 2>/dev/null)
+    cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
+    temp_unit=$(GetFTLData "info/sensors"  | jq --raw-output .sensors.unit 2>/dev/null)
 
-  if [  -z "$sys_model" ]; then
-    sys_model="Unknown"
-  fi
+    # Temp + Unit
+    if [ "${temp_unit}" = "C" ]; then
+        temperature="${cpu_temp}°${temp_unit}"
+        # no conversion needed
+        cpu_temp_celsius="$(echo "${cpu_temp}" | awk -F '.' '{print $1}')"
+    elif [ "${temp_unit}" = "F" ]; then
+        temperature="${cpu_temp}°${temp_unit}"
+        # convert to Celsius for limit checking
+        cpu_temp_celsius="$(echo "${cpu_temp}" | awk '{print ($1-32) * 5 / 9}' | awk -F '.' '{print $1}')"
+    elif [ "${temp_unit}" = "K" ]; then
+        # no ° for Kelvin
+        temperature="${cpu_temp}${temp_unit}"
+        # convert to Celsius for limit checking
+        cpu_temp_celsius="$(echo "${cpu_temp}" | awk '{print $1 - 273.15}' | awk -F '.' '{print $1}')"
+    fi
+
+    # CPU temperature heatmap
+    hot_flag=false
+    # If we're getting close to 85°C... (https://www.raspberrypi.org/blog/introducing-turbo-mode-up-to-50-more-performance-for-free/)
+    if [ "${cpu_temp_celsius}" -gt 80 ]; then
+        temp_heatmap=${blinking_text}${red_text}
+        # set flag to change the status message in SetStatusMessage()
+        hot_flag=true
+    elif [ "${cpu_temp_celsius}" -gt 70 ]; then
+        temp_heatmap=${magenta_text}
+    elif [ "${cpu_temp_celsius}" -gt 60 ]; then
+        temp_heatmap=${blue_text}
+    else
+        temp_heatmap=${cyan_text}
+    fi
+
+    # CPU, load, heatmap
+    core_count=$(echo "${sysinfo}" | jq .system.cpu.nprocs 2>/dev/null)
+    cpu_load_1=$(printf %.2f "$(echo "${sysinfo}" | jq .system.cpu.load.raw[0] 2>/dev/null)")
+    cpu_load_5=$(printf %.2f "$(echo "${sysinfo}" | jq .system.cpu.load.raw[1] 2>/dev/null)")
+    cpu_load_15=$(printf %.2f "$(echo "${sysinfo}" | jq .system.cpu.load.raw[2] 2>/dev/null)")
+    cpu_load_1_heatmap=$(HeatmapGenerator "${cpu_load_1}" "${core_count}")
+    cpu_load_5_heatmap=$(HeatmapGenerator "${cpu_load_5}" "${core_count}")
+    cpu_load_15_heatmap=$(HeatmapGenerator "${cpu_load_15}" "${core_count}")
+    cpu_percent=$(printf %.1f "$(echo "${sysinfo}" | jq .system.cpu.load.percent[0] 2>/dev/null)")
+
+    # Memory use, heatmap and bar
+    memory_percent_raw="$(echo "${sysinfo}" | jq '.system.memory.ram."%used"' 2>/dev/null)"
+    memory_percent=$(printf %.1f "${memory_percent_raw}")
+    memory_heatmap="$(HeatmapGenerator "${memory_percent}")"
+
+    # Get device model
+    sys_model="$(GetFTLData "info/host" | jq --raw-output .host.model 2>/dev/null)"
+
+    # DOCKER_VERSION is set during GetVersionInformation, so this needs to run first during startup
+    if [ ! "${DOCKER_VERSION}" = "null" ]; then
+        # Docker image
+        sys_model="Container"
+    fi
+
+    # Cleaning device model from useless OEM information
+    sys_model=$(filterModel "${sys_model}")
+
+    # FTL returns null if device information is not available
+    if [  -z "$sys_model" ] || [  "$sys_model" = "null" ]; then
+        sys_model="N/A"
+    fi
 }
 
 GetNetworkInformation() {
-  # Get pi IPv4 address
-  pi_ip4_addrs="$(ip addr | grep 'inet ' | grep -v '127.0.0.1/8' | awk '{print $2}' | cut -f1 -d'/' |wc -l)"
-  if [ "${pi_ip4_addrs}" -eq 0 ]; then
-    # No IPv4 address available
-    pi_ip4_addr="N/A"
-  elif [ "${pi_ip4_addrs}" -eq 1 ]; then
-    # One IPv4 address available
-    pi_ip4_addr="$(ip addr | grep 'inet ' | grep -v '127.0.0.1/8' | awk '{print $2}' | cut -f1 -d'/' | head -n 1)"
-  else
-    # More than one IPv4 address available
-    pi_ip4_addr="$(ip addr | grep 'inet ' | grep -v '127.0.0.1/8' | awk '{print $2}' | cut -f1 -d'/' | head -n 1)+"
-  fi
+    interfaces_raw=$(GetFTLData "network/interfaces")
+    config=$(GetFTLData "config")
 
-  # Get pi IPv6 address
-  pi_ip6_addrs="$(ip addr | grep 'inet6 ' | grep -v '::1/128' | awk '{print $2}' | cut -f1 -d'/' | wc -l)"
-  if [ "${pi_ip6_addrs}" -eq 0 ]; then
-    # No IPv6 address available
-    pi_ip6_addr="N/A"
-    ipv6_check_box=${check_box_bad}
-  elif [ "${pi_ip6_addrs}" -eq 1 ]; then
-    # One IPv6 address available
-    pi_ip6_addr="$(ip addr | grep 'inet6 ' | grep -v '::1/128' | awk '{print $2}' | cut -f1 -d'/' | head -n 1)"
-    ipv6_check_box=${check_box_good}
-  else
-    # More than one IPv6 address available
-    pi_ip6_addr="$(ip addr | grep 'inet6 ' | grep -v '::1/128' | awk '{print $2}' | cut -f1 -d'/' | head -n 1)+"
-    ipv6_check_box=${check_box_good}
-  fi
-
-  # Get hostname and gateway
-  pi_hostname=$(hostname)
-
-  full_hostname=${pi_hostname}
-  # does the Pi-hole have a domain set?
-  if [ -n "${PIHOLE_DOMAIN+x}" ]; then
-    # is Pi-hole acting as DHCP server?
-    if [ "${DHCP_ACTIVE}" = "true" ]; then
-      count=${pi_hostname}"."${PIHOLE_DOMAIN}
-      count=${#count}
-      if [ "${count}" -lt "18" ]; then
-        full_hostname=${pi_hostname}"."${PIHOLE_DOMAIN}
-      fi
-    fi
-  fi
-
-  # Get the DNS count (from pihole -c)
-  dns_count="0"
-  [ -n "${PIHOLE_DNS_1}" ] && dns_count=$((dns_count+1))
-  [ -n "${PIHOLE_DNS_2}" ] && dns_count=$((dns_count+1))
-  [ -n "${PIHOLE_DNS_3}" ] && dns_count=$((dns_count+1))
-  [ -n "${PIHOLE_DNS_4}" ] && dns_count=$((dns_count+1))
-  [ -n "${PIHOLE_DNS_5}" ] && dns_count=$((dns_count+1))
-  [ -n "${PIHOLE_DNS_6}" ] && dns_count=$((dns_count+1))
-  [ -n "${PIHOLE_DNS_7}" ] && dns_count=$((dns_count+1))
-  [ -n "${PIHOLE_DNS_8}" ] && dns_count=$((dns_count+1))
-  [ -n "${PIHOLE_DNS_9}" ] && dns_count=$((dns_count+1))
-
-  # if there's only one DNS server
-  if [ ${dns_count} -eq 1 ]; then
-      dns_information="1 server"
-  else
-    dns_information="${dns_count} servers"
-  fi
-
-  # Is Pi-Hole acting as the DHCP server?
-  if [ "${DHCP_ACTIVE}" = "true" ]; then
-    dhcp_status="Enabled"
-    dhcp_info=" Range:    ${DHCP_START} - ${DHCP_END}"
-    dhcp_heatmap=${green_text}
-    dhcp_check_box=${check_box_good}
-
-    # Is DHCP handling IPv6?
-    # DHCP_IPv6 is set in setupVars.conf
-    # shellcheck disable=SC2154
-    if [ "${DHCP_IPv6}" = "true" ]; then
-      dhcp_ipv6_status="Enabled"
-      dhcp_ipv6_heatmap=${green_text}
-      dhcp_ipv6_check_box=${check_box_good}
+    # Get pi IPv4 address  of the default interface
+    pi_ip4_addrs="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv4[]' 2>/dev/null  | wc -w)"
+    if [ "${pi_ip4_addrs}" -eq 0 ]; then
+        # No IPv4 address available
+        pi_ip4_addr="N/A"
+    elif [ "${pi_ip4_addrs}" -eq 1 ]; then
+        # One IPv4 address available
+        pi_ip4_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv4[0]' 2>/dev/null)"
     else
-      dhcp_ipv6_status="Disabled"
-      dhcp_ipv6_heatmap=${red_text}
-      dhcp_ipv6_check_box=${check_box_bad}
-    fi
-  else
-    dhcp_status="Disabled"
-    dhcp_heatmap=${red_text}
-    dhcp_check_box=${check_box_bad}
-
-    # if the DHCP Router variable isn't set
-    if [ -z ${DHCP_ROUTER+x} ]; then
-      DHCP_ROUTER=$(GetFTLData "gateway" | awk '{ printf $1 }')
+        # More than one IPv4 address available
+        pi_ip4_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv4[0]' 2>/dev/null)+"
     fi
 
-    dhcp_info=" Router:   ${DHCP_ROUTER}"
-    dhcp_heatmap=${red_text}
-    dhcp_check_box=${check_box_bad}
+    # Get pi IPv6 address of the default interface
+    pi_ip6_addrs="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv6[]' 2>/dev/null  | wc -w)"
+    if [ "${pi_ip6_addrs}" -eq 0 ]; then
+        # No IPv6 address available
+        pi_ip6_addr="N/A"
+        ipv6_check_box=${check_box_bad}
+    elif [ "${pi_ip6_addrs}" -eq 1 ]; then
+        # One IPv6 address available
+        pi_ip6_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv6[0]' 2>/dev/null  | cut -f1 -d "%" )"
+        ipv6_check_box=${check_box_good}
+    else
+        # More than one IPv6 address available
+        pi_ip6_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv6[0]' 2>/dev/null  | cut -f1 -d "%" )+"
+        ipv6_check_box=${check_box_good}
+    fi
 
-    dhcp_ipv6_status="N/A"
-    dhcp_ipv6_heatmap=${yellow_text}
-    dhcp_ipv6_check_box=${check_box_question}
-  fi
+    # Is Pi-Hole acting as the DHCP server?
+    DHCP_ACTIVE="$(echo "${config}" | jq .config.dns.dhcp.active 2>/dev/null )"
 
-  # DNSSEC
-  if [ "${DNSSEC}" = "true" ]; then
-    dnssec_status="Enabled"
-    dnssec_heatmap=${green_text}
-  else
-    dnssec_status="Disabled"
-    dnssec_heatmap=${red_text}
-  fi
+    if [ "${DHCP_ACTIVE}" = "true" ]; then
+        DHCP_START="$(echo "${config}" | jq --raw-output .config.dns.dhcp.start 2>/dev/null)"
+        DHCP_END="$(echo "${config}" | jq --raw-output .config.dns.dhcp.end 2>/dev/null)"
 
-  # Conditional forwarding
-  if [ "${CONDITIONAL_FORWARDING}" = "true" ] || [ "${REV_SERVER}" = "true" ]; then
-    conditional_forwarding_status="Enabled"
-    conditional_forwarding_heatmap=${green_text}
-  else
-    conditional_forwarding_status="Disabled"
-    conditional_forwarding_heatmap=${red_text}
-  fi
+        dhcp_status="Enabled"
+        dhcp_info=" Range:    ${DHCP_START} - ${DHCP_END}"
+        dhcp_heatmap=${green_text}
+        dhcp_check_box=${check_box_good}
 
-  #Default interface data
-  def_iface_data=$(GetFTLData "interfaces" | head -n1)
-  iface_name="$(echo "$def_iface_data" | awk '{print $1}')"
-  tx_bytes="$(echo "$def_iface_data" | awk '{print $4}')"
-  rx_bytes="$(echo "$def_iface_data" | awk '{print $5}')"
+        # Is DHCP handling IPv6?
+        DHCP_IPv6="$(echo "${config}" | jq --raw-output .config.dns.dhcp.ipv6 2>/dev/null)"
+        if [ "${DHCP_IPv6}" = "true" ]; then
+            dhcp_ipv6_status="Enabled"
+            dhcp_ipv6_heatmap=${green_text}
+            dhcp_ipv6_check_box=${check_box_good}
+        else
+            dhcp_ipv6_status="Disabled"
+            dhcp_ipv6_heatmap=${red_text}
+            dhcp_ipv6_check_box=${check_box_bad}
+        fi
+    else
+        dhcp_status="Disabled"
+        dhcp_heatmap=${red_text}
+        dhcp_check_box=${check_box_bad}
+
+        GATEWAY="$(GetFTLData "network/gateway" | jq --raw-output .address 2>/dev/null)"
+        dhcp_info=" Router:   ${GATEWAY}"
+        dhcp_ipv6_status="N/A"
+        dhcp_ipv6_heatmap=${yellow_text}
+        dhcp_ipv6_check_box=${check_box_question}
+    fi
+
+    # Get hostname
+    pi_hostname="$(GetFTLData "info/host" | jq --raw-output .host.uname.nodename 2>/dev/null)"
+    full_hostname=${pi_hostname}
+    # when PI-hole is the DHCP server, append the domain to the hostname
+    if [ "${DHCP_ACTIVE}" = "true" ]; then
+        PIHOLE_DOMAIN="$(echo "${config}" | jq --raw-output .config.dns.domain 2>/dev/null)"
+        if [  -n "${PIHOLE_DOMAIN}" ]; then
+            count=${pi_hostname}"."${PIHOLE_DOMAIN}
+            count=${#count}
+            if [ "${count}" -lt "18" ]; then
+                full_hostname=${pi_hostname}"."${PIHOLE_DOMAIN}
+            fi
+        fi
+    fi
+
+    # Get the number of configured upstream DNS servers
+    dns_count="$(echo "${config}" | jq --raw-output .config.dns.upstreams[] 2>/dev/null  | sed '/^\s*$/d' | wc -l)"
+    # if there's only one DNS server
+    if [ "${dns_count}" -eq 1 ]; then
+        dns_information="1 server"
+    else
+        dns_information="${dns_count} servers"
+    fi
+
+
+    # DNSSEC
+    DNSSEC="$(echo "${config}" | jq .config.dns.dnssec 2>/dev/null)"
+    if [ "${DNSSEC}" = "true" ]; then
+        dnssec_status="Enabled"
+        dnssec_heatmap=${green_text}
+    else
+        dnssec_status="Disabled"
+        dnssec_heatmap=${red_text}
+    fi
+
+    # Conditional forwarding
+    CONDITIONAL_FORWARDING="$(echo "${config}" | jq .config.dns.revServer.active 2>/dev/null)"
+    if [ "${CONDITIONAL_FORWARDING}" = "true" ]; then
+        conditional_forwarding_status="Enabled"
+        conditional_forwarding_heatmap=${green_text}
+    else
+        conditional_forwarding_status="Disabled"
+        conditional_forwarding_heatmap=${red_text}
+    fi
+
+    # Default interface data
+    iface_name="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .name' 2>/dev/null)"
+    tx_bytes="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .tx.num' 2>/dev/null)"
+    tx_bytes_unit="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .tx.unit' 2>/dev/null)"
+    tx_bytes=$(printf "%.1f %b" "${tx_bytes}" "${tx_bytes_unit}")
+
+    rx_bytes="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .rx.num' 2>/dev/null)"
+    rx_bytes_unit="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .rx.unit' 2>/dev/null)"
+    rx_bytes=$(printf "%.1f %b" "${rx_bytes}" "${rx_bytes_unit}")
 }
 
 GetPiholeInformation() {
-  # Get FTL status
+    sysinfo=$(GetFTLData "info/ftl")
 
-  # Get FTL's current PID
-  ftlPID="$(getFTLPID)"
-
-  # If FTL is not running (getFTLPID returns -1), set all variables to "not running"
-  ftl_down_flag=false
-  if [ "${ftlPID}" = "-1" ]; then
-    ftl_status="Not running"
+  # If FTL is not running (sysinfo is 000), set all variables to "not running"
+  connection_down_flag=false
+  if [ "${sysinfo}" = "000" ]; then
+    ftl_status="No connection"
     ftl_heatmap=${red_text}
     ftl_check_box=${check_box_bad}
     # set flag to change the status message in SetStatusMessage()
-    ftl_down_flag=true
+    connection_down_flag=true
     ftl_cpu="N/A"
     ftl_mem_percentage="N/A"
   else
@@ -412,15 +512,21 @@ GetPiholeInformation() {
     ftl_heatmap=${green_text}
     ftl_check_box=${check_box_good}
     # Get FTL CPU and memory usage
-    ftl_cpu="$(ps h -p "${ftlPID}" -o %cpu | tr -d '[:space:]')%"
-    ftl_mem_percentage="$(ps h -p "${ftlPID}" -o %mem | tr -d '[:space:]')%"
+    ftl_cpu_raw="$(echo "${sysinfo}" | jq '.ftl."%cpu"' 2>/dev/null)"
+    ftl_mem_percentage_raw="$(echo "${sysinfo}" | jq '.ftl."%mem"' 2>/dev/null)"
+    ftl_cpu="$(printf "%.1f" "${ftl_cpu_raw}")%"
+    ftl_mem_percentage="$(printf "%.1f" "${ftl_mem_percentage_raw}")%"
     # Get Pi-hole (blocking) status
-    ftl_dns_port=$(GetFTLData "dns-port")
+    ftl_dns_port=$(GetFTLData "config" | jq .config.dns.port 2>/dev/null)
+    # Get FTL's current PID
+    ftlPID="$(echo "${sysinfo}" | jq .ftl.pid 2>/dev/null)"
   fi
 
-  # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled, ${ftl_status} == "Not running" no ftlPID found
+
+
+  # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled
   dns_down_flag=false
-  if [ "${ftl_dns_port}" = 0 ] || [ "${ftl_status}" = "Not running" ]; then
+  if [ "${ftl_dns_port}" = 0 ] || [ "${ftl_status}" = "No connection" ]; then
     dns_status="DNS offline"
     dns_heatmap=${red_text}
     dns_check_box=${check_box_bad}
@@ -434,143 +540,161 @@ fi
 }
 
 GetVersionInformation() {
-  # Check if version status has been saved
-  # all info is sourced from /etc/pihole/versions
 
-  out_of_date_flag=false
+    out_of_date_flag=false
+    versions_raw=$(GetFTLData "info/version")
 
-  # If PADD is running inside docker, immediately return without checking for updated component versions
-  if [ -n "${DOCKER_VERSION}" ]; then
-    docker_version_converted="$(VersionConverter "${DOCKER_VERSION}")"
-    docker_version_latest_converted="$(VersionConverter "${GITHUB_DOCKER_VERSION}")"
+    # Gather DOCKER version information...
+    # returns "null" if not running Pi-hole in Docker container
+    DOCKER_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.docker.local 2>/dev/null)"
+
+    # If PADD is running inside docker, immediately return without checking for updated component versions
+    if [ ! "${DOCKER_VERSION}" = "null" ] ; then
+        GITHUB_DOCKER_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.docker.remote 2>/dev/null)"
+        docker_version_converted="$(VersionConverter "${DOCKER_VERSION}")"
+        docker_version_latest_converted="$(VersionConverter "${GITHUB_DOCKER_VERSION}")"
 
     # Note: the version comparison will fail for any Docker tag not following a 'YYYY.MM.VV' scheme
     #       e.g. 'nightly', 'beta', 'v6-pre-alpha' and might set a false out_of_date_flag
     #       As those versions are not meant to be used in production, we ignore this small bug
-    if [ "${docker_version_converted}" -lt "${docker_version_latest_converted}" ]; then
-      out_of_date_flag="true"
-      docker_version_heatmap=${red_text}
-    else
-      docker_version_heatmap=${green_text}
-    fi
-    return
-  fi
-
-  # Gather CORE version information...
-  # Extract vx.xx or vx.xx.xxx version
-  CORE_VERSION="$(echo "${CORE_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
-  if [ "${CORE_BRANCH}" = "master" ]; then
-    core_version_converted="$(VersionConverter "${CORE_VERSION}")"
-    core_version_latest_converted=$(VersionConverter "${GITHUB_CORE_VERSION}")
-
-    if [ "${core_version_converted}" -lt "${core_version_latest_converted}" ]; then
-      out_of_date_flag="true"
-      core_version_heatmap=${red_text}
-    else
-      core_version_heatmap=${green_text}
+        if [ "${docker_version_converted}" -lt "${docker_version_latest_converted}" ]; then
+            out_of_date_flag="true"
+            docker_version_heatmap=${red_text}
+        else
+            docker_version_heatmap=${green_text}
+        fi
+        return
     fi
 
-  else
-    # Custom branch
-    if [ -z "${CORE_BRANCH}"  ]; then
-      # Branch name is empty, something went wrong
-      core_version_heatmap=${red_text}
-      CORE_VERSION="?"
+    # Gather core version information...
+    CORE_BRANCH="$(echo "${versions_raw}" | jq --raw-output .version.core.local.branch 2>/dev/null)"
+    CORE_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.core.local.version 2>/dev/null | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    GITHUB_CORE_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.core.remmote.version  2>/dev/null | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    CORE_HASH="$(echo "${versions_raw}" | jq --raw-output .version.core.local.hash 2>/dev/null)"
+    GITHUB_CORE_HASH="$(echo "${versions_raw}" | jq --raw-output .version.core.remote.hash 2>/dev/null)"
+
+    if [ "${CORE_BRANCH}" = "master" ]; then
+        core_version_converted="$(VersionConverter "${CORE_VERSION}")"
+        core_version_latest_converted=$(VersionConverter "${GITHUB_CORE_VERSION}")
+
+        if [ "${core_version_converted}" -lt "${core_version_latest_converted}" ]; then
+            out_of_date_flag="true"
+            core_version_heatmap=${red_text}
+        else
+            core_version_heatmap=${green_text}
+        fi
     else
-      if [ "${CORE_HASH}" = "${GITHUB_CORE_HASH}" ]; then
-        # up-to-date
-        core_version_heatmap=${green_text}
-      else
-        # out-of-date
-        out_of_date_flag="true"
-        core_version_heatmap=${red_text}
-      fi
-      # shorten common branch names (fix/, tweak/, new/)
-      # use the first 7 characters of the branch name as version
-      CORE_VERSION="$(printf '%s' "$CORE_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
+        # Custom branch
+        if [ -z "${CORE_BRANCH}"  ]; then
+            # Branch name is empty, something went wrong
+            core_version_heatmap=${red_text}
+            CORE_VERSION="?"
+        else
+            if [ "${CORE_HASH}" = "${GITHUB_CORE_HASH}" ]; then
+                # up-to-date
+                core_version_heatmap=${green_text}
+            else
+                # out-of-date
+                out_of_date_flag="true"
+                core_version_heatmap=${red_text}
+            fi
+            # shorten common branch names (fix/, tweak/, new/)
+            # use the first 7 characters of the branch name as version
+            CORE_VERSION="$(printf '%s' "$CORE_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
+        fi
     fi
-  fi
 
   # Gather web version information...
-  # Extract vx.xx or vx.xx.xxx version
-  if [ "$INSTALL_WEB_INTERFACE" = true ]; then
-    WEB_VERSION="$(echo "${WEB_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
-    if [ "${WEB_BRANCH}" = "master" ]; then
-      web_version_converted="$(VersionConverter "${WEB_VERSION}")"
-      web_version_latest_converted=$(VersionConverter "${GITHUB_WEB_VERSION}")
+    WEB_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.web.local.version 2>/dev/null)"
 
-      if [ "${web_version_converted}" -lt "${web_version_latest_converted}" ]; then
-        out_of_date_flag="true"
-        web_version_heatmap=${red_text}
-      else
-        web_version_heatmap=${green_text}
-      fi
+    if [ ! "$WEB_VERSION" = "null" ]; then
+        WEB_BRANCH="$(echo "${versions_raw}" | jq --raw-output .version.web.local.branch 2>/dev/null)"
+        WEB_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.web.local.version 2>/dev/null | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+        GITHUB_WEB_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.web.remmote.version 2>/dev/null | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+        WEB_HASH="$(echo "${versions_raw}" | jq --raw-output .version.web.local.hash 2>/dev/null)"
+        GITHUB_WEB_HASH="$(echo "${versions_raw}" | jq --raw-output .version.web.remote.hash 2>/dev/null)"
 
-    else
-    # Custom branch
-      if [ -z "${WEB_BRANCH}"  ]; then
-        # Branch name is empty, something went wrong
-        web_version_heatmap=${red_text}
-        WEB_VERSION="?"
-      else
-        if [ "${WEB_HASH}" = "${GITHUB_WEB_HASH}" ]; then
-          # up-to-date
-          web_version_heatmap=${green_text}
+        if [ "${WEB_BRANCH}" = "master" ]; then
+            web_version_converted="$(VersionConverter "${WEB_VERSION}")"
+            web_version_latest_converted=$(VersionConverter "${GITHUB_WEB_VERSION}")
+
+            if [ "${web_version_converted}" -lt "${web_version_latest_converted}" ]; then
+                out_of_date_flag="true"
+                web_version_heatmap=${red_text}
+            else
+                web_version_heatmap=${green_text}
+            fi
+
         else
-          # out-of-date
-          out_of_date_flag="true"
-          web_version_heatmap=${red_text}
+            # Custom branch
+            if [ -z "${WEB_BRANCH}"  ]; then
+                # Branch name is empty, something went wrong
+                web_version_heatmap=${red_text}
+                WEB_VERSION="?"
+            else
+                if [ "${WEB_HASH}" = "${GITHUB_WEB_HASH}" ]; then
+                    # up-to-date
+                    web_version_heatmap=${green_text}
+                else
+                    # out-of-date
+                    out_of_date_flag="true"
+                    web_version_heatmap=${red_text}
+                fi
+                # shorten common branch names (fix/, tweak/, new/)
+                # use the first 7 characters of the branch name as version
+                WEB_VERSION="$(printf '%s' "$WEB_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
+            fi
         fi
-        # shorten common branch names (fix/, tweak/, new/)
-        # use the first 7 characters of the branch name as version
-        WEB_VERSION="$(printf '%s' "$WEB_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
-      fi
-    fi
-  else
-    # Web interface not installed
-    WEB_VERSION="N/A"
-    web_version_heatmap=${yellow_text}
-  fi
-
-  # Gather FTL version information...
-  # Extract vx.xx or vx.xx.xxx version
-  FTL_VERSION="$(echo "${FTL_VERSION}" | grep -oE '^v[0-9]+([.][0-9]+){1,2}')"
-  if [ "${FTL_BRANCH}" = "master" ]; then
-    ftl_version_converted="$(VersionConverter "${FTL_VERSION}")"
-    ftl_version_latest_converted=$(VersionConverter "${GITHUB_FTL_VERSION}")
-
-    if [ "${ftl_version_converted}" -lt "${ftl_version_latest_converted}" ]; then
-      out_of_date_flag="true"
-      ftl_version_heatmap=${red_text}
     else
-      ftl_version_heatmap=${green_text}
+        # Web interface not installed
+        WEB_VERSION="N/A"
+        web_version_heatmap=${yellow_text}
     fi
-  else
-    # Custom branch
-    if [ -z "${FTL_BRANCH}"  ]; then
-      # Branch name is empty, something went wrong
-      ftl_version_heatmap=${red_text}
-      FTL_VERSION="?"
+
+    # Gather FTL version information...
+    FTL_BRANCH="$(echo "${versions_raw}" | jq --raw-output .version.ftl.local.branch 2>/dev/null)"
+    FTL_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.ftl.local.version 2>/dev/null | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    GITHUB_FTL_VERSION="$(echo "${versions_raw}" | jq --raw-output .version.ftl.remmote.version 2>/dev/null | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    FTL_HASH="$(echo "${versions_raw}" | jq --raw-output .version.ftl.local.hash 2>/dev/null)"
+    GITHUB_FTL_HASH="$(echo "${versions_raw}" | jq --raw-output .version.ftl.remote.hash 2>/dev/null)"
+
+
+    if [ "${FTL_BRANCH}" = "master" ]; then
+        ftl_version_converted="$(VersionConverter "${FTL_VERSION}")"
+        ftl_version_latest_converted=$(VersionConverter "${GITHUB_FTL_VERSION}")
+
+        if [ "${ftl_version_converted}" -lt "${ftl_version_latest_converted}" ]; then
+            out_of_date_flag="true"
+            ftl_version_heatmap=${red_text}
+        else
+            ftl_version_heatmap=${green_text}
+        fi
     else
-      if [ "${FTL_HASH}" = "${GITHUB_FTL_HASH}" ]; then
-        # up-to-date
-        ftl_version_heatmap=${green_text}
-      else
-        # out-of-date
-        out_of_date_flag="true"
-        ftl_version_heatmap=${red_text}
-      fi
-      # shorten common branch names (fix/, tweak/, new/)
-      # use the first 7 characters of the branch name as version
-      FTL_VERSION="$(printf '%s' "$FTL_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
+        # Custom branch
+        if [ -z "${FTL_BRANCH}"  ]; then
+            # Branch name is empty, something went wrong
+            ftl_version_heatmap=${red_text}
+            FTL_VERSION="?"
+        else
+            if [ "${FTL_HASH}" = "${GITHUB_FTL_HASH}" ]; then
+                # up-to-date
+                ftl_version_heatmap=${green_text}
+            else
+                # out-of-date
+                out_of_date_flag="true"
+                ftl_version_heatmap=${red_text}
+            fi
+            # shorten common branch names (fix/, tweak/, new/)
+            # use the first 7 characters of the branch name as version
+            FTL_VERSION="$(printf '%s' "$FTL_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
+        fi
     fi
-  fi
 
 }
 
 GetPADDInformation() {
   # If PADD is running inside docker, immediately return without checking for an update
-  if [ -n "${DOCKER_VERSION}" ]; then
+  if [ ! "${DOCKER_VERSION}" = "null" ]; then
     return
   fi
 
@@ -636,9 +760,9 @@ GenerateSizeDependendOutput() {
 
   # System uptime
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-    system_uptime=$(echo "${system_uptime_raw}" | awk -F'( |,|:)+' '{if ($7=="min") m=$6; else {if ($7~/^day/){if ($9=="min") {d=$6;m=$8} else {d=$6;h=$8;m=$9}} else {h=$6;m=$7}}} {print d+0,"days,",h+0,"hours"}')
+    system_uptime="$(convertUptime "${system_uptime_raw}" | awk -F ',' '{print $1 "," $2}')"
   else
-    system_uptime=$(echo "${system_uptime_raw}" | awk -F'( |,|:)+' '{if ($7=="min") m=$6; else {if ($7~/^day/){if ($9=="min") {d=$6;m=$8} else {d=$6;h=$8;m=$9}} else {h=$6;m=$7}}} {print d+0,"days,",h+0,"hours,",m+0,"minutes"}')
+    system_uptime="$(convertUptime "${system_uptime_raw}")"
   fi
 
   #  Bar generations
@@ -675,7 +799,7 @@ SetStatusMessage() {
         full_status="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
         mega_status="${mega_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
 
-    elif [ "${ftl_down_flag}" = true ]; then
+    elif [ "${connection_down_flag}" = true ]; then
         # Check if FTL is down
         pico_status=${pico_status_ftl_down}
         mini_status=${mini_status_ftl_down}
@@ -691,15 +815,7 @@ SetStatusMessage() {
         full_status=${full_status_dns_down}
         mega_status=${mega_status_dns_down}
 
-    elif [ "${blocking_status}" = "unknown" ]; then
-        # Check if blocking status is unknown
-        pico_status=${pico_status_unknown}
-        mini_status=${mini_status_unknown}
-        tiny_status=${tiny_status_unknown}
-        full_status=${full_status_unknown}
-        mega_status=${mega_status_unknown}
-
-    elif [ "${blocking_status}" = "disabled" ]; then
+    elif [ "${blocking_enabled}" = "false" ]; then
         # Check if blocking status is disabled
         pico_status=${pico_status_off}
         mini_status=${mini_status_off}
@@ -715,7 +831,7 @@ SetStatusMessage() {
         full_status=${full_status_update}
         mega_status=${mega_status_update}
 
-    elif [ "${blocking_status}" = "enabled" ]; then
+    elif [ "${blocking_enabled}" = "true" ]; then
         # if we reach this point and blocking is enabled, everything is fine
         pico_status=${pico_status_ok}
         mini_status=${mini_status_ok}
@@ -728,7 +844,7 @@ SetStatusMessage() {
 ############################################# PRINTERS #############################################
 
 PrintLogo() {
-  if [ -n "${DOCKER_VERSION}" ]; then
+  if [ ! "${DOCKER_VERSION}" = "null" ]; then
       version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
     else
       version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
@@ -761,7 +877,7 @@ PrintLogo() {
 }
 
 PrintDashboard() {
-    if [ -n "${DOCKER_VERSION}" ]; then
+    if [ ! "${DOCKER_VERSION}" = "null" ]; then
       version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
     else
       version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
@@ -921,7 +1037,7 @@ PrintDashboard() {
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}FTL ============================================================================${reset_text}"
         moveXOffset; printf " %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}" "Mem. Use:" "${ftl_mem_percentage}"
-        moveXOffset; printf " %-10s%-69s${clear_line}\n" "DNSCache:" "${cache_inserts} insertions, ${cache_deletes} deletions, ${cache_size} total entries"
+        moveXOffset; printf " %-10s%-69s${clear_line}\n" "DNSCache:" "${cache_inserts} insertions, ${cache_evictions} deletions, ${cache_size} total entries"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-19s${clear_line}\n" "Hostname:" "${full_hostname}"
         moveXOffset; printf " %-10s%-15s %-4s%-9s %-4s%-9s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
@@ -1090,59 +1206,6 @@ VersionConverter() {
   echo "$@" | tr -d '[:alpha:]' | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
 }
 
-# get the Telnet API Port FTL is using by parsing `pihole-FTL.conf`
-# same implementation as https://github.com/pi-hole/pi-hole/pull/4945
-getFTLAPIPort(){
-    local FTLCONFFILE="/etc/pihole/pihole-FTL.conf"
-    local DEFAULT_FTL_PORT=4711
-    local ftl_api_port
-
-    if [ -s "$FTLCONFFILE" ]; then
-        # if FTLPORT is not set in pihole-FTL.conf, use the default port
-        ftl_api_port="$({ grep '^FTLPORT=' "${FTLCONFFILE}" || echo "${DEFAULT_FTL_PORT}"; } | cut -d'=' -f2-)"
-        # Exploit prevention: set the port to the default port if there is malicious (non-numeric)
-        # content set in pihole-FTL.conf
-        expr "${ftl_api_port}" : "[^[:digit:]]" > /dev/null && ftl_api_port="${DEFAULT_FTL_PORT}"
-    else
-        # if there is no pihole-FTL.conf, use the default port
-        ftl_api_port="${DEFAULT_FTL_PORT}"
-    fi
-
-    echo "${ftl_api_port}"
-
-}
-
-# returns FTL's PID based on the content of the pihole-FTL.pid file
-# honor PIDFILE setting in `pihole-FTL.conf`
-getFTLPID() {
-    local FTLCONFFILE="/etc/pihole/pihole-FTL.conf"
-    local DEFAULT_PID_FILE="/run/pihole-FTL.pid"
-    local FTL_PID_FILE
-    local FTL_PID
-
-    if [ -s "${FTLCONFFILE}" ]; then
-      # if PIDFILE is not set in pihole-FTL.conf, use the default path
-      FTL_PID_FILE="$({ grep '^PIDFILE=' "${FTLCONFFILE}" || echo "${DEFAULT_PID_FILE}"; } | cut -d'=' -f2-)"
-    else
-      # if there is no pihole-FTL.conf, use the default path
-      FTL_PID_FILE="${DEFAULT_PID_FILE}"
-    fi
-
-    if [ -s "${FTL_PID_FILE}" ]; then
-        # -s: FILE exists and has a size greater than zero
-        FTL_PID="$(cat "${FTL_PID_FILE}")"
-        # Exploit prevention: unset the variable if there is malicious content
-        # Verify that the value read from the file is numeric
-        expr "${FTL_PID}" : "[^[:digit:]]" > /dev/null && unset FTL_PID
-    fi
-
-    # If FTL is not running, or the PID file contains malicious stuff, substitute
-    # negative PID to signal this
-    FTL_PID=${FTL_PID:=-1}
-    echo  "${FTL_PID}"
-}
-
-
 moveYOffset(){
     # moves the cursor yOffset-times down
     # https://vt100.net/docs/vt510-rm/CUD.html
@@ -1195,35 +1258,116 @@ truncateString() {
     fi
 }
 
+# Converts seconds to days, hours, minutes
+# https://unix.stackexchange.com/a/338844
+convertUptime() {
+    # shellcheck disable=SC2016
+    eval "echo $(date -ud "@$1" +'$((%s/3600/24)) days, %H hours, %M minutes')"
+}
 
+secretRead() {
+
+    # POSIX compliant function to read user-input and
+    # mask every character entered by (*)
+    #
+    # This is challenging, because in POSIX, `read` does not support
+    # `-s` option (suppressing the input) or
+    # `-n` option (reading n chars)
+
+
+    # This workaround changes the terminal characteristics to not echo input and later resets this option
+    # credits https://stackoverflow.com/a/4316765
+    # showing asterisk instead of password
+    # https://stackoverflow.com/a/24600839
+    # https://unix.stackexchange.com/a/464963
+
+    stty -echo # do not echo user input
+    stty -icanon min 1 time 0 # disable canonical mode https://man7.org/linux/man-pages/man3/termios.3.html
+
+    unset password
+    unset key
+    unset charcount
+    charcount=0
+    while key=$(dd ibs=1 count=1 2>/dev/null); do #read one byte of input
+        if [ "${key}" = "$(printf '\0' | tr -d '\0')" ] ; then
+            # Enter - accept password
+            break
+        fi
+        if [ "${key}" = "$(printf '\177')" ] ; then
+            # Backspace
+            if [ $charcount -gt 0 ] ; then
+                charcount=$((charcount-1))
+                printf '\b \b'
+                password="${password%?}"
+            fi
+        else
+            # any other character
+            charcount=$((charcount+1))
+            printf '*'
+            password="$password$key"
+        fi
+    done
+
+    # restore original terminal settings
+    stty "${stty_orig}"
+}
 
 ########################################## MAIN FUNCTIONS ##########################################
 
 OutputJSON() {
-  GetSummaryInformation
-  echo "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today_raw},\"clients\": ${clients}}"
+    # Hiding the cursor.
+    # https://vt100.net/docs/vt510-rm/DECTCEM.html
+    printf '\e[?25l'
+    # Traps for graceful shutdown
+    # https://unix.stackexchange.com/a/681201
+    trap CleanExit EXIT
+    trap sig_cleanup INT QUIT TERM
+    # Save current terminal settings (needed for later restore after password prompt)
+    stty_orig=$(stty -g)
+
+    # Test if the authentication endpoint is available
+    TestAPIAvailability
+    # Authenticate with the FTL server
+    printf "%b" "Establishing connection with FTL...\n"
+    Authenthication
+
+    GetSummaryInformation
+    printf "%b" "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today},\"clients\": ${clients}}"
 }
 
 ShowVersion() {
-  # source version file to check if $DOCKER_VERSION is set
-  . /etc/pihole/versions
-  GetPADDInformation
-  if [ -z "${padd_version_latest}" ]; then
-    padd_version_latest="N/A"
-  fi
-  if [ -n "${DOCKER_VERSION}" ]; then
-    # Check for latest Docker version
+    # Hiding the cursor.
+    # https://vt100.net/docs/vt510-rm/DECTCEM.html
+    printf '\e[?25l'
+    # Traps for graceful shutdown
+    # https://unix.stackexchange.com/a/681201
+    trap CleanExit EXIT
+    trap sig_cleanup INT QUIT TERM
+
+    # Save current terminal settings (needed for later restore after password prompt)
+    stty_orig=$(stty -g)
+
+    # Test if the authentication endpoint is available
+    TestAPIAvailability
+    # Authenticate with the FTL server
+    printf "%b" "Establishing connection with FTL...\n"
+    Authenthication
+
     GetVersionInformation
-    printf "%s${clear_line}\n" "  PADD version is ${padd_version} as part of Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text} (Latest Docker: ${GITHUB_DOCKER_VERSION})"
-    version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
-  else
-    printf "%s${clear_line}\n" "  PADD version is ${padd_version_heatmap}${padd_version}${reset_text} (Latest: ${padd_version_latest})"
+    GetPADDInformation
+    if [ -z "${padd_version_latest}" ]; then
+        padd_version_latest="N/A"
+    fi
+    if [ ! "${DOCKER_VERSION}" = "null" ]; then
+        # Check for latest Docker version
+        printf "%s${clear_line}\n" "PADD version is ${padd_version} as part of Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text} (Latest Docker: ${GITHUB_DOCKER_VERSION})"
+        version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
+    else
+        printf "%s${clear_line}\n" "PADD version is ${padd_version_heatmap}${padd_version}${reset_text} (Latest: ${padd_version_latest})"
   fi
 }
 
 StartupRoutine(){
-  # Get config variables
-  . /etc/pihole/setupVars.conf
 
   # Clear the screen and move cursor to (0,0).
   # This mimics the 'clear' command.
@@ -1235,12 +1379,18 @@ StartupRoutine(){
   # adds the y-offset
   moveYOffset
 
-  # Get versions information
-  . /etc/pihole/versions
-
   if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
     moveXOffset; PrintLogo "$1"
     moveXOffset; printf "%b" "START-UP ===========\n"
+
+    # Test if the authentication endpoint is available
+    TestAPIAvailability
+
+    # Authenticate with the FTL server
+    moveXOffset; printf "%b" "Establishing connection with FTL...\n"
+    Authenthication
+
+    moveXOffset; printf "%b" "Starting PADD...\n"
 
     moveXOffset; printf "%b" " [■·········]  10%\r"
 
@@ -1250,7 +1400,7 @@ StartupRoutine(){
 
     # Get our information for the first time
     moveXOffset; printf "%b" " [■■■■······]  40%\r"
-    GetSystemInformation
+    GetVersionInformation
     moveXOffset; printf "%b" " [■■■■■·····]  50%\r"
     GetSummaryInformation
     moveXOffset; printf "%b" " [■■■■■■····]  60%\r"
@@ -1258,7 +1408,7 @@ StartupRoutine(){
     moveXOffset; printf "%b" " [■■■■■■■···]  70%\r"
     GetNetworkInformation
     moveXOffset; printf "%b" " [■■■■■■■■··]  80%\r"
-    GetVersionInformation
+    GetSystemInformation
     moveXOffset; printf "%b" " [■■■■■■■■■·]  90%\r"
     GetPADDInformation
     moveXOffset; printf "%b" " [■■■■■■■■■■] 100%\n"
@@ -1266,8 +1416,15 @@ StartupRoutine(){
   elif [ "$1" = "mini" ]; then
     moveXOffset; PrintLogo "$1"
     moveXOffset; echo "START UP ====================="
+    # Test if the authentication endpoint is available
+    TestAPIAvailability
+    # Authenticate with the FTL server
+    moveXOffset; printf "%b" "Establishing connection with FTL...\n"
+    Authenthication
 
     # Get our information for the first time
+    moveXOffset; echo "- Gathering version info."
+    GetVersionInformation
     moveXOffset; echo "- Gathering system info."
     GetSystemInformation
     moveXOffset; echo "- Gathering Pi-hole info."
@@ -1275,10 +1432,8 @@ StartupRoutine(){
     GetSummaryInformation
     moveXOffset; echo "- Gathering network info."
     GetNetworkInformation
-    moveXOffset; echo "- Gathering version info."
-    GetVersionInformation
     GetPADDInformation
-    if [ -n "${DOCKER_VERSION}" ]; then
+    if [ ! "${DOCKER_VERSION}" = "null" ]; then
       moveXOffset; echo "  - Docker Tag ${DOCKER_VERSION}"
     else
       moveXOffset; echo "  - Core $CORE_VERSION, Web $WEB_VERSION"
@@ -1295,7 +1450,17 @@ StartupRoutine(){
       moveXOffset; echo "START UP ==================================================="
     fi
 
+    # Test if the authentication endpoint is available
+    TestAPIAvailability
+
+    # Authenticate with the FTL server
+    moveXOffset; printf "%b" "Establishing connection with FTL...\n"
+    Authenthication
+
+
     # Get our information for the first time
+    moveXOffset; echo "- Gathering version information..."
+    GetVersionInformation
     moveXOffset; echo "- Gathering system information..."
     GetSystemInformation
     moveXOffset; echo "- Gathering Pi-hole information..."
@@ -1303,10 +1468,9 @@ StartupRoutine(){
     GetPiholeInformation
     moveXOffset; echo "- Gathering network information..."
     GetNetworkInformation
-    moveXOffset; echo "- Gathering version information..."
-    GetVersionInformation
+
     GetPADDInformation
-    if [ -n "${DOCKER_VERSION}" ]; then
+    if [ ! "${DOCKER_VERSION}" = "null" ]; then
       moveXOffset; echo "  - Docker Tag ${DOCKER_VERSION}"
     else
       moveXOffset; echo "  - Pi-hole Core $CORE_VERSION"
@@ -1355,9 +1519,16 @@ NormalPADD() {
     # Start getting our information for next round
     now=$(date +%s)
 
+    # check if a new authentication is required (e.g. after connection to FTL has re-established)
+    # GetFTLData() will return a 401 if a 401 http status code is returned
+    # as $password should be set already, PADD should automatically re-authenticate
+    authenthication_required=$(GetFTLData "info/ftl")
+    if [ "${authenthication_required}" = 401 ]; then
+      LoginAPI
+    fi
+
     # Get uptime, CPU load, temp, etc. every 5 seconds
     if [ $((now - LastCheckSystemInformation)) -ge 5 ]; then
-      . /etc/pihole/setupVars.conf
       GetSystemInformation
       LastCheckSystemInformation="${now}"
     fi
@@ -1382,7 +1553,6 @@ NormalPADD() {
 
     # Get Pi-hole components version information every 30 seconds
     if [ $((now - LastCheckVersionInformation)) -ge 30 ]; then
-      . /etc/pihole/versions
       GetVersionInformation
       LastCheckVersionInformation="${now}"
     fi
@@ -1447,24 +1617,46 @@ DisplayHelp() {
 
 ::: PADD displays stats about your Pi-hole!
 :::
-::: Note: If no option is passed, then stats are displayed on screen, updated every 5 seconds
 :::
 ::: Options:
-:::  -xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
-:::  -yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
-:::  -j, --json     output stats as JSON formatted string and exit
-:::  -u, --update   update to the latest version
-:::  -v, --version  show PADD version info
-:::  -h, --help     display this help text
+:::  --xoff [num]    set the x-offset, reference is the upper left corner, disables auto-centering
+:::  --yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
+:::
+:::  --server <DOMAIN|IP>    domain or IP of your Pi-hole (default: localhost)
+:::  --secret <password>     your Pi-hole's password, required to access the API
+:::  -j, --json              output stats as JSON formatted string and exit and exit
+:::  -u, --update            update to the latest version
+:::  -v, --version           show PADD version info
+:::  -h, --help              display this help text
 
 EOM
 }
 
-CleanExit(){
+# Called on signals INT QUIT TERM
+sig_cleanup() {
+    # save error code (130 for SIGINT, 143 for SIGTERM, 131 for SIGQUIT)
+    err=$?
+
+    # some shells will call EXIT after the INT signal
+    # causing EXIT trap to be executed, so we trap EXIT after INT
+    trap '' EXIT
+
+    (exit $err) # execute in a subshell just to pass $? to CleanExit()
+    CleanExit
+}
+
+# Called on signal EXIT, or indirectly on INT QUIT TERM
+CleanExit() {
     # save the return code of the script
     err=$?
-    #clear the line
-    printf '\e[0K\n'
+
+    # reset trap for all signals to not interrupt clean_tempfiles() on any next signal
+    trap '' EXIT INT QUIT TERM
+
+    # restore terminal settings if they have been changed (e.g. user canceled script while at password input prompt)
+    if [ "$(stty -g)" != "${stty_orig}" ]; then
+        stty "${stty_orig}"
+    fi
 
     # Show the cursor
     # https://vt100.net/docs/vt510-rm/DECTCEM.html
@@ -1472,8 +1664,10 @@ CleanExit(){
 
     # if background sleep is running, kill it
     # http://mywiki.wooledge.org/SignalTrap#When_is_the_signal_handled.3F
-    kill $sleepPID > /dev/null 2>&1
+    kill "{$sleepPID}" > /dev/null 2>&1
 
+    #  Delete session from FTL server
+    DeleteSession
     exit $err # exit the script with saved $?
 }
 
@@ -1491,7 +1685,7 @@ TerminalResize(){
 
     printf '\e[H\e[2J\e[3J'
 
-    kill $sleepPID > /dev/null 2>&1
+    kill "{$sleepPID}" > /dev/null 2>&1
 }
 
 main(){
@@ -1499,15 +1693,14 @@ main(){
     # https://vt100.net/docs/vt510-rm/DECTCEM.html
     printf '\e[?25l'
 
-    # Trap on exit
-    trap 'CleanExit' INT TERM EXIT
+    # Traps for graceful shutdown
+    # https://unix.stackexchange.com/a/681201
+    trap CleanExit EXIT
+    trap sig_cleanup INT QUIT TERM
 
-    # If setupVars.conf is not present, then PADD is not running on a Pi-hole
-    # and we are not able to start as StartupRoutine() will fail below
-    if [ ! -f /etc/pihole/setupVars.conf ]; then
-      printf "%b" "${check_box_bad} Error!\n    PADD only works in conjunction with Pi-hole!\n"
-      exit 1
-    fi
+    # Save current terminal settings (needed for later restore after password prompt)
+    stty_orig=$(stty -g)
+
 
     SizeChecker
 
@@ -1520,12 +1713,14 @@ main(){
 # Process all options (if present)
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    "-j" | "--json"     ) OutputJSON; exit 0;;
+    "-j" | "--json"     ) xOffset=0; OutputJSON; exit 0;;
     "-u" | "--update"   ) Update;;
     "-h" | "--help"     ) DisplayHelp; exit 0;;
-    "-v" | "--version"  ) ShowVersion; exit 0;;
-    "-xoff"             ) xOffset="$2"; xOffOrig="$2"; shift;;
-    "-yoff"             ) yOffset="$2"; yOffOrig="$2"; shift;;
+    "-v" | "--version"  ) xOffset=0; ShowVersion; exit 0;;
+    "--xoff"            ) xOffset="$2"; xOffOrig="$2"; shift;;
+    "--yoff"            ) yOffset="$2"; yOffOrig="$2"; shift;;
+    "--server"          ) SERVER="$2"; shift;;
+    "--secret"          ) password="$2"; shift;;
     *                   ) DisplayHelp; exit 1;;
   esac
   shift
