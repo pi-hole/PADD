@@ -145,6 +145,12 @@ TestAPIAvailability() {
             API_PORT=""
         else
             # API is available at this URL combination
+
+            if [ "${availabilityResonse}" = 200 ]; then
+                # API is available without authentication
+                needAuth=false
+            fi
+
             break
         fi
 
@@ -169,9 +175,21 @@ TestAPIAvailability() {
 }
 
 LoginAPI() {
-    # Try to authenticate
-    Authenticate
+    # Exit early if no authentication is required
+    if [ "${needAuth}" = false ]; then
+        moveXOffset; echo "No password required."
+        return
+    fi
 
+    # Try to read the CLI password (if enabled and readable by the current user)
+    if [ -r /etc/pihole/cli_pw ]; then
+        password=$(cat /etc/pihole/cli_pw)
+
+        # Try to authenticate using the CLI password
+        Authenticate
+    fi
+
+    # If this did not work, ask the user for the password
     while [ "${validSession}" = false ] || [ -z "${validSession}" ] ; do
         moveXOffset; echo "Authentication failed."
 
