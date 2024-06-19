@@ -168,9 +168,9 @@ TestAPIAvailability() {
     fi
 }
 
-Authenthication() {
+LoginAPI() {
     # Try to authenticate
-    LoginAPI
+    Authenticate
 
     while [ "${validSession}" = false ] || [ -z "${validSession}" ] ; do
         moveXOffset; echo "Authentication failed."
@@ -186,7 +186,7 @@ Authenthication() {
         moveXOffset; secretRead; printf '\n'
 
         # Try to authenticate again
-        LoginAPI
+        Authenticate
     done
 
     # Loop exited, authentication was successful
@@ -213,7 +213,7 @@ DeleteSession() {
 
 }
 
-LoginAPI() {
+Authenticate() {
 	sessionResponse="$(curl -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
 
   if [ -z "${sessionResponse}" ]; then
@@ -1329,7 +1329,7 @@ OutputJSON() {
     TestAPIAvailability
     # Authenticate with the FTL server
     printf "%b" "Establishing connection with FTL...\n"
-    Authenthication
+    LoginAPI
 
     GetSummaryInformation
     printf "%b" "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today},\"clients\": ${clients}}"
@@ -1351,7 +1351,7 @@ ShowVersion() {
     TestAPIAvailability
     # Authenticate with the FTL server
     printf "%b" "Establishing connection with FTL...\n"
-    Authenthication
+    LoginAPI
 
     GetVersionInformation
     GetPADDInformation
@@ -1388,7 +1388,7 @@ StartupRoutine(){
 
     # Authenticate with the FTL server
     moveXOffset; printf "%b" "Establishing connection with FTL...\n"
-    Authenthication
+    LoginAPI
 
     moveXOffset; printf "%b" "Starting PADD...\n"
 
@@ -1420,7 +1420,7 @@ StartupRoutine(){
     TestAPIAvailability
     # Authenticate with the FTL server
     moveXOffset; printf "%b" "Establishing connection with FTL...\n"
-    Authenthication
+    LoginAPI
 
     # Get our information for the first time
     moveXOffset; echo "- Gathering version info."
@@ -1455,7 +1455,7 @@ StartupRoutine(){
 
     # Authenticate with the FTL server
     moveXOffset; printf "%b" "Establishing connection with FTL...\n"
-    Authenthication
+    LoginAPI
 
 
     # Get our information for the first time
@@ -1524,7 +1524,7 @@ NormalPADD() {
     # as $password should be set already, PADD should automatically re-authenticate
     authenthication_required=$(GetFTLData "info/ftl")
     if [ "${authenthication_required}" = 401 ]; then
-      LoginAPI
+      Authenticate
     fi
 
     # Get uptime, CPU load, temp, etc. every 5 seconds
