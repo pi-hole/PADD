@@ -102,7 +102,7 @@ padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${gre
 
 TestAPIAvailability() {
 
-    local chaos_api_list availabilityResonse cmdResult digReturnCode
+    local chaos_api_list availabilityResponse cmdResult digReturnCode
 
     # Query the API URLs from FTL using CHAOS TXT
     # The result is a space-separated enumeration of full URLs
@@ -137,16 +137,16 @@ TestAPIAvailability() {
         API_URL="${API_URL#\"}"
 
         # Test if the API is available at this URL
-        availabilityResonse=$(curl -skS -o /dev/null -w "%{http_code}" "${API_URL}auth")
+        availabilityResponse=$(curl -skS -o /dev/null -w "%{http_code}" "${API_URL}auth")
 
         # Test if http status code was 200 (OK) or 401 (authentication required)
-        if [ ! "${availabilityResonse}" = 200 ] && [ ! "${availabilityResonse}" = 401 ]; then
+        if [ ! "${availabilityResponse}" = 200 ] && [ ! "${availabilityResponse}" = 401 ]; then
             # API is not available at this port/protocol combination
             API_PORT=""
         else
             # API is available at this URL combination
 
-            if [ "${availabilityResonse}" = 200 ]; then
+            if [ "${availabilityResponse}" = 200 ]; then
                 # API is available without authentication
                 needAuth=false
             fi
