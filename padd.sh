@@ -102,7 +102,7 @@ padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${gre
 
 TestAPIAvailability() {
 
-    local chaos_api_list availabilityResonse cmdResult digReturnCode
+    local chaos_api_list availabilityResponse cmdResult digReturnCode
 
     # Query the API URLs from FTL using CHAOS TXT
     # The result is a space-separated enumeration of full URLs
@@ -137,14 +137,20 @@ TestAPIAvailability() {
         API_URL="${API_URL#\"}"
 
         # Test if the API is available at this URL
-        availabilityResonse=$(curl -skS -o /dev/null -w "%{http_code}" "${API_URL}auth")
+        availabilityResponse=$(curl -skS -o /dev/null -w "%{http_code}" "${API_URL}auth")
 
         # Test if http status code was 200 (OK) or 401 (authentication required)
-        if [ ! "${availabilityResonse}" = 200 ] && [ ! "${availabilityResonse}" = 401 ]; then
+        if [ ! "${availabilityResponse}" = 200 ] && [ ! "${availabilityResponse}" = 401 ]; then
             # API is not available at this port/protocol combination
             API_PORT=""
         else
             # API is available at this URL combination
+
+            if [ "${availabilityResponse}" = 200 ]; then
+                # API is available without authentication
+                needAuth=false
+            fi
+
             break
         fi
 
@@ -168,10 +174,22 @@ TestAPIAvailability() {
     fi
 }
 
-Authenthication() {
-    # Try to authenticate
-    LoginAPI
+LoginAPI() {
+    # Exit early if no authentication is required
+    if [ "${needAuth}" = false ]; then
+        moveXOffset; echo "No password required."
+        return
+    fi
 
+    # Try to read the CLI password (if enabled and readable by the current user)
+    if [ -r /etc/pihole/cli_pw ]; then
+        password=$(cat /etc/pihole/cli_pw)
+
+        # Try to authenticate using the CLI password
+        Authenticate
+    fi
+
+    # If this did not work, ask the user for the password
     while [ "${validSession}" = false ] || [ -z "${validSession}" ] ; do
         moveXOffset; echo "Authentication failed."
 
@@ -186,7 +204,7 @@ Authenthication() {
         moveXOffset; secretRead; printf '\n'
 
         # Try to authenticate again
-        LoginAPI
+        Authenticate
     done
 
     # Loop exited, authentication was successful
@@ -213,7 +231,7 @@ DeleteSession() {
 
 }
 
-LoginAPI() {
+Authenticate() {
 	sessionResponse="$(curl -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
 
   if [ -z "${sessionResponse}" ]; then
@@ -1329,7 +1347,7 @@ OutputJSON() {
     TestAPIAvailability
     # Authenticate with the FTL server
     printf "%b" "Establishing connection with FTL...\n"
-    Authenthication
+    LoginAPI
 
     GetSummaryInformation
     printf "%b" "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today},\"clients\": ${clients}}"
@@ -1351,7 +1369,7 @@ ShowVersion() {
     TestAPIAvailability
     # Authenticate with the FTL server
     printf "%b" "Establishing connection with FTL...\n"
-    Authenthication
+    LoginAPI
 
     GetVersionInformation
     GetPADDInformation
@@ -1388,7 +1406,7 @@ StartupRoutine(){
 
     # Authenticate with the FTL server
     moveXOffset; printf "%b" "Establishing connection with FTL...\n"
-    Authenthication
+    LoginAPI
 
     moveXOffset; printf "%b" "Starting PADD...\n"
 
@@ -1420,7 +1438,7 @@ StartupRoutine(){
     TestAPIAvailability
     # Authenticate with the FTL server
     moveXOffset; printf "%b" "Establishing connection with FTL...\n"
-    Authenthication
+    LoginAPI
 
     # Get our information for the first time
     moveXOffset; echo "- Gathering version info."
@@ -1455,7 +1473,7 @@ StartupRoutine(){
 
     # Authenticate with the FTL server
     moveXOffset; printf "%b" "Establishing connection with FTL...\n"
-    Authenthication
+    LoginAPI
 
 
     # Get our information for the first time
@@ -1524,7 +1542,7 @@ NormalPADD() {
     # as $password should be set already, PADD should automatically re-authenticate
     authenthication_required=$(GetFTLData "info/ftl")
     if [ "${authenthication_required}" = 401 ]; then
-      LoginAPI
+      Authenticate
     fi
 
     # Get uptime, CPU load, temp, etc. every 5 seconds
