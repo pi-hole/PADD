@@ -390,34 +390,39 @@ GetSystemInformation() {
 
 GetNetworkInformation() {
     interfaces_raw=$(GetFTLData "network/interfaces")
+    gateway_raw=$(GetFTLData "network/gateway")
+    gateway_v4_iface=$(echo "${gateway_raw}" | jq -r '.gateway[] | select(.family == "inet") | .interface' | head -n 1)
+    v4_iface_data=$(echo "${interfaces_raw}" | jq --arg iface "${gateway_v4_iface}" '.interfaces[] | select(.name==$iface)' 2>/dev/null)
+    gateway_v6_iface=$(echo "${gateway_raw}" | jq -r '.gateway[] | select(.family == "inet6") | .interface' | head -n 1)
+    v6_iface_data=$(echo "${interfaces_raw}" | jq --arg iface "${gateway_v6_iface}" '.interfaces[] | select(.name==$iface)' 2>/dev/null)
     config=$(GetFTLData "config")
 
     # Get pi IPv4 address  of the default interface
-    pi_ip4_addrs="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv4[]' 2>/dev/null  | wc -w)"
-    if [ "${pi_ip4_addrs}" -eq 0 ]; then
+    pi_ip4_addrs="$(echo "${v4_iface_data}" | jq --raw-output '.addresses[] | select(.family=="inet") | .address' 2>/dev/null)"
+    if [ $(echo "${pi_ip4_addrs}" | wc -l) -eq 0 ]; then
         # No IPv4 address available
         pi_ip4_addr="N/A"
-    elif [ "${pi_ip4_addrs}" -eq 1 ]; then
+    elif [ $(echo "${pi_ip4_addrs}" | wc -l) -eq 1 ]; then
         # One IPv4 address available
-        pi_ip4_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv4[0]' 2>/dev/null)"
+        pi_ip4_addr=${pi_ip4_addrs}
     else
         # More than one IPv4 address available
-        pi_ip4_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv4[0]' 2>/dev/null)+"
+        pi_ip4_addr="$(echo "${pi_ip4_addrs}" | head -n 1)+"
     fi
 
     # Get pi IPv6 address of the default interface
-    pi_ip6_addrs="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv6[]' 2>/dev/null  | wc -w)"
-    if [ "${pi_ip6_addrs}" -eq 0 ]; then
+    pi_ip6_addrs="$(echo "${v6_iface_data}" | jq --raw-output '.addresses[] | select(.family=="inet6") | .address' 2>/dev/null)"
+    if [ $(echo "${pi_ip6_addrs}" | wc -l) -eq 0 ]; then
         # No IPv6 address available
         pi_ip6_addr="N/A"
         ipv6_check_box=${check_box_bad}
-    elif [ "${pi_ip6_addrs}" -eq 1 ]; then
+    elif [ $(echo "${pi_ip6_addrs}" | wc -l) -eq 1 ]; then
         # One IPv6 address available
-        pi_ip6_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv6[0]' 2>/dev/null  | cut -f1 -d "%" )"
+        pi_ip6_addr=${pi_ip6_addrs}
         ipv6_check_box=${check_box_good}
     else
         # More than one IPv6 address available
-        pi_ip6_addr="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .ipv6[0]' 2>/dev/null  | cut -f1 -d "%" )+"
+        pi_ip6_addr="$(echo "${pi_ip6_addrs}" | head -n 1)+"
         ipv6_check_box=${check_box_good}
     fi
 
@@ -449,7 +454,8 @@ GetNetworkInformation() {
         dhcp_heatmap=${red_text}
         dhcp_check_box=${check_box_bad}
 
-        GATEWAY="$(GetFTLData "network/gateway" | jq --raw-output .address 2>/dev/null)"
+        # Display the gateway address if DHCP is disabled
+        GATEWAY="$(echo "${gateway_raw}" | jq -r '.gateway[] | select(.family == "inet") | .address' | head -n 1)"
         dhcp_info=" Router:   ${GATEWAY}"
         dhcp_ipv6_status="N/A"
         dhcp_ipv6_heatmap=${yellow_text}
@@ -501,15 +507,23 @@ GetNetworkInformation() {
         conditional_forwarding_heatmap=${red_text}
     fi
 
-    # Default interface data
-    iface_name="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .name' 2>/dev/null)"
-    tx_bytes="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .tx.num' 2>/dev/null)"
-    tx_bytes_unit="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .tx.unit' 2>/dev/null)"
+    # Default interface data (use IPv4 interface - we cannot show both and assume they are the same)
+    iface_name="${gateway_v4_iface}"
+    tx_bytes="$(echo "${v4_iface_data}" | jq --raw-output '.stats.tx_bytes.value' 2>/dev/null)"
+    tx_bytes_unit="$(echo "${v4_iface_data}" | jq --raw-output '.stats.tx_bytes.unit' 2>/dev/null)"
     tx_bytes=$(printf "%.1f %b" "${tx_bytes}" "${tx_bytes_unit}")
 
-    rx_bytes="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .rx.num' 2>/dev/null)"
-    rx_bytes_unit="$(echo "${interfaces_raw}" | jq --raw-output '.interfaces[] | select(.default==true) | .rx.unit' 2>/dev/null)"
+    rx_bytes="$(echo "${v4_iface_data}" | jq --raw-output '.stats.rx_bytes.value' 2>/dev/null)"
+    rx_bytes_unit="$(echo "${v4_iface_data}" | jq --raw-output '.stats.rx_bytes.unit' 2>/dev/null)"
     rx_bytes=$(printf "%.1f %b" "${rx_bytes}" "${rx_bytes_unit}")
+
+    # If IPv4 and IPv6 interfaces are not the same, add a "*" to the interface
+    # name to highlight that there are two different interfaces and the
+    # displayed statistics are only for the IPv4 interface, while the IPv6
+    # address correctly corresponds to the default IPv6 interface
+    if [ ! "${gateway_v4_iface}" = "${gateway_v6_iface}" ]; then
+        iface_name="${iface_name}*"
+    fi
 }
 
 GetPiholeInformation() {
