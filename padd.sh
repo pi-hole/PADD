@@ -232,22 +232,22 @@ DeleteSession() {
 }
 
 Authenticate() {
-	sessionResponse="$(curl -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
+  sessionResponse="$(curl -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
 
   if [ -z "${sessionResponse}" ]; then
     moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
     moveXOffset; echo "Usage: $0 [--server <domain|IP>]"
     exit 1
   fi
-	# obtain validity and session ID from session response
-	validSession=$(echo "${sessionResponse}"| jq .session.valid 2>/dev/null)
-	SID=$(echo "${sessionResponse}"| jq --raw-output .session.sid 2>/dev/null)
+  # obtain validity and session ID from session response
+  validSession=$(echo "${sessionResponse}"| jq .session.valid 2>/dev/null)
+  SID=$(echo "${sessionResponse}"| jq --raw-output .session.sid 2>/dev/null)
 }
 
 GetFTLData() {
   local response
   # get the data from querying the API as well as the http status code
-	response=$(curl -skS -w "%{http_code}" -X GET "${API_URL}$1" -H "Accept: application/json" -H "sid: ${SID}" )
+  response=$(curl -skS -w "%{http_code}" -X GET "${API_URL}$1" -H "Accept: application/json" -H "sid: ${SID}" )
 
   # status are the last 3 characters
   status=$(printf %s "${response#"${response%???}"}")
