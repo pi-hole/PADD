@@ -422,11 +422,11 @@ GetNetworkInformation() {
     fi
 
     # Is Pi-Hole acting as the DHCP server?
-    DHCP_ACTIVE="$(echo "${config}" | jq .config.dns.dhcp.active 2>/dev/null )"
+    DHCP_ACTIVE="$(echo "${config}" | jq .config.dhcp.active 2>/dev/null )"
 
     if [ "${DHCP_ACTIVE}" = "true" ]; then
-        DHCP_START="$(echo "${config}" | jq --raw-output .config.dns.dhcp.start 2>/dev/null)"
-        DHCP_END="$(echo "${config}" | jq --raw-output .config.dns.dhcp.end 2>/dev/null)"
+        DHCP_START="$(echo "${config}" | jq --raw-output .config.dhcp.start 2>/dev/null)"
+        DHCP_END="$(echo "${config}" | jq --raw-output .config.dhcp.end 2>/dev/null)"
 
         dhcp_status="Enabled"
         dhcp_info=" Range:    ${DHCP_START} - ${DHCP_END}"
@@ -434,7 +434,7 @@ GetNetworkInformation() {
         dhcp_check_box=${check_box_good}
 
         # Is DHCP handling IPv6?
-        DHCP_IPv6="$(echo "${config}" | jq --raw-output .config.dns.dhcp.ipv6 2>/dev/null)"
+        DHCP_IPv6="$(echo "${config}" | jq --raw-output .config.dhcp.ipv6 2>/dev/null)"
         if [ "${DHCP_IPv6}" = "true" ]; then
             dhcp_ipv6_status="Enabled"
             dhcp_ipv6_heatmap=${green_text}
