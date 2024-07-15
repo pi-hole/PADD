@@ -232,22 +232,22 @@ DeleteSession() {
 }
 
 Authenticate() {
-	sessionResponse="$(curl -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
+  sessionResponse="$(curl -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
 
   if [ -z "${sessionResponse}" ]; then
     moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
     moveXOffset; echo "Usage: $0 [--server <domain|IP>]"
     exit 1
   fi
-	# obtain validity and session ID from session response
-	validSession=$(echo "${sessionResponse}"| jq .session.valid 2>/dev/null)
-	SID=$(echo "${sessionResponse}"| jq --raw-output .session.sid 2>/dev/null)
+  # obtain validity and session ID from session response
+  validSession=$(echo "${sessionResponse}"| jq .session.valid 2>/dev/null)
+  SID=$(echo "${sessionResponse}"| jq --raw-output .session.sid 2>/dev/null)
 }
 
 GetFTLData() {
   local response
   # get the data from querying the API as well as the http status code
-	response=$(curl -skS -w "%{http_code}" -X GET "${API_URL}$1" -H "Accept: application/json" -H "sid: ${SID}" )
+  response=$(curl -skS -w "%{http_code}" -X GET "${API_URL}$1" -H "Accept: application/json" -H "sid: ${SID}" )
 
   # status are the last 3 characters
   status=$(printf %s "${response#"${response%???}"}")
@@ -422,11 +422,11 @@ GetNetworkInformation() {
     fi
 
     # Is Pi-Hole acting as the DHCP server?
-    DHCP_ACTIVE="$(echo "${config}" | jq .config.dns.dhcp.active 2>/dev/null )"
+    DHCP_ACTIVE="$(echo "${config}" | jq .config.dhcp.active 2>/dev/null )"
 
     if [ "${DHCP_ACTIVE}" = "true" ]; then
-        DHCP_START="$(echo "${config}" | jq --raw-output .config.dns.dhcp.start 2>/dev/null)"
-        DHCP_END="$(echo "${config}" | jq --raw-output .config.dns.dhcp.end 2>/dev/null)"
+        DHCP_START="$(echo "${config}" | jq --raw-output .config.dhcp.start 2>/dev/null)"
+        DHCP_END="$(echo "${config}" | jq --raw-output .config.dhcp.end 2>/dev/null)"
 
         dhcp_status="Enabled"
         dhcp_info=" Range:    ${DHCP_START} - ${DHCP_END}"
@@ -434,7 +434,7 @@ GetNetworkInformation() {
         dhcp_check_box=${check_box_good}
 
         # Is DHCP handling IPv6?
-        DHCP_IPv6="$(echo "${config}" | jq --raw-output .config.dns.dhcp.ipv6 2>/dev/null)"
+        DHCP_IPv6="$(echo "${config}" | jq --raw-output .config.dhcp.ipv6 2>/dev/null)"
         if [ "${DHCP_IPv6}" = "true" ]; then
             dhcp_ipv6_status="Enabled"
             dhcp_ipv6_heatmap=${green_text}
