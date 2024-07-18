@@ -1613,26 +1613,12 @@ Update() {
 
         padd_script_path=$(realpath "$0")
 
-        if which wget > /dev/null 2>&1; then
-            echo "${check_box_info} Downloading PADD update via wget ..."
-            if wget -qO "${padd_script_path}" https://install.padd.sh > /dev/null 2>&1; then
-                echo "${check_box_good} ... done. Restart PADD for the update to take effect"
-            else
-                echo "${check_box_bad} Cannot download PADD update via wget"
-                echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
-                exit 1
-            fi
-        elif which curl > /dev/null 2>&1; then
-            echo "${check_box_info} Downloading PADD update via curl ..."
-            if  curl -sSL https://install.padd.sh -o "${padd_script_path}" > /dev/null 2>&1; then
-                echo "${check_box_good} ... done. Restart PADD for the update to take effect"
-            else
-                echo "${check_box_bad} Cannot download PADD update via curl"
-                echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
-                exit 1
-            fi
+        echo "${check_box_info} Downloading PADD update ..."
+
+        if  curl -sSL https://install.padd.sh -o "${padd_script_path}" > /dev/null 2>&1; then
+            echo "${check_box_good} ... done. Restart PADD for the update to take effect"
         else
-            echo "${check_box_bad} Cannot download, neither wget nor curl are available"
+            echo "${check_box_bad} Cannot download PADD update"
             echo "${check_box_info} Go to https://install.padd.sh to download the update manually"
             exit 1
         fi
@@ -1720,6 +1706,9 @@ TerminalResize(){
 }
 
 main(){
+
+    check_dependencies
+
     # Hiding the cursor.
     # https://vt100.net/docs/vt510-rm/DECTCEM.html
     printf '\e[?25l'
@@ -1757,5 +1746,4 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-check_dependencies
 main
