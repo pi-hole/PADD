@@ -1330,6 +1330,19 @@ secretRead() {
     stty "${stty_orig}"
 }
 
+check_dependencies() {
+    # Check for required dependencies
+    if ! command -v curl >/dev/null 2>&1; then
+        printf "%b" "${check_box_bad} Error!\n    'curl' is missing but required.\n"
+        exit 1
+    fi
+
+    if ! command -v jq >/dev/null 2>&1; then
+          printf "%b" "${check_box_bad} Error!\n    'jq' is missing but required.\n"
+          exit 1
+    fi
+}
+
 ########################################## MAIN FUNCTIONS ##########################################
 
 OutputJSON() {
@@ -1744,4 +1757,5 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
+check_dependencies
 main
