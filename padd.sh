@@ -394,6 +394,11 @@ GetNetworkInformation() {
     gateway_v4_iface=$(echo "${gateway_raw}" | jq -r '.gateway[] | select(.family == "inet") | .interface' | head -n 1)
     v4_iface_data=$(echo "${interfaces_raw}" | jq --arg iface "${gateway_v4_iface}" '.interfaces[] | select(.name==$iface)' 2>/dev/null)
     gateway_v6_iface=$(echo "${gateway_raw}" | jq -r '.gateway[] | select(.family == "inet6") | .interface' | head -n 1)
+    # Fallback: If there is no default IPv6 gateway, use the default IPv4
+    # gateway interface instead
+    if [ -z "${gateway_v6_iface}" ]; then
+        gateway_v6_iface="${gateway_v4_iface}"
+    fi
     v6_iface_data=$(echo "${interfaces_raw}" | jq --arg iface "${gateway_v6_iface}" '.interfaces[] | select(.name==$iface)' 2>/dev/null)
     config=$(GetFTLData "config")
 
