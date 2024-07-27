@@ -279,17 +279,32 @@ GetSummaryInformation() {
   blocking_enabled=$(echo "${dns_blocking}" | jq .blocking 2>/dev/null)
 
   domains_being_blocked_raw=$(echo "${ftl_info}" | jq .ftl.database.gravity 2>/dev/null)
-  domains_being_blocked=$(printf "%.f" "${domains_being_blocked_raw}")
+  if [ -z "${domains_being_blocked_raw}" ]; then
+    domains_being_blocked="N/A"
+  else
+    domains_being_blocked=$(printf "%.f" "${domains_being_blocked_raw}")
+  fi
 
   dns_queries_today_raw=$(echo "$summary" | jq .queries.total 2>/dev/null)
-  dns_queries_today=$(printf "%.f" "${dns_queries_today_raw}")
+  if [ -z "${dns_queries_today_raw}" ]; then
+    dns_queries_today="N/A"
+  else
+    dns_queries_today=$(printf "%.f" "${dns_queries_today_raw}")
+  fi
 
   ads_blocked_today_raw=$(echo "$summary" | jq .queries.blocked 2>/dev/null)
-  ads_blocked_today=$(printf "%.f" "${ads_blocked_today_raw}")
+  if [ -z "${ads_blocked_today_raw}" ]; then
+    ads_blocked_today="N/A"
+  else
+    ads_blocked_today=$(printf "%.f" "${ads_blocked_today_raw}")
+  fi
 
   ads_percentage_today_raw=$(echo "$summary" | jq .queries.percent_blocked 2>/dev/null)
-  ads_percentage_today=$(printf "%.1f" "${ads_percentage_today_raw}")
-
+  if [ -z "${ads_percentage_today_raw}" ]; then
+    ads_percentage_today="N/A"
+  else
+    ads_percentage_today=$(printf "%.1f" "${ads_percentage_today_raw}")
+  fi
   cache_size=$(echo "$cache_info" | jq .metrics.dns.cache.size 2>/dev/null)
   cache_evictions=$(echo "$cache_info" | jq .metrics.dns.cache.evicted 2>/dev/null)
   cache_inserts=$(echo "$cache_info"| jq .metrics.dns.cache.inserted 2>/dev/null)
@@ -515,12 +530,20 @@ GetNetworkInformation() {
     # Default interface data (use IPv4 interface - we cannot show both and assume they are the same)
     iface_name="${gateway_v4_iface}"
     tx_bytes="$(echo "${v4_iface_data}" | jq --raw-output '.stats.tx_bytes.value' 2>/dev/null)"
-    tx_bytes_unit="$(echo "${v4_iface_data}" | jq --raw-output '.stats.tx_bytes.unit' 2>/dev/null)"
-    tx_bytes=$(printf "%.1f %b" "${tx_bytes}" "${tx_bytes_unit}")
+    if [ -z "${tx_bytes}" ]; then
+        tx_bytes="N/A"
+    else
+        tx_bytes_unit="$(echo "${v4_iface_data}" | jq --raw-output '.stats.tx_bytes.unit' 2>/dev/null)"
+        tx_bytes=$(printf "%.1f %b" "${tx_bytes}" "${tx_bytes_unit}")
+    fi
 
     rx_bytes="$(echo "${v4_iface_data}" | jq --raw-output '.stats.rx_bytes.value' 2>/dev/null)"
-    rx_bytes_unit="$(echo "${v4_iface_data}" | jq --raw-output '.stats.rx_bytes.unit' 2>/dev/null)"
-    rx_bytes=$(printf "%.1f %b" "${rx_bytes}" "${rx_bytes_unit}")
+    if [ -z "${rx_bytes}" ]; then
+        rx_bytes="N/A"
+    else
+        rx_bytes_unit="$(echo "${v4_iface_data}" | jq --raw-output '.stats.rx_bytes.unit' 2>/dev/null)"
+        rx_bytes=$(printf "%.1f %b" "${rx_bytes}" "${rx_bytes_unit}")
+    fi
 
     # If IPv4 and IPv6 interfaces are not the same, add a "*" to the interface
     # name to highlight that there are two different interfaces and the
@@ -551,8 +574,16 @@ GetPiholeInformation() {
     # Get FTL CPU and memory usage
     ftl_cpu_raw="$(echo "${sysinfo}" | jq '.ftl."%cpu"' 2>/dev/null)"
     ftl_mem_percentage_raw="$(echo "${sysinfo}" | jq '.ftl."%mem"' 2>/dev/null)"
-    ftl_cpu="$(printf "%.1f" "${ftl_cpu_raw}")%"
-    ftl_mem_percentage="$(printf "%.1f" "${ftl_mem_percentage_raw}")%"
+    if [ -z "${ftl_cpu_raw}" ]; then
+      ftl_cpu="N/A"
+    else
+      ftl_cpu="$(printf "%.1f" "${ftl_cpu_raw}")%"
+    fi
+    if [ -z "${ftl_mem_percentage_raw}" ]; then
+      ftl_mem_percentage="N/A"
+    else
+      ftl_mem_percentage="$(printf "%.1f" "${ftl_mem_percentage_raw}")%"
+    fi
     # Get Pi-hole (blocking) status
     ftl_dns_port=$(GetFTLData "config" | jq .config.dns.port 2>/dev/null)
     # Get FTL's current PID
