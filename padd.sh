@@ -406,9 +406,15 @@ GetSystemInformation() {
 GetNetworkInformation() {
     interfaces_raw=$(GetFTLData "network/interfaces")
     gateway_raw=$(GetFTLData "network/gateway")
-    gateway_v4_iface=$(echo "${gateway_raw}" | jq -r '.gateway[] | select(.family == "inet") | .interface' | head -n 1)
+    if [ "${gateway_raw}" = "000" ]; then
+      gateway_v4_iface="N/A"
+      gateway_v6_iface="N/A"
+    else
+      gateway_v4_iface=$(echo "${gateway_raw}" | jq -r '(.gateway[] | select(.family == "inet") | .interface)' | head -n 1)
+      gateway_v6_iface=$(echo "${gateway_raw}" | jq -r '(.gateway[] | select(.family == "inet6") | .interface)' | head -n 1)
+    fi
     v4_iface_data=$(echo "${interfaces_raw}" | jq --arg iface "${gateway_v4_iface}" '.interfaces[] | select(.name==$iface)' 2>/dev/null)
-    gateway_v6_iface=$(echo "${gateway_raw}" | jq -r '.gateway[] | select(.family == "inet6") | .interface' | head -n 1)
+
     # Fallback: If there is no default IPv6 gateway, use the default IPv4
     # gateway interface instead
     if [ -z "${gateway_v6_iface}" ]; then
@@ -475,7 +481,11 @@ GetNetworkInformation() {
         dhcp_check_box=${check_box_bad}
 
         # Display the gateway address if DHCP is disabled
-        GATEWAY="$(echo "${gateway_raw}" | jq -r '.gateway[] | select(.family == "inet") | .address' | head -n 1)"
+        if [ "${gateway_raw}" = "000" ]; then
+          GATEWAY="N/A"
+        else
+          GATEWAY="$(echo "${gateway_raw}" | jq -r '.gateway[] | select(.family == "inet") | .address' | head -n 1)"
+        fi
         dhcp_info=" Router:   ${GATEWAY}"
         dhcp_ipv6_status="N/A"
         dhcp_ipv6_heatmap=${yellow_text}
