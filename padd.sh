@@ -267,14 +267,16 @@ GetFTLData() {
 GetAPIData() {
   local api_data
   api_data=$(GetFTLData "padd" "$1")
+
   # Iterate over all the leaf paths in the JSON object and creates key-value
   # pairs in the format "key=value". Nested objects are flattened using the dot
   # notation, e.g., { "a": { "b": 1 } } becomes "a.b=1".
-  # We have to redefine the function here, as it it is broken in jq, see
-  # https://github.com/jqlang/jq/issues/2872
   # We cannot use leaf_paths here as it was deprecated in jq 1.6 and removed in
   # current master
-  padd_data=$(echo "$api_data" | jq -r 'def paths(node_filter): . as $dot|paths|select(. as $p|$dot|getpath($p)|node_filter|true); paths(scalars) as $p | [$p | join(".")] + [getpath($p)] | join("=")' 2>/dev/null)
+  # Using "paths(scalars | true)" will return null and false values.
+  # We also check if the value is exactly `null` and, in this case, return the
+  # string "null", as jq would return an empty string for nulls.
+  padd_data=$(echo "$api_data" | jq -r 'paths(scalars | true) as $p | [$p | join(".")] + [if getpath($p)!=null then getpath($p) else "null" end] | join("=")' 2>/dev/null)
 }
 
 GetAPIValue() {
