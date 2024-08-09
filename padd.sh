@@ -274,15 +274,23 @@ GetPADDData() {
   local response
   response=$(GetFTLData "padd" "$1")
 
-  # Iterate over all the leaf paths in the JSON object and creates key-value
-  # pairs in the format "key=value". Nested objects are flattened using the dot
-  # notation, e.g., { "a": { "b": 1 } } becomes "a.b=1".
-  # We cannot use leaf_paths here as it was deprecated in jq 1.6 and removed in
-  # current master
-  # Using "paths(scalars | true)" will return null and false values.
-  # We also check if the value is exactly `null` and, in this case, return the
-  # string "null", as jq would return an empty string for nulls.
-  padd_data=$(echo "$response" | jq -r 'paths(scalars | true) as $p | [$p | join(".")] + [if getpath($p)!=null then getpath($p) else "null" end] | join("=")' 2>/dev/null)
+  if [ "${response}" = 000 ]; then
+    # connection lost
+    padd_data="000"
+  elif [ "${response}" = 401 ]; then
+    # unauthorized
+    padd_data="401"
+  else
+    # Iterate over all the leaf paths in the JSON object and creates key-value
+    # pairs in the format "key=value". Nested objects are flattened using the dot
+    # notation, e.g., { "a": { "b": 1 } } becomes "a.b=1".
+    # We cannot use leaf_paths here as it was deprecated in jq 1.6 and removed in
+    # current master
+    # Using "paths(scalars | true)" will return null and false values.
+    # We also check if the value is exactly `null` and, in this case, return the
+    # string "null", as jq would return an empty string for nulls.
+    padd_data=$(echo "$response" | jq -r 'paths(scalars | true) as $p | [$p | join(".")] + [if getpath($p)!=null then getpath($p) else "null" end] | join("=")' 2>/dev/null)
+  fi
 }
 
 GetPADDValue() {
