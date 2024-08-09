@@ -1320,7 +1320,7 @@ secretRead() {
     unset key
     unset charcount
     charcount=0
-    while key=$(dd ibs=1 count=1); do #read one byte of input
+    while key=$(dd ibs=1 count=1 2>/dev/null); do #read one byte of input
         if [ "${key}" = "$(printf '\0' | tr -d '\0')" ] ; then
             # Enter - accept password
             break
