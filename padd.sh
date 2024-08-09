@@ -243,7 +243,7 @@ Authenticate() {
 GetFTLData() {
   local response
   # get the data from querying the API as well as the http status code
-  response=$(curl -skS -w "%{http_code}" -X GET "${API_URL}$1$2" -H "Accept: application/json" -H "sid: ${SID}" )
+  response=$(curl -sk -w "%{http_code}" -X GET "${API_URL}$1$2" -H "Accept: application/json" -H "sid: ${SID}" )
 
   # status are the last 3 characters
   status=$(printf %s "${response#"${response%???}"}")
