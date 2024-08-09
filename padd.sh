@@ -1413,6 +1413,7 @@ ShowVersion() {
     printf "%b" "Establishing connection with FTL...\n"
     LoginAPI
 
+    GetPADDData
     GetVersionInformation
     GetPADDInformation
     if [ -z "${padd_version_latest}" ]; then
