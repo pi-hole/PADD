@@ -1675,8 +1675,8 @@ NormalPADD() {
       Authenticate
     fi
 
-    # Request PADD data
-    if [ $((now - LastCheckFullInformation)) -ge 30 ]; then
+    # Request PADD data after 30 seconds or if the connection was lost
+    if [ $((now - LastCheckFullInformation)) -ge 30 ] || [ "${connection_down_flag}" = true ] ; then
         GetPADDData
         LastCheckFullInformation="${now}"
     else
@@ -1693,16 +1693,19 @@ NormalPADD() {
         GetPiholeInformation
         GetNetworkInformation
         GetVersionInformation
+        # set flag to update network information in the next loop in case the connection is re-established
+        get_network_information_requried=true
     else
         # Get uptime, CPU load, temp, etc. every 5 seconds
         GetSystemInformation
         GetSummaryInformation
         GetPiholeInformation
 
-        if [ $((now - LastCheckNetworkInformation)) -ge 30 ]; then
+        if [ $((now - LastCheckNetworkInformation)) -ge 30 ] || [ "${get_network_information_requried}" = true ]; then
             GetNetworkInformation
             GetVersionInformation
             LastCheckNetworkInformation="${now}"
+            get_network_information_requried=false
         fi
 
         # Get PADD version information every 24hours
