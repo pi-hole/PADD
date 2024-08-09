@@ -264,9 +264,9 @@ GetFTLData() {
 
 ############################################# GETTERS ##############################################
 
-GetAPIData() {
-  local api_data
-  api_data=$(GetFTLData "padd" "$1")
+GetPADDData() {
+  local response
+  response=$(GetFTLData "padd" "$1")
 
   # Iterate over all the leaf paths in the JSON object and creates key-value
   # pairs in the format "key=value". Nested objects are flattened using the dot
@@ -276,41 +276,41 @@ GetAPIData() {
   # Using "paths(scalars | true)" will return null and false values.
   # We also check if the value is exactly `null` and, in this case, return the
   # string "null", as jq would return an empty string for nulls.
-  padd_data=$(echo "$api_data" | jq -r 'paths(scalars | true) as $p | [$p | join(".")] + [if getpath($p)!=null then getpath($p) else "null" end] | join("=")' 2>/dev/null)
+  padd_data=$(echo "$response" | jq -r 'paths(scalars | true) as $p | [$p | join(".")] + [if getpath($p)!=null then getpath($p) else "null" end] | join("=")' 2>/dev/null)
 }
 
-GetAPIValue() {
+GetPADDValue() {
   echo "$padd_data" | sed -n "s/^$1=//p" 2>/dev/null
 }
 
 GetSummaryInformation() {
-  clients=$(GetAPIValue active_clients)
+  clients=$(GetPADDValue active_clients)
 
-  blocking_enabled=$(GetAPIValue blocking)
+  blocking_enabled=$(GetPADDValue blocking)
 
-  domains_being_blocked_raw=$(GetAPIValue gravity_size)
+  domains_being_blocked_raw=$(GetPADDValue gravity_size)
   domains_being_blocked=$(printf "%.f" "${domains_being_blocked_raw}")
 
-  dns_queries_today_raw=$(GetAPIValue queries.total)
+  dns_queries_today_raw=$(GetPADDValue queries.total)
   dns_queries_today=$(printf "%.f" "${dns_queries_today_raw}")
 
-  ads_blocked_today_raw=$(GetAPIValue queries.blocked)
+  ads_blocked_today_raw=$(GetPADDValue queries.blocked)
   ads_blocked_today=$(printf "%.f" "${ads_blocked_today_raw}")
 
-  ads_percentage_today_raw=$(GetAPIValue queries.percent_blocked)
+  ads_percentage_today_raw=$(GetPADDValue queries.percent_blocked)
   ads_percentage_today=$(printf "%.1f" "${ads_percentage_today_raw}")
 
-  cache_size=$(GetAPIValue cache.size)
-  cache_evictions=$(GetAPIValue cache.evicted)
-  cache_inserts=$(echo "${padd_data}"| GetAPIValue cache.inserted)
+  cache_size=$(GetPADDValue cache.size)
+  cache_evictions=$(GetPADDValue cache.evicted)
+  cache_inserts=$(echo "${padd_data}"| GetPADDValue cache.inserted)
 
-  latest_blocked_raw=$(GetAPIValue recent_blocked)
+  latest_blocked_raw=$(GetPADDValue recent_blocked)
 
-  top_blocked_raw=$(GetAPIValue top_blocked)
+  top_blocked_raw=$(GetPADDValue top_blocked)
 
-  top_domain_raw=$(GetAPIValue top_domain)
+  top_domain_raw=$(GetPADDValue top_domain)
 
-  top_client_raw=$(GetAPIValue top_client)
+  top_client_raw=$(GetPADDValue top_client)
 }
 
 GetSystemInformation() {
@@ -319,14 +319,14 @@ GetSystemInformation() {
       # in case FTL connection is down, system_uptime_raw need to be set to 0 otherwise convertUptime() will complain
       system_uptime_raw=0
     else
-      system_uptime_raw=$(GetAPIValue system.uptime)
+      system_uptime_raw=$(GetPADDValue system.uptime)
     fi
 
     # CPU temperature and unit
     # in case .sensors.cpu_temp returns 'null' we substitute with 0
-    cpu_temp_raw=$(GetAPIValue sensors.cpu_temp)
+    cpu_temp_raw=$(GetPADDValue sensors.cpu_temp)
     cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
-    temp_unit=$(echo "${padd_data}"  | GetAPIValue sensors.unit)
+    temp_unit=$(echo "${padd_data}"  | GetPADDValue sensors.unit)
 
     # Temp + Unit
     if [ "${temp_unit}" = "C" ]; then
@@ -364,22 +364,22 @@ GetSystemInformation() {
     fi
 
     # CPU, load, heatmap
-    core_count=$(GetAPIValue system.cpu.nprocs)
-    cpu_load_1=$(printf %.2f "$(GetAPIValue system.cpu.load.0)")
-    cpu_load_5=$(printf %.2f "$(GetAPIValue system.cpu.load.1)")
-    cpu_load_15=$(printf %.2f "$(GetAPIValue system.cpu.load.2)")
+    core_count=$(GetPADDValue system.cpu.nprocs)
+    cpu_load_1=$(printf %.2f "$(GetPADDValue system.cpu.load.0)")
+    cpu_load_5=$(printf %.2f "$(GetPADDValue system.cpu.load.1)")
+    cpu_load_15=$(printf %.2f "$(GetPADDValue system.cpu.load.2)")
     cpu_load_1_heatmap=$(HeatmapGenerator "${cpu_load_1}" "${core_count}")
     cpu_load_5_heatmap=$(HeatmapGenerator "${cpu_load_5}" "${core_count}")
     cpu_load_15_heatmap=$(HeatmapGenerator "${cpu_load_15}" "${core_count}")
-    cpu_percent=$(printf %.1f "$(GetAPIValue system.cpu.load.percent.0)")
+    cpu_percent=$(printf %.1f "$(GetPADDValue system.cpu.load.percent.0)")
 
     # Memory use, heatmap and bar
-    memory_percent_raw="$(GetAPIValue system.memory.ram.%used)"
+    memory_percent_raw="$(GetPADDValue system.memory.ram.%used)"
     memory_percent=$(printf %.1f "${memory_percent_raw}")
     memory_heatmap="$(HeatmapGenerator "${memory_percent}")"
 
     # Get device model
-    sys_model="$(GetAPIValue host_model)"
+    sys_model="$(GetPADDValue host_model)"
 
     # DOCKER_VERSION is set during GetVersionInformation, so this needs to run first during startup
     if [ ! "${DOCKER_VERSION}" = "null" ]; then
@@ -397,12 +397,12 @@ GetSystemInformation() {
 }
 
 GetNetworkInformation() {
-    gateway_v4_iface=$(GetAPIValue iface.v4.name)
-    gateway_v6_iface=$(GetAPIValue iface.v4.name)
+    gateway_v4_iface=$(GetPADDValue iface.v4.name)
+    gateway_v6_iface=$(GetPADDValue iface.v4.name)
 
     # Get IPv4 address of the default interface
-    pi_ip4_addrs="$(GetAPIValue iface.v4.num_addrs)"
-    pi_ip4_addr="$(GetAPIValue iface.v4.addr)"
+    pi_ip4_addrs="$(GetPADDValue iface.v4.num_addrs)"
+    pi_ip4_addr="$(GetPADDValue iface.v4.addr)"
     if [ "${pi_ip4_addrs}" -eq 0 ]; then
         # No IPv4 address available
         pi_ip4_addr="N/A"
@@ -414,8 +414,8 @@ GetNetworkInformation() {
     fi
 
     # Get IPv6 address of the default interface
-    pi_ip6_addrs="$(GetAPIValue iface.v6.num_addrs)"
-    pi_ip6_addr="$(GetAPIValue iface.v6.addr)"
+    pi_ip6_addrs="$(GetPADDValue iface.v6.num_addrs)"
+    pi_ip6_addr="$(GetPADDValue iface.v6.addr)"
     if [ "${pi_ip6_addrs}" -eq 0 ]; then
         # No IPv6 address available
         pi_ip6_addr="N/A"
@@ -430,11 +430,11 @@ GetNetworkInformation() {
     fi
 
     # Is Pi-Hole acting as the DHCP server?
-    DHCP_ACTIVE="$(GetAPIValue config.dhcp_active )"
+    DHCP_ACTIVE="$(GetPADDValue config.dhcp_active )"
 
     if [ "${DHCP_ACTIVE}" = "true" ]; then
-        DHCP_START="$(GetAPIValue config.dhcp_start)"
-        DHCP_END="$(GetAPIValue config.dhcp_end)"
+        DHCP_START="$(GetPADDValue config.dhcp_start)"
+        DHCP_END="$(GetPADDValue config.dhcp_end)"
 
         dhcp_status="Enabled"
         dhcp_info=" Range:    ${DHCP_START} - ${DHCP_END}"
@@ -442,7 +442,7 @@ GetNetworkInformation() {
         dhcp_check_box=${check_box_good}
 
         # Is DHCP handling IPv6?
-        DHCP_IPv6="$(GetAPIValue config.dhcp_ipv6)"
+        DHCP_IPv6="$(GetPADDValue config.dhcp_ipv6)"
         if [ "${DHCP_IPv6}" = "true" ]; then
             dhcp_ipv6_status="Enabled"
             dhcp_ipv6_heatmap=${green_text}
@@ -458,7 +458,7 @@ GetNetworkInformation() {
         dhcp_check_box=${check_box_bad}
 
         # Display the gateway address if DHCP is disabled
-        GATEWAY="$(GetAPIValue iface.v4.gw_addr | head -n 1)"
+        GATEWAY="$(GetPADDValue iface.v4.gw_addr | head -n 1)"
         dhcp_info=" Router:   ${GATEWAY}"
         dhcp_ipv6_status="N/A"
         dhcp_ipv6_heatmap=${yellow_text}
@@ -466,11 +466,11 @@ GetNetworkInformation() {
     fi
 
     # Get hostname
-    pi_hostname="$(GetAPIValue node_name)"
+    pi_hostname="$(GetPADDValue node_name)"
     full_hostname=${pi_hostname}
     # when PI-hole is the DHCP server, append the domain to the hostname
     if [ "${DHCP_ACTIVE}" = "true" ]; then
-        PIHOLE_DOMAIN="$(GetAPIValue config.dns_domain)"
+        PIHOLE_DOMAIN="$(GetPADDValue config.dns_domain)"
         if [  -n "${PIHOLE_DOMAIN}" ]; then
             count=${pi_hostname}"."${PIHOLE_DOMAIN}
             count=${#count}
@@ -481,7 +481,7 @@ GetNetworkInformation() {
     fi
 
     # Get the number of configured upstream DNS servers
-    dns_count="$(GetAPIValue config.dns_num_upstreams)"
+    dns_count="$(GetPADDValue config.dns_num_upstreams)"
     # if there's only one DNS server
     if [ "${dns_count}" -eq 1 ]; then
         dns_information="1 server"
@@ -491,7 +491,7 @@ GetNetworkInformation() {
 
 
     # DNSSEC
-    DNSSEC="$(GetAPIValue config.dns_dnssec)"
+    DNSSEC="$(GetPADDValue config.dns_dnssec)"
     if [ "${DNSSEC}" = "true" ]; then
         dnssec_status="Enabled"
         dnssec_heatmap=${green_text}
@@ -501,7 +501,7 @@ GetNetworkInformation() {
     fi
 
     # Conditional forwarding
-    CONDITIONAL_FORWARDING="$(GetAPIValue config.dns_revServer_active)"
+    CONDITIONAL_FORWARDING="$(GetPADDValue config.dns_revServer_active)"
     if [ "${CONDITIONAL_FORWARDING}" = "true" ]; then
         conditional_forwarding_status="Enabled"
         conditional_forwarding_heatmap=${green_text}
@@ -512,12 +512,12 @@ GetNetworkInformation() {
 
     # Default interface data (use IPv4 interface - we cannot show both and assume they are the same)
     iface_name="${gateway_v4_iface}"
-    tx_bytes="$(GetAPIValue iface.v4.tx_bytes.value)"
-    tx_bytes_unit="$(GetAPIValue iface.v4.tx_bytes.unit)"
+    tx_bytes="$(GetPADDValue iface.v4.tx_bytes.value)"
+    tx_bytes_unit="$(GetPADDValue iface.v4.tx_bytes.unit)"
     tx_bytes=$(printf "%.1f %b" "${tx_bytes}" "${tx_bytes_unit}")
 
-    rx_bytes="$(GetAPIValue iface.v4.rx_bytes.value)"
-    rx_bytes_unit="$(GetAPIValue iface.v4.rx_bytes.unit)"
+    rx_bytes="$(GetPADDValue iface.v4.rx_bytes.value)"
+    rx_bytes_unit="$(GetPADDValue iface.v4.rx_bytes.unit)"
     rx_bytes=$(printf "%.1f %b" "${rx_bytes}" "${rx_bytes_unit}")
 
     # If IPv4 and IPv6 interfaces are not the same, add a "*" to the interface
@@ -545,14 +545,14 @@ GetPiholeInformation() {
     ftl_heatmap=${green_text}
     ftl_check_box=${check_box_good}
     # Get FTL CPU and memory usage
-    ftl_cpu_raw="$(GetAPIValue "%cpu")"
-    ftl_mem_percentage_raw="$(GetAPIValue "%mem")"
+    ftl_cpu_raw="$(GetPADDValue "%cpu")"
+    ftl_mem_percentage_raw="$(GetPADDValue "%mem")"
     ftl_cpu="$(printf "%.1f" "${ftl_cpu_raw}")%"
     ftl_mem_percentage="$(printf "%.1f" "${ftl_mem_percentage_raw}")%"
     # Get Pi-hole (blocking) status
-    ftl_dns_port=$(GetAPIValue config.dns_port)
+    ftl_dns_port=$(GetPADDValue config.dns_port)
     # Get FTL's current PID
-    ftlPID="$(GetAPIValue pid)"
+    ftlPID="$(GetPADDValue pid)"
   fi
 
 
@@ -578,11 +578,11 @@ GetVersionInformation() {
 
     # Gather DOCKER version information...
     # returns "null" if not running Pi-hole in Docker container
-    DOCKER_VERSION="$(GetAPIValue version.docker.local)"
+    DOCKER_VERSION="$(GetPADDValue version.docker.local)"
 
     # If PADD is running inside docker, immediately return without checking for updated component versions
     if [ ! "${DOCKER_VERSION}" = "null" ] ; then
-        GITHUB_DOCKER_VERSION="$(GetAPIValue version.docker.remote)"
+        GITHUB_DOCKER_VERSION="$(GetPADDValue version.docker.remote)"
         docker_version_converted="$(VersionConverter "${DOCKER_VERSION}")"
         docker_version_latest_converted="$(VersionConverter "${GITHUB_DOCKER_VERSION}")"
 
@@ -599,11 +599,11 @@ GetVersionInformation() {
     fi
 
     # Gather core version information...
-    CORE_BRANCH="$(GetAPIValue version.core.local.branch)"
-    CORE_VERSION="$(GetAPIValue version.core.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    GITHUB_CORE_VERSION="$(GetAPIValue version.core.remmote.version  | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    CORE_HASH="$(GetAPIValue version.core.local.hash)"
-    GITHUB_CORE_HASH="$(GetAPIValue version.core.remote.hash)"
+    CORE_BRANCH="$(GetPADDValue version.core.local.branch)"
+    CORE_VERSION="$(GetPADDValue version.core.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    GITHUB_CORE_VERSION="$(GetPADDValue version.core.remmote.version  | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    CORE_HASH="$(GetPADDValue version.core.local.hash)"
+    GITHUB_CORE_HASH="$(GetPADDValue version.core.remote.hash)"
 
     if [ "${CORE_BRANCH}" = "master" ]; then
         core_version_converted="$(VersionConverter "${CORE_VERSION}")"
@@ -637,14 +637,14 @@ GetVersionInformation() {
     fi
 
   # Gather web version information...
-    WEB_VERSION="$(GetAPIValue version.web.local.version)"
+    WEB_VERSION="$(GetPADDValue version.web.local.version)"
 
     if [ ! "$WEB_VERSION" = "null" ]; then
-        WEB_BRANCH="$(GetAPIValue version.web.local.branch)"
-        WEB_VERSION="$(GetAPIValue version.web.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-        GITHUB_WEB_VERSION="$(GetAPIValue version.web.remmote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-        WEB_HASH="$(GetAPIValue version.web.local.hash)"
-        GITHUB_WEB_HASH="$(GetAPIValue version.web.remote.hash)"
+        WEB_BRANCH="$(GetPADDValue version.web.local.branch)"
+        WEB_VERSION="$(GetPADDValue version.web.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+        GITHUB_WEB_VERSION="$(GetPADDValue version.web.remmote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+        WEB_HASH="$(GetPADDValue version.web.local.hash)"
+        GITHUB_WEB_HASH="$(GetPADDValue version.web.remote.hash)"
 
         if [ "${WEB_BRANCH}" = "master" ]; then
             web_version_converted="$(VersionConverter "${WEB_VERSION}")"
@@ -684,11 +684,11 @@ GetVersionInformation() {
     fi
 
     # Gather FTL version information...
-    FTL_BRANCH="$(GetAPIValue version.ftl.local.branch)"
-    FTL_VERSION="$(GetAPIValue version.ftl.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    GITHUB_FTL_VERSION="$(GetAPIValue version.ftl.remmote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    FTL_HASH="$(GetAPIValue version.ftl.local.hash)"
-    GITHUB_FTL_HASH="$(GetAPIValue version.ftl.remote.hash)"
+    FTL_BRANCH="$(GetPADDValue version.ftl.local.branch)"
+    FTL_VERSION="$(GetPADDValue version.ftl.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    GITHUB_FTL_VERSION="$(GetPADDValue version.ftl.remmote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    FTL_HASH="$(GetPADDValue version.ftl.local.hash)"
+    GITHUB_FTL_HASH="$(GetPADDValue version.ftl.remote.hash)"
 
 
     if [ "${FTL_BRANCH}" = "master" ]; then
@@ -1376,7 +1376,7 @@ OutputJSON() {
     printf "%b" "Establishing connection with FTL...\n"
     LoginAPI
 
-    GetAPIData
+    GetPADDData
     GetSummaryInformation
     printf "%b" "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today},\"clients\": ${clients}}"
 }
@@ -1440,8 +1440,8 @@ StartupRoutine(){
 
     moveXOffset; printf "%b" " [■·········]  10%\r"
 
-    # Request API data
-    GetAPIData
+    # Request PADD data
+    GetPADDData
 
     # Check for updates
     moveXOffset; printf "%b" " [■■········]  20%\r"
@@ -1471,9 +1471,9 @@ StartupRoutine(){
     moveXOffset; printf "%b" "Establishing connection with FTL...\n"
     LoginAPI
 
-    # Request API data
-    moveXOffset; echo "- Requesting API information..."
-    GetAPIData
+    # Request PADD data
+    moveXOffset; echo "- Requesting PADD information..."
+    GetPADDData
 
     # Get our information for the first time
     moveXOffset; echo "- Gathering version info."
@@ -1510,9 +1510,9 @@ StartupRoutine(){
     moveXOffset; printf "%b" "Establishing connection with FTL...\n"
     LoginAPI
 
-    # Request API data
-    moveXOffset; echo "- Requesting API information..."
-    GetAPIData
+    # Request PADD data
+    moveXOffset; echo "- Requesting PADD information..."
+    GetPADDData
 
     # Get our information for the first time
     moveXOffset; echo "- Gathering version information..."
@@ -1583,15 +1583,15 @@ NormalPADD() {
       Authenticate
     fi
 
-    # Request API data
+    # Request PADD data
     if [ $((now - LastCheckFullInformation)) -ge 30 ]; then
-        GetAPIData
+        GetPADDData
         GetNetworkInformation
         GetVersionInformation
         LastCheckFullInformation="${now}"
     else
         # Request only a subset of the data
-        GetAPIData "?full=false"
+        GetPADDData "?full=false"
     fi
 
     # Get uptime, CPU load, temp, etc. every 5 seconds
