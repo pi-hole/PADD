@@ -21,6 +21,9 @@ padd_version="v4.0.0"
 LastCheckPADDInformation=$(date +%s)
 LastCheckFullInformation=$(date +%s)
 
+# padd_data holds the data returned by FTL's /padd endpoint globally
+padd_data=""
+
 # COLORS
 CSI="$(printf '\033')["  # Control Sequence Introducer
 red_text="${CSI}91m"     # Red
@@ -242,6 +245,9 @@ Authenticate() {
 
 GetFTLData() {
   local response
+  local data
+  local status
+
   # get the data from querying the API as well as the http status code
   response=$(curl -sk -w "%{http_code}" -X GET "${API_URL}$1$2" -H "Accept: application/json" -H "sid: ${SID}" )
 
