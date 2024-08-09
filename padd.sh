@@ -20,6 +20,7 @@ padd_version="v4.0.0"
 # LastChecks
 LastCheckPADDInformation=$(date +%s)
 LastCheckFullInformation=$(date +%s)
+LastCheckNetworkInformation=$(date +%s)
 
 # padd_data holds the data returned by FTL's /padd endpoint globally
 padd_data=""
@@ -298,6 +299,24 @@ GetPADDValue() {
 }
 
 GetSummaryInformation() {
+    if [ "${connection_down_flag}" = true ]; then
+        clients="N/A"
+        blocking_enabled="N/A"
+        domains_being_blocked="N/A"
+        dns_queries_today="N/A"
+        ads_blocked_today="N/A"
+        ads_percentage_today="N/A"
+        cache_size="N/A"
+        cache_evictions="N/A"
+        cache_inserts="N/A"
+        latest_blocked_raw="N/A"
+        top_blocked_raw="N/A"
+        top_domain_raw="N/A"
+        top_client_raw="N/A"
+        return
+    fi
+
+
   clients=$(GetPADDValue active_clients)
 
   blocking_enabled=$(GetPADDValue blocking)
@@ -328,16 +347,31 @@ GetSummaryInformation() {
 }
 
 GetSystemInformation() {
-    # System uptime
-    if [ "${padd_data}" = 000 ]; then
-      # in case FTL connection is down, system_uptime_raw need to be set to 0 otherwise convertUptime() will complain
-      system_uptime_raw=0
-    else
-      system_uptime_raw=$(GetPADDValue system.uptime)
+
+    if [ "${connection_down_flag}" = true ]; then
+        system_uptime_raw=0
+        temperature="N/A"
+        temp_heatmap=${reset_text}
+
+        cpu_load_1="N/A"
+        cpu_load_5="N/A"
+        cpu_load_15="N/A"
+        cpu_load_1_heatmap=${reset_text}
+        cpu_load_5_heatmap=${reset_text}
+        cpu_load_15_heatmap=${reset_text}
+        cpu_percent=0
+
+        memory_percent=0
+        memory_heatmap=${reset_text}
+
+        sys_model="N/A"
+        return
     fi
 
+    # System uptime
+    system_uptime_raw=$(GetPADDValue system.uptime)
+
     # CPU temperature and unit
-    # in case .sensors.cpu_temp returns 'null' we substitute with 0
     cpu_temp_raw=$(GetPADDValue sensors.cpu_temp)
     cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
     temp_unit=$(echo "${padd_data}"  | GetPADDValue sensors.unit)
@@ -411,6 +445,36 @@ GetSystemInformation() {
 }
 
 GetNetworkInformation() {
+    if [ "${connection_down_flag}" = true ]; then
+        iface_name="N/A"
+        pi_ip4_addr="N/A"
+        pi_ip6_addr="N/A"
+        ipv6_check_box=${check_box_question}
+
+        dhcp_status="N/A"
+        dhcp_heatmap=${reset_text}
+        dhcp_info=""
+        dhcp_ipv6_status="N/A"
+        dhcp_ipv6_heatmap=${reset_text}
+        dhcp_ipv6_check_box=${check_box_question}
+
+        pi_hostname="N/A"
+        full_hostname="N/A"
+
+        dns_count="N/A"
+        dns_information="N/A"
+
+        dnssec_status="N/A"
+        dnssec_heatmap=${reset_text}
+
+        conditional_forwarding_status="N/A"
+        conditional_forwarding_heatmap=${reset_text}
+
+        tx_bytes="N/A"
+        rx_bytes="N/A"
+        return
+    fi
+
     gateway_v4_iface=$(GetPADDValue iface.v4.name)
     gateway_v6_iface=$(GetPADDValue iface.v4.name)
 
@@ -544,17 +608,21 @@ GetNetworkInformation() {
 }
 
 GetPiholeInformation() {
-  # If FTL is not running (sysinfo is 000), set all variables to "not running"
-  connection_down_flag=false
-  if [ "${padd_data}" = "000" ]; then
-    ftl_status="No connection"
-    ftl_heatmap=${red_text}
-    ftl_check_box=${check_box_bad}
-    # set flag to change the status message in SetStatusMessage()
-    connection_down_flag=true
-    ftl_cpu="N/A"
-    ftl_mem_percentage="N/A"
-  else
+    if [ "${connection_down_flag}" = true ]; then
+        ftl_status="No connection"
+        ftl_heatmap=${red_text}
+        ftl_check_box=${check_box_bad}
+        ftl_cpu="N/A"
+        ftl_mem_percentage="N/A"
+        dns_status="DNS offline"
+        dns_heatmap=${red_text}
+        dns_check_box=${check_box_bad}
+        ftlPID="N/A"
+        dns_down_flag=true
+
+        return
+    fi
+
     ftl_status="Running"
     ftl_heatmap=${green_text}
     ftl_check_box=${check_box_good}
@@ -567,13 +635,12 @@ GetPiholeInformation() {
     ftl_dns_port=$(GetPADDValue config.dns_port)
     # Get FTL's current PID
     ftlPID="$(GetPADDValue pid)"
-  fi
 
 
 
   # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled
   dns_down_flag=false
-  if [ "${ftl_dns_port}" = 0 ] || [ "${ftl_status}" = "No connection" ]; then
+  if [ "${ftl_dns_port}" = 0 ]; then
     dns_status="DNS offline"
     dns_heatmap=${red_text}
     dns_check_box=${check_box_bad}
@@ -587,6 +654,16 @@ fi
 }
 
 GetVersionInformation() {
+    if [ "${connection_down_flag}" = true ]; then
+        DOCKER_VERSION=null
+        CORE_VERSION="N/A"
+        WEB_VERSION="N/A"
+        FTL_VERSION="N/A"
+        core_version_heatmap=${reset_text}
+        web_version_heatmap=${reset_text}
+        ftl_version_heatmap=${reset_text}
+        return
+    fi
 
     out_of_date_flag=false
 
@@ -861,7 +938,7 @@ SetStatusMessage() {
         full_status=${full_status_dns_down}
         mega_status=${mega_status_dns_down}
 
-    elif [ "${blocking_enabled}" = "false" ]; then
+    elif [ "${blocking_enabled}" = "disabled" ]; then
         # Check if blocking status is disabled
         pico_status=${pico_status_off}
         mini_status=${mini_status_off}
@@ -877,7 +954,7 @@ SetStatusMessage() {
         full_status=${full_status_update}
         mega_status=${mega_status_update}
 
-    elif [ "${blocking_enabled}" = "true" ]; then
+    elif [ "${blocking_enabled}" = "enabled" ]; then
         # if we reach this point and blocking is enabled, everything is fine
         pico_status=${pico_status_ok}
         mini_status=${mini_status_ok}
@@ -1601,23 +1678,38 @@ NormalPADD() {
     # Request PADD data
     if [ $((now - LastCheckFullInformation)) -ge 30 ]; then
         GetPADDData
-        GetNetworkInformation
-        GetVersionInformation
         LastCheckFullInformation="${now}"
     else
         # Request only a subset of the data
         GetPADDData "?full=false"
     fi
 
-    # Get uptime, CPU load, temp, etc. every 5 seconds
-    GetSystemInformation
-    GetSummaryInformation
-    GetPiholeInformation
+    connection_down_flag=false
+    # If the connection was lost, set connection_down_flag
+    if [ "${padd_data}" = "000" ]; then
+        connection_down_flag=true
+        GetSystemInformation
+        GetSummaryInformation
+        GetPiholeInformation
+        GetNetworkInformation
+        GetVersionInformation
+    else
+        # Get uptime, CPU load, temp, etc. every 5 seconds
+        GetSystemInformation
+        GetSummaryInformation
+        GetPiholeInformation
 
-    # Get PADD version information every 24hours
-    if [ $((now - LastCheckPADDInformation)) -ge 86400 ]; then
-      GetPADDInformation
-      LastCheckPADDInformation="${now}"
+        if [ $((now - LastCheckNetworkInformation)) -ge 30 ]; then
+            GetNetworkInformation
+            GetVersionInformation
+            LastCheckNetworkInformation="${now}"
+        fi
+
+        # Get PADD version information every 24hours
+        if [ $((now - LastCheckPADDInformation)) -ge 86400 ]; then
+            GetPADDInformation
+            LastCheckPADDInformation="${now}"
+        fi
     fi
 
   done
