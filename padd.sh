@@ -137,7 +137,7 @@ TestAPIAvailability() {
         API_URL="${API_URL#\"}"
 
         # Test if the API is available at this URL
-        availabilityResponse=$(curl -skS -o /dev/null -w "%{http_code}" "${API_URL}auth")
+        availabilityResponse=$(curl --connect-timeout 2 -skS -o /dev/null -w "%{http_code}" "${API_URL}auth")
 
         # Test if http status code was 200 (OK) or 401 (authentication required)
         if [ ! "${availabilityResponse}" = 200 ] && [ ! "${availabilityResponse}" = 401 ]; then
@@ -217,7 +217,7 @@ DeleteSession() {
     # SID is not null (successful authenthication only), delete the session
     if [ "${validSession}" = true ] && [ ! "${SID}" = null ]; then
         # Try to delete the session. Omit the output, but get the http status code
-        deleteResponse=$(curl -skS -o /dev/null -w "%{http_code}" -X DELETE "${API_URL}auth"  -H "Accept: application/json" -H "sid: ${SID}")
+        deleteResponse=$(curl --connect-timeout 2 -skS -o /dev/null -w "%{http_code}" -X DELETE "${API_URL}auth"  -H "Accept: application/json" -H "sid: ${SID}")
 
         printf "\n\n"
         case "${deleteResponse}" in
@@ -232,7 +232,7 @@ DeleteSession() {
 }
 
 Authenticate() {
-  sessionResponse="$(curl -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
+  sessionResponse="$(curl --connect-timeout 2 -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
 
   if [ -z "${sessionResponse}" ]; then
     moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
@@ -250,7 +250,7 @@ GetFTLData() {
   local status
 
   # get the data from querying the API as well as the http status code
-  response=$(curl -sk -w "%{http_code}" -X GET "${API_URL}$1$2" -H "Accept: application/json" -H "sid: ${SID}" )
+  response=$(curl --connect-timeout 2 -sk -w "%{http_code}" -X GET "${API_URL}$1$2" -H "Accept: application/json" -H "sid: ${SID}" )
 
   # status are the last 3 characters
   status=$(printf %s "${response#"${response%???}"}")
@@ -822,7 +822,7 @@ GetPADDInformation() {
   fi
 
   # PADD version information...
-  padd_version_latest="$(curl --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
+  padd_version_latest="$(curl --connect-timeout 5 --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
   # is PADD up-to-date?
   padd_out_of_date_flag=false
   if [ -z "${padd_version_latest}" ]; then
@@ -1733,7 +1733,7 @@ Update() {
 
         echo "${check_box_info} Downloading PADD update ..."
 
-        if  curl -sSL https://install.padd.sh -o "${padd_script_path}" > /dev/null 2>&1; then
+        if  curl --connect-timeout 5 -sSL https://install.padd.sh -o "${padd_script_path}" > /dev/null 2>&1; then
             echo "${check_box_good} ... done. Restart PADD for the update to take effect"
         else
             echo "${check_box_bad} Cannot download PADD update"
