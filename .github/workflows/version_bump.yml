@@ -17,9 +17,10 @@ jobs:
           LATEST_TAG=$(gh -R $REPO release list -L 1 | awk '{printf $3}')
           echo "Latest version tag for releases in $REPO is $LATEST_TAG"
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_ENV
+          [[ -z ${LATEST_TAG} ]] && echo "Error: LATEST_TAG is empty, aborting" && exit 1
 
       - name: Checkout code
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v4.1.7
         with:
           ref: 'development'
 
