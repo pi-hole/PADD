@@ -413,9 +413,9 @@ GetSystemInformation() {
 
     # CPU, load, heatmap
     core_count=$(GetPADDValue system.cpu.nprocs)
-    cpu_load_1=$(printf %.2f "$(GetPADDValue system.cpu.load.0)")
-    cpu_load_5=$(printf %.2f "$(GetPADDValue system.cpu.load.1)")
-    cpu_load_15=$(printf %.2f "$(GetPADDValue system.cpu.load.2)")
+    cpu_load_1=$(printf %.2f "$(GetPADDValue system.cpu.load.raw.[0])")
+    cpu_load_5=$(printf %.2f "$(GetPADDValue system.cpu.load.raw.[1])")
+    cpu_load_15=$(printf %.2f "$(GetPADDValue system.cpu.load.raw.[2])")
     cpu_load_1_heatmap=$(HeatmapGenerator "${cpu_load_1}" "${core_count}")
     cpu_load_5_heatmap=$(HeatmapGenerator "${cpu_load_5}" "${core_count}")
     cpu_load_15_heatmap=$(HeatmapGenerator "${cpu_load_15}" "${core_count}")
