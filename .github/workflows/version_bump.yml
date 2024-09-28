@@ -20,7 +20,7 @@ jobs:
           [[ -z ${LATEST_TAG} ]] && echo "Error: LATEST_TAG is empty, aborting" && exit 1
 
       - name: Checkout code
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.0
         with:
           ref: 'development'
 
