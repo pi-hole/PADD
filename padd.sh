@@ -15,7 +15,7 @@ export LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v4.0.0"
+padd_version="v3.11.1"
 
 # LastChecks
 LastCheckPADDInformation=$(date +%s)
