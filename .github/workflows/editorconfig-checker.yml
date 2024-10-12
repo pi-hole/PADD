@@ -9,6 +9,6 @@ jobs:
       name: editorconfig-checker
       runs-on: ubuntu-latest
       steps:
-        - uses: actions/checkout@v4.2.0
+        - uses: actions/checkout@v4.2.1
         - uses: editorconfig-checker/action-editorconfig-checker@main # current tag v1.0.0 is really out-of-date
         - run: editorconfig-checker
