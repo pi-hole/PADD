@@ -253,7 +253,8 @@ GetFTLData() {
   response=$(curl --connect-timeout 2 -sk -w "%{http_code}" -X GET "${API_URL}$1$2" -H "Accept: application/json" -H "sid: ${SID}" )
 
   # status are the last 3 characters
-  status=$(printf %s "${response#"${response%???}"}")
+  # not using ${response#"${response%???}"}" here because it's extremely slow on big responses
+  status=$(printf "%s" "${response}" | tail -c 3)
   # data is everything from response without the last 3 characters
   data=$(printf %s "${response%???}")
 
