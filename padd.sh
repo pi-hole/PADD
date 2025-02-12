@@ -528,12 +528,12 @@ GetNetworkInformation() {
             dhcp_ipv6_check_box=${check_box_good}
         else
             dhcp_ipv6_status="Disabled"
-            dhcp_ipv6_heatmap=${red_text}
+            dhcp_ipv6_heatmap=${blue_text}
             dhcp_ipv6_check_box=${check_box_bad}
         fi
     else
         dhcp_status="Disabled"
-        dhcp_heatmap=${red_text}
+        dhcp_heatmap=${blue_text}
         dhcp_check_box=${check_box_bad}
 
         # Display the gateway address if DHCP is disabled
@@ -576,7 +576,7 @@ GetNetworkInformation() {
         dnssec_heatmap=${green_text}
     else
         dnssec_status="Disabled"
-        dnssec_heatmap=${red_text}
+        dnssec_heatmap=${blue_text}
     fi
 
     # Conditional forwarding
@@ -586,7 +586,7 @@ GetNetworkInformation() {
         conditional_forwarding_heatmap=${green_text}
     else
         conditional_forwarding_status="Disabled"
-        conditional_forwarding_heatmap=${red_text}
+        conditional_forwarding_heatmap=${blue_text}
     fi
 
     # Default interface data (use IPv4 interface - we cannot show both and assume they are the same)
