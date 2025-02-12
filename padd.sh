@@ -44,6 +44,7 @@ dim_text="${CSI}2m"
 # CHECK BOXES
 check_box_good="[${green_text}✓${reset_text}]"       # Good
 check_box_bad="[${red_text}✗${reset_text}]"          # Bad
+check_box_disabled="[${blue_text}-${reset_text}]"    # Disabled, but not an error
 check_box_question="[${yellow_text}?${reset_text}]"  # Question / ?
 check_box_info="[${yellow_text}i${reset_text}]"      # Info / i
 
@@ -528,13 +529,13 @@ GetNetworkInformation() {
             dhcp_ipv6_check_box=${check_box_good}
         else
             dhcp_ipv6_status="Disabled"
-            dhcp_ipv6_heatmap=${red_text}
-            dhcp_ipv6_check_box=${check_box_bad}
+            dhcp_ipv6_heatmap=${blue_text}
+            dhcp_ipv6_check_box=${check_box_disabled}
         fi
     else
         dhcp_status="Disabled"
-        dhcp_heatmap=${red_text}
-        dhcp_check_box=${check_box_bad}
+        dhcp_heatmap=${blue_text}
+        dhcp_check_box=${check_box_disabled}
 
         # Display the gateway address if DHCP is disabled
         GATEWAY="$(GetPADDValue iface.v4.gw_addr | head -n 1)"
@@ -576,7 +577,7 @@ GetNetworkInformation() {
         dnssec_heatmap=${green_text}
     else
         dnssec_status="Disabled"
-        dnssec_heatmap=${red_text}
+        dnssec_heatmap=${blue_text}
     fi
 
     # Conditional forwarding
@@ -586,7 +587,7 @@ GetNetworkInformation() {
         conditional_forwarding_heatmap=${green_text}
     else
         conditional_forwarding_status="Disabled"
-        conditional_forwarding_heatmap=${red_text}
+        conditional_forwarding_heatmap=${blue_text}
     fi
 
     # Default interface data (use IPv4 interface - we cannot show both and assume they are the same)
