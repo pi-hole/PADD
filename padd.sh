@@ -451,14 +451,16 @@ GetNetworkInformation() {
         iface_name="N/A"
         pi_ip4_addr="N/A"
         pi_ip6_addr="N/A"
+        ipv6_status="N/A"
+        ipv6_heatmap=${reset_text}
         ipv6_check_box=${check_box_question}
 
         dhcp_status="N/A"
         dhcp_heatmap=${reset_text}
-        dhcp_info=""
+        dhcp_range="N/A"
+        dhcp_range_heatmap=${reset_text}
         dhcp_ipv6_status="N/A"
         dhcp_ipv6_heatmap=${reset_text}
-        dhcp_ipv6_check_box=${check_box_question}
 
         pi_hostname="N/A"
         full_hostname="N/A"
@@ -500,13 +502,19 @@ GetNetworkInformation() {
         # No IPv6 address available
         pi_ip6_addr="N/A"
         ipv6_check_box=${check_box_bad}
+        ipv6_status="Disabled"
+        ipv6_heatmap=${red_text}
     elif [ "${pi_ip6_addrs}" -eq 1 ]; then
         # One IPv6 address available
         ipv6_check_box=${check_box_good}
+        ipv6_status="Enabled"
+        ipv6_heatmap=${green_text}
     else
         # More than one IPv6 address available
         pi_ip6_addr="${pi_ip6_addr}+"
         ipv6_check_box=${check_box_good}
+        ipv6_status="Enabled"
+        ipv6_heatmap=${green_text}
     fi
 
     # Is Pi-Hole acting as the DHCP server?
@@ -517,7 +525,8 @@ GetNetworkInformation() {
         DHCP_END="$(GetPADDValue config.dhcp_end)"
 
         dhcp_status="Enabled"
-        dhcp_info=" Range:    ${DHCP_START} - ${DHCP_END}"
+        dhcp_range="${DHCP_START} - ${DHCP_END}"
+        dhcp_range_heatmap=${reset_text}
         dhcp_heatmap=${green_text}
         dhcp_check_box=${check_box_good}
 
@@ -526,23 +535,19 @@ GetNetworkInformation() {
         if [ "${DHCP_IPv6}" = "true" ]; then
             dhcp_ipv6_status="Enabled"
             dhcp_ipv6_heatmap=${green_text}
-            dhcp_ipv6_check_box=${check_box_good}
         else
             dhcp_ipv6_status="Disabled"
             dhcp_ipv6_heatmap=${blue_text}
-            dhcp_ipv6_check_box=${check_box_disabled}
         fi
     else
         dhcp_status="Disabled"
         dhcp_heatmap=${blue_text}
         dhcp_check_box=${check_box_disabled}
+        dhcp_range="N/A"
 
-        # Display the gateway address if DHCP is disabled
-        GATEWAY="$(GetPADDValue iface.v4.gw_addr | head -n 1)"
-        dhcp_info=" Router:   ${GATEWAY}"
         dhcp_ipv6_status="N/A"
+        dhcp_range_heatmap=${yellow_text}
         dhcp_ipv6_heatmap=${yellow_text}
-        dhcp_ipv6_check_box=${check_box_question}
     fi
 
     # Get hostname
@@ -1022,7 +1027,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ============${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" " Hst: ${pi_hostname}"
         moveXOffset; printf "%s${clear_line}\n" " IP:  ${pi_ip4_addr}"
-        moveXOffset; printf "%s${clear_line}\n" " DHCP ${dhcp_check_box} IPv6 ${dhcp_ipv6_check_box}"
+        moveXOffset; printf "%s${clear_line}\n" " IPv6 ${ipv6_check_box} DHCP ${dhcp_check_box}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}CPU ================${reset_text}"
         moveXOffset; printf "%s${clear_line}" " [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
     elif [ "$1" = "nano" ]; then
@@ -1035,7 +1040,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ================${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" " Host: ${pi_hostname}"
         moveXOffset; printf "%s${clear_line}\n" " IP:   ${pi_ip4_addr}"
-        moveXOffset; printf "%s${clear_line}\n" " DHCP: ${dhcp_check_box}    IPv6: ${dhcp_ipv6_check_box}"
+        moveXOffset; printf "%s${clear_line}\n" " IPv6: ${ipv6_check_box}    DHCP: ${dhcp_check_box}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =================${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" " Up:  ${system_uptime}"
         moveXOffset; printf "%s${clear_line}"  " CPU: [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
@@ -1044,7 +1049,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "µ${padd_text}     ${mini_status}"
         moveXOffset; printf "%s${clear_line}\n" ""
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}PI-HOLE ======================${reset_text}"
-        moveXOffset; printf "%s${clear_line}\n" " DNS:  ${dns_check_box}      FTL:  ${ftl_check_box}"
+        moveXOffset; printf "%s${clear_line}\n" " DNS:  ${dns_check_box}        FTL:  ${ftl_check_box}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ========================${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" " Blckng:  ${domains_being_blocked} domains"
         moveXOffset; printf "%s${clear_line}\n" " Piholed: [${ads_blocked_bar}] ${ads_percentage_today}%"
@@ -1052,7 +1057,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ======================${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" " Host:    ${full_hostname}"
         moveXOffset; printf "%s${clear_line}\n" " IP:      ${pi_ip4_addr}"
-        moveXOffset; printf "%s${clear_line}\n" " DHCP:    ${dhcp_check_box}     IPv6:  ${dhcp_ipv6_check_box}"
+        moveXOffset; printf "%s${clear_line}\n" " IPv6: ${ipv6_check_box}       DHCP:  ${dhcp_check_box}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =======================${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" " Uptime:  ${system_uptime}"
         moveXOffset; printf "%s${clear_line}\n" " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
@@ -1068,16 +1073,12 @@ PrintDashboard() {
         moveXOffset; printf " %-9s[%-20s] %-5s${clear_line}\n" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
         moveXOffset; printf " %-9s%-29s${clear_line}\n" "Piholed:" "${ads_blocked_today} out of ${dns_queries_today}"
         moveXOffset; printf " %-9s%-29s${clear_line}\n" "Latest:" "${latest_blocked}"
-        if [ "${DHCP_ACTIVE}" != "true" ]; then
-            moveXOffset; printf " %-9s%-29s${clear_line}\n" "Top Ad:" "${top_blocked}"
-        fi
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ================================${reset_text}"
         moveXOffset; printf " %-9s%-16s%-5s%-9s${clear_line}\n" "Host:" "${full_hostname}" "DNS:" "${dns_information}"
         moveXOffset; printf " %-9s%s${clear_line}\n" "IP:" "${pi_ip4_addr} (${iface_name})"
+        moveXOffset; printf " %-9s${ipv6_heatmap}%-10s${reset_text} %-8s${dhcp_heatmap}%-10s${reset_text}${clear_line}\n" "IPv6:" "${ipv6_status}" "DHCP:" "${dhcp_status}"
+
         moveXOffset; printf " %-9s%-4s%-12s%-4s%-5s${clear_line}\n" "Traffic:" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
-        if [ "${DHCP_ACTIVE}" = "true" ]; then
-            moveXOffset; printf " %-9s${dhcp_heatmap}%-10s${reset_text} %-9s${dhcp_ipv6_heatmap}%-10s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
-        fi
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =================================${reset_text}"
         moveXOffset; printf " %-9s%-29s${clear_line}\n" "Uptime:" "${system_uptime}"
         moveXOffset; printf "%s${clear_line}\n" " Load:    [${cpu_load_1_heatmap}${cpu_bar}${reset_text}] ${cpu_percent}%"
@@ -1094,18 +1095,12 @@ PrintDashboard() {
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Latest:" "${latest_blocked}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Ad:" "${top_blocked}"
-        if [ "${DHCP_ACTIVE}" != "true" ]; then
-            moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
-            moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
-        fi
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK =============================================${reset_text}"
         moveXOffset; printf " %-10s%-16s %-8s%-16s${clear_line}\n" "Hostname:" "${full_hostname}" "IP:  " "${pi_ip4_addr}"
         moveXOffset; printf " %-10s%-16s %-4s%-7s %-4s%-5s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
         moveXOffset; printf " %-10s%-16s %-8s${dnssec_heatmap}%-16s${reset_text}${clear_line}\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_status}"
-        if [ "${DHCP_ACTIVE}" = "true" ]; then
-            moveXOffset; printf " %-10s${dhcp_heatmap}%-16s${reset_text} %-8s${dhcp_ipv6_heatmap}%-10s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
-            moveXOffset; printf "%s${clear_line}\n" "${dhcp_info}"
-        fi
+        moveXOffset; printf " %-10s%s${clear_line}\n" "IPv6:" "${pi_ip6_addr}"
+        moveXOffset; printf " %-10s%-15s%-4s${dhcp_range_heatmap}%-36s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_check_box}" "Rng" "${dhcp_range}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM ==============================================${reset_text}"
         moveXOffset; printf " %-10s%-29s${clear_line}\n" "Uptime:" "${system_uptime}"
         moveXOffset; printf " %-10s${temp_heatmap}%-17s${reset_text} %-8s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
@@ -1131,18 +1126,12 @@ PrintDashboard() {
         moveXOffset; printf " %-10s%-49s${clear_line}\n" "Pi-holed:" "${ads_blocked_today} out of ${dns_queries_today} queries"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Latest:" "${latest_blocked}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Ad:" "${top_blocked}"
-        if [ "${DHCP_ACTIVE}" != "true" ]; then
-            moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
-            moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
-        fi
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ====================================================${reset_text}"
-        moveXOffset; printf " %-10s%-15s %-4s%-17s%-6s%s${clear_line}\n" "Hostname:" "${full_hostname}" "IP:" "${pi_ip4_addr}" "IPv6:" "${ipv6_check_box}"
+        moveXOffset; printf " %-10s%-15s %-4s%-17s${clear_line}\n" "Hostname:" "${full_hostname}" "IP:" "${pi_ip4_addr}"
         moveXOffset; printf " %-10s%-15s %-4s%-17s%-4s%s${clear_line}\n" "Interfce:" "${iface_name}" "TX:" "${tx_bytes}" "RX:" "${rx_bytes}"
+        moveXOffset; printf " %-10s%s${clear_line}\n" "IPv6:" "${pi_ip6_addr}"
         moveXOffset; printf " %-10s%-15s %-10s${dnssec_heatmap}%-19s${reset_text}${clear_line}\n" "DNS:" "${dns_information}" "DNSSEC:" "${dnssec_status}"
-        if [ "${DHCP_ACTIVE}" = "true" ]; then
-            moveXOffset; printf " %-10s${dhcp_heatmap}%-15s${reset_text} %-10s${dhcp_ipv6_heatmap}%-19s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_status}" "IPv6:" ${dhcp_ipv6_status}
-            moveXOffset; printf "%s${clear_line}\n" "${dhcp_info}"
-        fi
+        moveXOffset; printf " %-10s%-16s%-6s${dhcp_range_heatmap}%-36s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_check_box}" "Range" "${dhcp_range}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =====================================================${reset_text}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Uptime:" "${system_uptime}"
         moveXOffset; printf " %-10s${temp_heatmap}%-21s${reset_text}%-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
@@ -1170,7 +1159,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}DNS ==========================DHCP==============================================${reset_text}"
         moveXOffset; printf " %-10s%-19s %-6s${dhcp_heatmap}%-19s${reset_text}${clear_line}\n" "Servers:" "${dns_information}" "DHCP:" "${dhcp_status}"
         moveXOffset; printf " %-10s${dnssec_heatmap}%-19s${reset_text} %-10s${dhcp_ipv6_heatmap}%-9s${reset_text}${clear_line}\n" "DNSSEC:" "${dnssec_status}" "IPv6 Spt:" "${dhcp_ipv6_status}"
-        moveXOffset; printf " %-10s${conditional_forwarding_heatmap}%-19s${reset_text}%s${clear_line}\n" "CdFwding:" "${conditional_forwarding_status}" "${dhcp_info}"
+        moveXOffset; printf " %-10s${conditional_forwarding_heatmap}%-20s${reset_text}%-6s${dhcp_range_heatmap}%-36s${reset_text}${clear_line}\n" "CdFwding:" "${conditional_forwarding_status}" "Range" "${dhcp_range}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Device:" "${sys_model}"
         moveXOffset; printf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
