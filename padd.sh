@@ -1632,6 +1632,10 @@ NormalPADD() {
     # Trap the window resize signal (handle window resize events)
     trap 'TerminalResize' WINCH
 
+
+    # Clear the screen once on startup to remove overflow from the startup routine
+    printf '\033[2J'
+
     while true; do
 
     # Generate output that depends on the terminal size
