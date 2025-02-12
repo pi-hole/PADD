@@ -1573,7 +1573,7 @@ StartupRoutine(){
       moveXOffset; echo "  - Docker Tag ${DOCKER_VERSION}"
     else
       moveXOffset; echo "  - Core $CORE_VERSION, Web $WEB_VERSION"
-      moveXOffset; echo "  - FTL $FTL_VERSION, PADD ${padd_data}_version"
+      moveXOffset; echo "  - FTL $FTL_VERSION, PADD ${padd_version}"
     fi
 
   else
