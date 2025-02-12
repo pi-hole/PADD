@@ -501,9 +501,9 @@ GetNetworkInformation() {
     if [ "${pi_ip6_addrs}" -eq 0 ]; then
         # No IPv6 address available
         pi_ip6_addr="N/A"
-        ipv6_check_box=${check_box_bad}
+        ipv6_check_box=${check_box_disabled}
         ipv6_status="Disabled"
-        ipv6_heatmap=${red_text}
+        ipv6_heatmap=${blue_text}
     elif [ "${pi_ip6_addrs}" -eq 1 ]; then
         # One IPv6 address available
         ipv6_check_box=${check_box_good}
