@@ -185,10 +185,10 @@ LoginAPI() {
     # Try to read the CLI password (if enabled and readable by the current user)
     if [ -r /etc/pihole/cli_pw ]; then
         password=$(cat /etc/pihole/cli_pw)
-
-        # Try to authenticate using the CLI password
-        Authenticate
     fi
+
+    # Try to authenticate using the CLI password or the password supplied as argument
+    Authenticate
 
     # If this did not work, ask the user for the password
     while [ "${validSession}" = false ] || [ -z "${validSession}" ] ; do
