@@ -1757,7 +1757,7 @@ DisplayHelp() {
 :::
 :::  --server <DOMAIN|IP>    domain or IP of your Pi-hole (default: localhost)
 :::  --secret <password>     your Pi-hole's password, required to access the API
-:::  -j, --json              output stats as JSON formatted string and exit and exit
+:::  -j, --json              output stats as JSON formatted string and exit
 :::  -u, --update            update to the latest version
 :::  -v, --version           show PADD version info
 :::  -h, --help              display this help text
