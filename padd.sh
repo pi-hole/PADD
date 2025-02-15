@@ -194,6 +194,8 @@ LoginAPI() {
     # Try to read the CLI password (if enabled and readable by the current user)
     if [ -r /etc/pihole/cli_pw ]; then
         password=$(cat /etc/pihole/cli_pw)
+        # If we can read the CLI password, we can skip 2FA even when it's required
+        needTOTP=false
     fi
 
     if [ -z "${password}" ]; then
