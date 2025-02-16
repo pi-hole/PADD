@@ -194,7 +194,7 @@ LoginAPI() {
     # Try to read the CLI password (if enabled and readable by the current user)
     if [ -r /etc/pihole/cli_pw ]; then
         password=$(cat /etc/pihole/cli_pw)
-        # If we can read the CLI password, we can skip 2FA even when it's required
+        # If we can read the CLI password, we can skip 2FA even when it's required otherwise
         needTOTP=false
     fi
 
@@ -207,7 +207,8 @@ LoginAPI() {
 
     if [ "${needTOTP}" = true ] && [ -z "${totp}" ]; then
         # 2FA required, but no TOTP was supplied as argument
-        moveXOffset; echo "Please enter the correct second factor:"
+        moveXOffset; echo "Please enter the correct second factor."
+        moveXOffset; echo "(Can be any number if you used the app password)"
         moveXOffset; read -r totp
     fi
 
@@ -234,6 +235,7 @@ LoginAPI() {
 
         if [ "${needTOTP}" = true ]; then
             moveXOffset; echo "Please enter the correct second factor:"
+            moveXOffset; echo "(Can be any number if you used the app password)"
             moveXOffset; read -r totp
         fi
 
