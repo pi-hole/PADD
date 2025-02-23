@@ -103,7 +103,7 @@ padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${gre
 
 TestAPIAvailability() {
 
-    local chaos_api_list availabilityResponse cmdResult digReturnCode
+    local chaos_api_list authResponse cmdResult digReturnCode authStatus authData
 
     # Query the API URLs from FTL using CHAOS TXT
     # The result is a space-separated enumeration of full URLs
@@ -138,19 +138,28 @@ TestAPIAvailability() {
         API_URL="${API_URL#\"}"
 
         # Test if the API is available at this URL
-        availabilityResponse=$(curl --connect-timeout 2 -skS -o /dev/null -w "%{http_code}" "${API_URL}auth")
+        authResponse=$(curl --connect-timeout 2 -skS -w "%{http_code}" "${API_URL}auth")
+
+        # authStatus are the last 3 characters
+        # not using ${authResponse#"${authResponse%???}"}" here because it's extremely slow on big responses
+        authStatus=$(printf "%s" "${authResponse}" | tail -c 3)
+        # data is everything from response without the last 3 characters
+        authData=$(printf %s "${authResponse%???}")
 
         # Test if http status code was 200 (OK) or 401 (authentication required)
-        if [ ! "${availabilityResponse}" = 200 ] && [ ! "${availabilityResponse}" = 401 ]; then
+        if [ ! "${authStatus}" = 200 ] && [ ! "${authStatus}" = 401 ]; then
             # API is not available at this port/protocol combination
             API_PORT=""
         else
             # API is available at this URL combination
 
-            if [ "${availabilityResponse}" = 200 ]; then
+            if [ "${authStatus}" = 200 ]; then
                 # API is available without authentication
                 needAuth=false
             fi
+
+            # Check if 2FA is required
+            needTOTP=$(echo "${authData}"| jq --raw-output .session.totp 2>/dev/null)
 
             break
         fi
@@ -178,31 +187,57 @@ TestAPIAvailability() {
 LoginAPI() {
     # Exit early if no authentication is required
     if [ "${needAuth}" = false ]; then
-        moveXOffset; echo "No password required."
+        moveXOffset; echo "No authentication required."
         return
     fi
 
     # Try to read the CLI password (if enabled and readable by the current user)
     if [ -r /etc/pihole/cli_pw ]; then
         password=$(cat /etc/pihole/cli_pw)
-
-        # Try to authenticate using the CLI password
-        Authenticate
+        # If we can read the CLI password, we can skip 2FA even when it's required otherwise
+        needTOTP=false
     fi
 
-    # If this did not work, ask the user for the password
-    while [ "${validSession}" = false ] || [ -z "${validSession}" ] ; do
+    if [ -z "${password}" ]; then
+        # no password was supplied as argument or read from CLI file
+        moveXOffset; echo "No password supplied. Please enter your password:"
+        # secretly read the password
+        moveXOffset; secretRead; printf '\n'
+    fi
+
+    if [ "${needTOTP}" = true ] && [ -z "${totp}" ]; then
+        # 2FA required, but no TOTP was supplied as argument
+        moveXOffset; echo "Please enter the correct second factor."
+        moveXOffset; echo "(Can be any number if you used the app password)"
+        moveXOffset; read -r totp
+    fi
+
+    # Try to authenticate using the supplied password (CLI file, argument or user input) and TOTP
+    Authenticate
+
+    # Try to login again until the session is valid
+    while [ ! "${validSession}" = true ]  ; do
         moveXOffset; echo "Authentication failed."
 
-        # no password was supplied as argument
-        if [ -z "${password}" ]; then
-            moveXOffset; echo "No password supplied. Please enter your password:"
-        else
-            moveXOffset; echo "Wrong password supplied, please enter the correct password:"
+        # Print the error message if there is one
+        if  [ ! "${sessionError}" = "null"  ]; then
+            moveXOffset; echo "Error: ${sessionError}"
         fi
+        # Print the session message if there is one
+        if  [ ! "${sessionMessage}" = "null"  ]; then
+            moveXOffset; echo "Error: ${sessionMessage}"
+        fi
+
+        moveXOffset; echo "Please enter the correct password:"
 
         # secretly read the password
         moveXOffset; secretRead; printf '\n'
+
+        if [ "${needTOTP}" = true ]; then
+            moveXOffset; echo "Please enter the correct second factor:"
+            moveXOffset; echo "(Can be any number if you used the app password)"
+            moveXOffset; read -r totp
+        fi
 
         # Try to authenticate again
         Authenticate
@@ -233,16 +268,20 @@ DeleteSession() {
 }
 
 Authenticate() {
-  sessionResponse="$(curl --connect-timeout 2 -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\"}" )"
+  sessionResponse="$(curl --connect-timeout 2 -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\", \"totp\":${totp:-null}}" )"
 
   if [ -z "${sessionResponse}" ]; then
     moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
     moveXOffset; echo "Usage: $0 [--server <domain|IP>]"
     exit 1
   fi
-  # obtain validity and session ID from session response
+  # obtain validity, session ID and sessionMessage from session response
   validSession=$(echo "${sessionResponse}"| jq .session.valid 2>/dev/null)
   SID=$(echo "${sessionResponse}"| jq --raw-output .session.sid 2>/dev/null)
+  sessionMessage=$(echo "${sessionResponse}"| jq --raw-output .session.message 2>/dev/null)
+
+  # obtain the error message from the session response
+  sessionError=$(echo "${sessionResponse}"| jq --raw-output .error.message 2>/dev/null)
 }
 
 GetFTLData() {
@@ -1757,6 +1796,7 @@ DisplayHelp() {
 :::
 :::  --server <DOMAIN|IP>    domain or IP of your Pi-hole (default: localhost)
 :::  --secret <password>     your Pi-hole's password, required to access the API
+:::  --2fa <2fa>             your Pi-hole's 2FA code, if 2FA is enabled
 :::  -j, --json              output stats as JSON formatted string and exit
 :::  -u, --update            update to the latest version
 :::  -v, --version           show PADD version info
@@ -1857,6 +1897,7 @@ while [ "$#" -gt 0 ]; do
     "--yoff"            ) yOffset="$2"; yOffOrig="$2"; shift;;
     "--server"          ) SERVER="$2"; shift;;
     "--secret"          ) password="$2"; shift;;
+    "--2fa"             ) totp="$2"; shift;;
     *                   ) DisplayHelp; exit 1;;
   esac
   shift
