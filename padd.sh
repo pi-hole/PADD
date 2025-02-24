@@ -1324,9 +1324,7 @@ SizeChecker(){
         height=10
     # Below Pico. Gives you nothing...
     else
-        # Nothing is this small, sorry
-        printf "%b" "${check_box_bad} Error!\n    PADD isn't\n    for ants!\n"
-        exit 1
+        padd_size="ants"
     fi
 
     # Center the output (default position)
@@ -1537,6 +1535,12 @@ ShowVersion() {
 }
 
 StartupRoutine(){
+
+  if [ "$1" = "ants" ]; then
+    # If the screen is too small from the beginning, exit
+    printf "%b" "${check_box_bad} Error!\n    PADD isn't\n    for ants!\n"
+    exit 1
+  fi
 
   # Clear the screen and move cursor to (0,0).
   # This mimics the 'clear' command.
