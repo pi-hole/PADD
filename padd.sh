@@ -527,8 +527,9 @@ GetNetworkInformation() {
     if [ "${pi_ip4_addrs}" -eq 0 ]; then
         # No IPv4 address available
         pi_ip4_addr="N/A"
-    #elif [ "${pi_ip4_addrs}" -eq 1 ]; then
-    #    # One IPv4 address available
+    elif [ "${pi_ip4_addrs}" -eq 1 ]; then
+        # One IPv4 address available
+        : # Do nothing as the address is already set
     else
         # More than one IPv4 address available
         pi_ip4_addr="${pi_ip4_addr}+"
