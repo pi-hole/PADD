@@ -391,8 +391,6 @@ GetSystemInformation() {
 
     if [ "${connection_down_flag}" = true ]; then
         system_uptime_raw=0
-        temperature="N/A"
-        temp_heatmap=${reset_text}
 
         cpu_load_1="N/A"
         cpu_load_5="N/A"
@@ -411,46 +409,6 @@ GetSystemInformation() {
 
     # System uptime
     system_uptime_raw=$(GetPADDValue system.uptime)
-
-    # CPU temperature and unit
-    cpu_temp_raw=$(GetPADDValue sensors.cpu_temp)
-    cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
-    temp_unit=$(echo "${padd_data}"  | GetPADDValue sensors.unit)
-
-    # Temp + Unit
-    if [ "${temp_unit}" = "C" ]; then
-        temperature="${cpu_temp}°${temp_unit}"
-        # no conversion needed
-        cpu_temp_celsius="$(echo "${cpu_temp}" | awk -F '.' '{print $1}')"
-    elif [ "${temp_unit}" = "F" ]; then
-        temperature="${cpu_temp}°${temp_unit}"
-        # convert to Celsius for limit checking
-        cpu_temp_celsius="$(echo "${cpu_temp}" | awk '{print ($1-32) * 5 / 9}' | awk -F '.' '{print $1}')"
-    elif [ "${temp_unit}" = "K" ]; then
-        # no ° for Kelvin
-        temperature="${cpu_temp}${temp_unit}"
-        # convert to Celsius for limit checking
-        cpu_temp_celsius="$(echo "${cpu_temp}" | awk '{print $1 - 273.15}' | awk -F '.' '{print $1}')"
-    else # unknown unit
-        temperature="${cpu_temp}°?"
-        # no conversion needed
-        cpu_temp_celsius=0
-    fi
-
-    # CPU temperature heatmap
-    hot_flag=false
-    # If we're getting close to 85°C... (https://www.raspberrypi.org/blog/introducing-turbo-mode-up-to-50-more-performance-for-free/)
-    if [ "${cpu_temp_celsius}" -gt 80 ]; then
-        temp_heatmap=${blinking_text}${red_text}
-        # set flag to change the status message in SetStatusMessage()
-        hot_flag=true
-    elif [ "${cpu_temp_celsius}" -gt 70 ]; then
-        temp_heatmap=${magenta_text}
-    elif [ "${cpu_temp_celsius}" -gt 60 ]; then
-        temp_heatmap=${blue_text}
-    else
-        temp_heatmap=${cyan_text}
-    fi
 
     # CPU, load, heatmap
     core_count=$(GetPADDValue system.cpu.nprocs)
@@ -949,9 +907,8 @@ GenerateSizeDependendOutput() {
 
 SetStatusMessage() {
     # depending on which flags are set, the "message field" shows a different output
-    # 7 messages are possible (from highest to lowest priority):
+    # 6 messages are possible (from highest to lowest priority):
 
-    #   - System is hot
     #   - FTLDNS service is not running
     #   - Pi-hole's DNS server is off (FTL running, but not providing DNS)
     #   - Unable to determine Pi-hole blocking status
@@ -960,15 +917,7 @@ SetStatusMessage() {
     #   - Everything is fine
 
 
-    if [ "${hot_flag}" = true ]; then
-        # Check if CPU temperature is high
-        pico_status="${pico_status_hot}"
-        mini_status="${mini_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-        tiny_status="${tiny_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-        full_status="${full_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-        mega_status="${mega_status_hot} ${blinking_text}${red_text}${temperature}${reset_text}"
-
-    elif [ "${connection_down_flag}" = true ]; then
+    if [ "${connection_down_flag}" = true ]; then
         # Check if FTL is down
         pico_status=${pico_status_ftl_down}
         mini_status=${mini_status_ftl_down}
@@ -1142,7 +1091,7 @@ PrintDashboard() {
         moveXOffset; printf " %-10s%-15s%-4s${dhcp_range_heatmap}%-36s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_check_box}" "Rng" "${dhcp_range}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM ==============================================${reset_text}"
         moveXOffset; printf " %-10s%-29s${clear_line}\n" "Uptime:" "${system_uptime}"
-        moveXOffset; printf " %-10s${temp_heatmap}%-17s${reset_text} %-8s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
+        moveXOffset; printf " %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
         moveXOffset; printf " %-10s[${memory_heatmap}%-7s${reset_text}] %-6s %-8s[${cpu_load_1_heatmap}%-7s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU:" "${cpu_bar}" "${cpu_percent}%"
     elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
         # slim is a screen with at least 60 columns and exactly 21 lines
@@ -1173,7 +1122,7 @@ PrintDashboard() {
         moveXOffset; printf " %-10s%-16s%-6s${dhcp_range_heatmap}%-36s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_check_box}" "Range" "${dhcp_range}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =====================================================${reset_text}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Uptime:" "${system_uptime}"
-        moveXOffset; printf " %-10s${temp_heatmap}%-21s${reset_text}%-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
+        moveXOffset; printf " %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
         moveXOffset; printf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
     else # ${padd_size} = mega
          # mega is a screen with at least 80 columns and 26 lines
@@ -1202,9 +1151,8 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Device:" "${sys_model}"
         moveXOffset; printf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
-        moveXOffset; printf " %-10s${temp_heatmap}%-10s${reset_text} %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-7s${reset_text} %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
+        moveXOffset; printf " %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-27s${reset_text} %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
     fi
-
     # Clear to end of screen (below the drawn dashboard)
     # https://vt100.net/docs/vt510-rm/ED.html
     printf '\e[0J'
