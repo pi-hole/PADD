@@ -414,8 +414,10 @@ GetSystemInformation() {
 
     # CPU temperature and unit
     cpu_temp_raw=$(GetPADDValue sensors.cpu_temp)
-    cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
-    temp_unit=$(echo "${padd_data}"  | GetPADDValue sensors.unit)
+    if [ $cpu_temp_raw != null ]; then
+        cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
+        temp_unit=$(echo "${padd_data}"  | GetPADDValue sensors.unit)
+    fi
 
     # Temp + Unit
     if [ "${temp_unit}" = "C" ]; then
