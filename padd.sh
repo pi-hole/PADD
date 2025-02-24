@@ -99,6 +99,20 @@ padd_logo_retro_1="${bold_text} ${yellow_text}_${green_text}_      ${blue_text}_
 padd_logo_retro_2="${bold_text}${yellow_text}|${green_text}_${blue_text}_${cyan_text}) ${red_text}/${yellow_text}\\ ${blue_text}|  ${red_text}\\${yellow_text}|  ${cyan_text}\\  ${reset_text}"
 padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${green_text}-${blue_text}\\${cyan_text}|${magenta_text}_${red_text}_${yellow_text}/${green_text}|${blue_text}_${cyan_text}_${magenta_text}/  ${reset_text}"
 
+SetDateCommand() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if [ -x "$(command -v "gdate")" ]; then
+            DATECMD="gdate"
+        else
+            moveXOffset;  echo "macOS requires gdate. If using Homebrew run: brew install coreutils"
+            exit 1
+        fi
+    else
+        DATECMD="date"
+    fi
+}
+
+
 ############################################# FTL ##################################################
 
 TestAPIAvailability() {
@@ -1415,7 +1429,7 @@ truncateString() {
 # https://unix.stackexchange.com/a/338844
 convertUptime() {
     # shellcheck disable=SC2016
-    eval "echo $(date -ud "@$1" +'$((%s/3600/24)) days, %H hours, %M minutes')"
+    eval "echo $($DATECMD -ud "@$1" +'$((%s/3600/24)) days, %H hours, %M minutes')"
 }
 
 secretRead() {
@@ -1491,6 +1505,9 @@ OutputJSON() {
     # Save current terminal settings (needed for later restore after password prompt)
     stty_orig=$(stty -g)
 
+    # Set the date command
+    SetDateCommand
+
     # Test if the authentication endpoint is available
     TestAPIAvailability
     # Authenticate with the FTL server
@@ -1513,6 +1530,9 @@ ShowVersion() {
 
     # Save current terminal settings (needed for later restore after password prompt)
     stty_orig=$(stty -g)
+
+    # Set the date command
+    SetDateCommand
 
     # Test if the authentication endpoint is available
     TestAPIAvailability
@@ -1551,6 +1571,9 @@ StartupRoutine(){
     moveXOffset; PrintLogo "$1"
     moveXOffset; printf "%b" "START-UP ===========\n"
 
+    # Set the date command
+    SetDateCommand
+
     # Test if the authentication endpoint is available
     TestAPIAvailability
 
@@ -1587,6 +1610,8 @@ StartupRoutine(){
   elif [ "$1" = "mini" ]; then
     moveXOffset; PrintLogo "$1"
     moveXOffset; echo "START UP ====================="
+    # Set the date command
+    SetDateCommand
     # Test if the authentication endpoint is available
     TestAPIAvailability
     # Authenticate with the FTL server
@@ -1624,6 +1649,9 @@ StartupRoutine(){
     else
       moveXOffset; echo "START UP ==================================================="
     fi
+
+    # Set the date command
+    SetDateCommand
 
     # Test if the authentication endpoint is available
     TestAPIAvailability
