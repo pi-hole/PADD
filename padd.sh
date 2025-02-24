@@ -424,19 +424,21 @@ GetSystemInformation() {
         temperature="${cpu_temp}°${temp_unit}"
         # no conversion needed
         cpu_temp_celsius="$(echo "${cpu_temp}" | awk -F '.' '{print $1}')"
+        temp_unicode=true
     elif [ "${temp_unit}" = "F" ]; then
         temperature="${cpu_temp}°${temp_unit}"
         # convert to Celsius for limit checking
         cpu_temp_celsius="$(echo "${cpu_temp}" | awk '{print ($1-32) * 5 / 9}' | awk -F '.' '{print $1}')"
+        temp_unicode=true
     elif [ "${temp_unit}" = "K" ]; then
         # no ° for Kelvin
         temperature="${cpu_temp}${temp_unit}"
         # convert to Celsius for limit checking
         cpu_temp_celsius="$(echo "${cpu_temp}" | awk '{print $1 - 273.15}' | awk -F '.' '{print $1}')"
     else # unknown unit
-        temperature="${cpu_temp}°?"
+        temperature="N/A"
         # no conversion needed
-        cpu_temp_celsius=0
+        cpu_temp_celsius=-274
     fi
 
     # CPU temperature heatmap
@@ -450,8 +452,10 @@ GetSystemInformation() {
         temp_heatmap=${magenta_text}
     elif [ "${cpu_temp_celsius}" -gt 60 ]; then
         temp_heatmap=${blue_text}
-    else
+    elif [ "${cpu_temp_celsius}" -gt -274 ]; then
         temp_heatmap=${cyan_text}
+    else
+        temp_heatmap=${clear_text}
     fi
 
     # CPU, load, heatmap
@@ -1149,6 +1153,11 @@ PrintDashboard() {
     elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
         # slim is a screen with at least 60 columns and exactly 21 lines
         # regular is a screen at least 60x22 (columns x lines)
+        if [ "$temp_unicode" = true ]; then
+            temp_padding=21
+        else
+            temp_padding=20
+        fi
         if [ "$1" = "slim" ]; then
            moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${version_info}${reset_text}"
            moveXOffset; printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
@@ -1175,10 +1184,15 @@ PrintDashboard() {
         moveXOffset; printf " %-10s%-16s%-6s${dhcp_range_heatmap}%-36s${reset_text}${clear_line}\n" "DHCP:" "${dhcp_check_box}" "Range" "${dhcp_range}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =====================================================${reset_text}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Uptime:" "${system_uptime}"
-        moveXOffset; printf " %-10s${temp_heatmap}%-21s${reset_text}%-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
+        moveXOffset; printf " %-10s${temp_heatmap}%-""${temp_padding}""s${reset_text}%-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-4s${reset_text}${clear_line}\n" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}"
         moveXOffset; printf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
     else # ${padd_size} = mega
          # mega is a screen with at least 80 columns and 26 lines
+        if [ "$temp_unicode" = true ]; then
+            temp_padding=10
+        else
+            temp_padding=9
+        fi
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_1}"
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_2}   ${version_info}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
@@ -1204,7 +1218,7 @@ PrintDashboard() {
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}SYSTEM =========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Device:" "${sys_model}"
         moveXOffset; printf " %-10s%-39s %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}\n" "Uptime:" "${system_uptime}" "Memory:" "${memory_bar}" "${memory_percent}%"
-        moveXOffset; printf " %-10s${temp_heatmap}%-10s${reset_text} %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-7s${reset_text} %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
+        moveXOffset; printf " %-10s${temp_heatmap}%-""${temp_padding}""s${reset_text} %-10s${cpu_load_1_heatmap}%-4s${reset_text}, ${cpu_load_5_heatmap}%-4s${reset_text}, ${cpu_load_15_heatmap}%-7s${reset_text} %-10s[${memory_heatmap}%-10s${reset_text}] %-6s${clear_line}" "CPU Temp:" "${temperature}" "CPU Load:" "${cpu_load_1}" "${cpu_load_5}" "${cpu_load_15}" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
     fi
 
     # Clear to end of screen (below the drawn dashboard)
