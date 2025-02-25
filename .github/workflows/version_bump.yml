@@ -17,7 +17,9 @@ jobs:
           LATEST_TAG=$(gh -R $REPO release list -L 1 | awk '{printf $3}')
           echo "Latest version tag for releases in $REPO is $LATEST_TAG"
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_ENV
-          [[ -z ${LATEST_TAG} ]] && echo "Error: LATEST_TAG is empty, aborting" && exit 1
+          # Exit when LATEST_TAG is empty, due to github connection errors
+          if [[ -z "${LATEST_TAG}" ]]; then echo "Error: LATEST_TAG is empty, aborting" && exit 1; fi;
+        shell: bash
 
       - name: Checkout code
         uses: actions/checkout@v4.2.2
@@ -28,14 +30,16 @@ jobs:
         run: |
           LATEST_TAG=${{ env.latest_tag }}
           REMOTE_BRANCH=$(git ls-remote --heads origin "bump_$LATEST_TAG")
-          [[ -z ${REMOTE_BRANCH} ]] && echo "branch_exists=false" >> $GITHUB_ENV || echo "branch_exists=true" >> $GITHUB_ENV
-          [[ -z ${REMOTE_BRANCH} ]] && echo "Remote branch bump_$LATEST_TAG does not exist" || echo "Remote branch bump_$LATEST_TAG already exists"
+          [[ -z "${REMOTE_BRANCH}" ]] && echo "branch_exists=false" >> $GITHUB_ENV || echo "branch_exists=true" >> $GITHUB_ENV
+          [[ -z "${REMOTE_BRANCH}" ]] && echo "Remote branch bump_$LATEST_TAG does not exist" || echo "Remote branch bump_$LATEST_TAG already exists"
+        shell: bash
 
       - name: Get current version
         run: |
           CURRENT_VERSION=$(cat padd.sh | grep '^padd_version=' | cut -d'"' -f 2)
           echo "Current PADD version is $CURRENT_VERSION"
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_ENV
+        shell: bash
 
       - name: Create PR if versions don't match and branch does not exist
         if: (env.current_version != env.latest_tag) && (env.branch_exists == 'false')
@@ -48,3 +52,4 @@ jobs:
           git commit -a -m "Bump version to $LATEST_TAG"
           git push --set-upstream origin "bump_$LATEST_TAG"
           gh pr create -B development -H "bump_$LATEST_TAG" --title "Bump version to ${LATEST_TAG}" --body 'Created by Github action' --label 'Internal'
+        shell: bash
