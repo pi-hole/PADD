@@ -1523,6 +1523,7 @@ OutputJSON() {
     GetPADDData
     GetSummaryInformation
     printf "%b" "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today},\"clients\": ${clients}}"
+    exit 0
 }
 
 ShowVersion() {
@@ -1556,6 +1557,7 @@ ShowVersion() {
     else
         printf "%s${clear_line}\n" "PADD version is ${padd_version_heatmap}${padd_version}${reset_text} (Latest: ${padd_version_latest})"
     fi
+    exit 0
 }
 
 StartupRoutine(){
@@ -1921,10 +1923,10 @@ main(){
 # Process all options (if present)
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        "-j" | "--json"     ) xOffset=0; OutputJSON; exit 0;;
-        "-u" | "--update"   ) Update;;
+        "-j" | "--json"     ) xOffset=0; showJSON=true;;
+        "-u" | "--update"   ) xOffset=0; doUpdate=true;;
         "-h" | "--help"     ) DisplayHelp; exit 0;;
-        "-v" | "--version"  ) xOffset=0; ShowVersion; exit 0;;
+        "-v" | "--version"  ) xOffset=0; versionOnly=true ;;
         "--xoff"            ) xOffset="$2"; xOffOrig="$2"; shift;;
         "--yoff"            ) yOffset="$2"; yOffOrig="$2"; shift;;
         "--server"          ) SERVER="$2"; shift;;
@@ -1934,5 +1936,17 @@ while [ "$#" -gt 0 ]; do
     esac
     shift
 done
+
+if [ "${showJSON}" = true ]; then
+    OutputJSON
+fi
+
+if [ "${versionOnly}" ]; then
+    ShowVersion
+fi
+
+if [ "${doUpdate}" ]; then
+    Update
+fi
 
 main
