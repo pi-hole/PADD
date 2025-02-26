@@ -1503,29 +1503,6 @@ check_dependencies() {
 
 ########################################## MAIN FUNCTIONS ##########################################
 
-OutputJSON() {
-    # Hiding the cursor.
-    # https://vt100.net/docs/vt510-rm/DECTCEM.html
-    printf '\e[?25l'
-    # Traps for graceful shutdown
-    # https://unix.stackexchange.com/a/681201
-    trap CleanExit EXIT
-    trap sig_cleanup INT QUIT TERM
-    # Save current terminal settings (needed for later restore after password prompt)
-    stty_orig=$(stty -g)
-
-    # Test if the authentication endpoint is available
-    TestAPIAvailability
-    # Authenticate with the FTL server
-    printf "%b" "Establishing connection with FTL...\n"
-    LoginAPI
-
-    GetPADDData
-    GetSummaryInformation
-    printf "%b" "{\"domains_being_blocked\":${domains_being_blocked_raw},\"dns_queries_today\":${dns_queries_today_raw},\"ads_blocked_today\":${ads_blocked_today_raw},\"ads_percentage_today\":${ads_percentage_today},\"clients\": ${clients}}"
-    exit 0
-}
-
 ShowVersion() {
     # Hiding the cursor.
     # https://vt100.net/docs/vt510-rm/DECTCEM.html
@@ -1552,10 +1529,10 @@ ShowVersion() {
     fi
     if [ ! "${DOCKER_VERSION}" = "null" ]; then
         # Check for latest Docker version
-        printf "%s${clear_line}\n" "PADD version is ${padd_version} as part of Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text} (Latest Docker: ${GITHUB_DOCKER_VERSION})"
+        printf "\n%s${clear_line}\n" "PADD version is ${padd_version} as part of Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text} (Latest Docker: ${GITHUB_DOCKER_VERSION})"
         version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
     else
-        printf "%s${clear_line}\n" "PADD version is ${padd_version_heatmap}${padd_version}${reset_text} (Latest: ${padd_version_latest})"
+        printf "\n%s${clear_line}\n" "PADD version is ${padd_version_heatmap}${padd_version}${reset_text} (Latest: ${padd_version_latest})"
     fi
     exit 0
 }
@@ -1828,7 +1805,6 @@ DisplayHelp() {
 :::  --server <DOMAIN|IP>    domain or IP of your Pi-hole (default: localhost)
 :::  --secret <password>     your Pi-hole's password, required to access the API
 :::  --2fa <2fa>             your Pi-hole's 2FA code, if 2FA is enabled
-:::  -j, --json              output stats as JSON formatted string and exit
 :::  -u, --update            update to the latest version
 :::  -v, --version           show PADD version info
 :::  -h, --help              display this help text
@@ -1923,7 +1899,6 @@ main(){
 # Process all options (if present)
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        "-j" | "--json"     ) xOffset=0; showJSON=true;;
         "-u" | "--update"   ) xOffset=0; doUpdate=true;;
         "-h" | "--help"     ) DisplayHelp; exit 0;;
         "-v" | "--version"  ) xOffset=0; versionOnly=true ;;
@@ -1936,10 +1911,6 @@ while [ "$#" -gt 0 ]; do
     esac
     shift
 done
-
-if [ "${showJSON}" = true ]; then
-    OutputJSON
-fi
 
 if [ "${versionOnly}" ]; then
     ShowVersion
