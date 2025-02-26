@@ -435,10 +435,12 @@ GetSystemInformation() {
         temperature="${cpu_temp}${temp_unit}"
         # convert to Celsius for limit checking
         cpu_temp_celsius="$(echo "${cpu_temp}" | awk '{print $1 - 273.15}' | awk -F '.' '{print $1}')"
+        temp_unicode=false
     else # unknown unit
         temperature="N/A"
         # no conversion needed
         cpu_temp_celsius=-274
+        temp_unicode=false
     fi
 
     # CPU temperature heatmap
