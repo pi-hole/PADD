@@ -922,6 +922,11 @@ GenerateSizeDependendOutput() {
     top_domain=$(truncateString "$top_domain_raw" 48)
     top_client=$(truncateString "$top_client_raw" 48)
 
+    if [ "$temp_unicode" = true ]; then
+      temp_padding=21
+    else
+      temp_padding=20
+    fi
 
   elif [ "$1" = "mega" ]; then
     ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
@@ -930,6 +935,12 @@ GenerateSizeDependendOutput() {
     top_blocked=$(truncateString "$top_blocked_raw" 68)
     top_domain=$(truncateString "$top_domain_raw" 68)
     top_client=$(truncateString "$top_client_raw" 68)
+
+    if [ "$temp_unicode" = true ]; then
+      temp_padding=10
+    else
+      temp_padding=9
+    fi
 
   fi
 
@@ -1153,11 +1164,6 @@ PrintDashboard() {
     elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
         # slim is a screen with at least 60 columns and exactly 21 lines
         # regular is a screen at least 60x22 (columns x lines)
-        if [ "$temp_unicode" = true ]; then
-            temp_padding=21
-        else
-            temp_padding=20
-        fi
         if [ "$1" = "slim" ]; then
            moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${version_info}${reset_text}"
            moveXOffset; printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
@@ -1188,11 +1194,6 @@ PrintDashboard() {
         moveXOffset; printf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
     else # ${padd_size} = mega
          # mega is a screen with at least 80 columns and 26 lines
-        if [ "$temp_unicode" = true ]; then
-            temp_padding=10
-        else
-            temp_padding=9
-        fi
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_1}"
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_2}   ${version_info}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
