@@ -1761,15 +1761,31 @@ NormalPADD() {
 }
 
 Update() {
-    # source version file to check if $DOCKER_VERSION is set
-    . /etc/pihole/versions
+    # Hiding the cursor.
+    # https://vt100.net/docs/vt510-rm/DECTCEM.html
+    printf '\e[?25l'
+    # Traps for graceful shutdown
+    # https://unix.stackexchange.com/a/681201
+    trap CleanExit EXIT
+    trap sig_cleanup INT QUIT TERM
 
-    if [ -n "${DOCKER_VERSION}" ]; then
+    # Save current terminal settings (needed for later restore after password prompt)
+    stty_orig=$(stty -g)
+
+    # Test if the authentication endpoint is available
+    TestAPIAvailability
+    # Authenticate with the FTL server
+    printf "%b" "Establishing connection with FTL...\n"
+    LoginAPI
+
+    GetPADDData
+    GetVersionInformation
+    GetPADDInformation
+
+    if [ ! "${DOCKER_VERSION}" = "null" ]; then
         echo "${check_box_info} Update is not supported for Docker"
         exit 1
     fi
-
-    GetPADDInformation
 
     if [ "${padd_out_of_date_flag}" = "true" ]; then
         echo "${check_box_info} Updating PADD from ${padd_version} to ${padd_version_latest}"
