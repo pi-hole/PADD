@@ -261,82 +261,82 @@ DeleteSession() {
             "401") moveXOffset; printf "%b" "Logout attempt without a valid session. Unauthorized!\n";;
          esac;
     else
-      # no session to delete, just print a newline for nicer output
-      echo
+        # no session to delete, just print a newline for nicer output
+        echo
     fi
 
 }
 
 Authenticate() {
-  sessionResponse="$(curl --connect-timeout 2 -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\", \"totp\":${totp:-null}}" )"
+    sessionResponse="$(curl --connect-timeout 2 -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\", \"totp\":${totp:-null}}" )"
 
-  if [ -z "${sessionResponse}" ]; then
-    moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
-    moveXOffset; echo "Usage: $0 [--server <domain|IP>]"
-    exit 1
-  fi
-  # obtain validity, session ID and sessionMessage from session response
-  validSession=$(echo "${sessionResponse}"| jq .session.valid 2>/dev/null)
-  SID=$(echo "${sessionResponse}"| jq --raw-output .session.sid 2>/dev/null)
-  sessionMessage=$(echo "${sessionResponse}"| jq --raw-output .session.message 2>/dev/null)
+    if [ -z "${sessionResponse}" ]; then
+        moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
+        moveXOffset; echo "Usage: $0 [--server <domain|IP>]"
+        exit 1
+    fi
+    # obtain validity, session ID and sessionMessage from session response
+    validSession=$(echo "${sessionResponse}"| jq .session.valid 2>/dev/null)
+    SID=$(echo "${sessionResponse}"| jq --raw-output .session.sid 2>/dev/null)
+    sessionMessage=$(echo "${sessionResponse}"| jq --raw-output .session.message 2>/dev/null)
 
-  # obtain the error message from the session response
-  sessionError=$(echo "${sessionResponse}"| jq --raw-output .error.message 2>/dev/null)
+    # obtain the error message from the session response
+    sessionError=$(echo "${sessionResponse}"| jq --raw-output .error.message 2>/dev/null)
 }
 
 GetFTLData() {
-  local response
-  local data
-  local status
+    local response
+    local data
+    local status
 
-  # get the data from querying the API as well as the http status code
-  response=$(curl --connect-timeout 2 -sk -w "%{http_code}" -X GET "${API_URL}$1$2" -H "Accept: application/json" -H "sid: ${SID}" )
+    # get the data from querying the API as well as the http status code
+    response=$(curl --connect-timeout 2 -sk -w "%{http_code}" -X GET "${API_URL}$1$2" -H "Accept: application/json" -H "sid: ${SID}" )
 
-  # status are the last 3 characters
-  # not using ${response#"${response%???}"}" here because it's extremely slow on big responses
-  status=$(printf "%s" "${response}" | tail -c 3)
-  # data is everything from response without the last 3 characters
-  data=$(printf %s "${response%???}")
+    # status are the last 3 characters
+    # not using ${response#"${response%???}"}" here because it's extremely slow on big responses
+    status=$(printf "%s" "${response}" | tail -c 3)
+    # data is everything from response without the last 3 characters
+    data=$(printf %s "${response%???}")
 
-  if [ "${status}" = 200 ]; then
-    echo "${data}"
-  elif [ "${status}" = 000 ]; then
-    # connection lost
-    echo "000"
-  elif [ "${status}" = 401 ]; then
-    # unauthorized
-    echo "401"
-  fi
+    if [ "${status}" = 200 ]; then
+        echo "${data}"
+    elif [ "${status}" = 000 ]; then
+        # connection lost
+        echo "000"
+    elif [ "${status}" = 401 ]; then
+        # unauthorized
+        echo "401"
+    fi
 }
 
 
 ############################################# GETTERS ##############################################
 
 GetPADDData() {
-  local response
-  response=$(GetFTLData "padd" "$1")
+    local response
+    response=$(GetFTLData "padd" "$1")
 
-  if [ "${response}" = 000 ]; then
-    # connection lost
-    padd_data="000"
-  elif [ "${response}" = 401 ]; then
-    # unauthorized
-    padd_data="401"
-  else
-    # Iterate over all the leaf paths in the JSON object and creates key-value
-    # pairs in the format "key=value". Nested objects are flattened using the dot
-    # notation, e.g., { "a": { "b": 1 } } becomes "a.b=1".
-    # We cannot use leaf_paths here as it was deprecated in jq 1.6 and removed in
-    # current master
-    # Using "paths(scalars | true)" will return null and false values.
-    # We also check if the value is exactly `null` and, in this case, return the
-    # string "null", as jq would return an empty string for nulls.
-    padd_data=$(echo "$response" | jq -r 'paths(scalars | true) as $p | [$p | join(".")] + [if getpath($p)!=null then getpath($p) else "null" end] | join("=")' 2>/dev/null)
-  fi
+    if [ "${response}" = 000 ]; then
+        # connection lost
+        padd_data="000"
+    elif [ "${response}" = 401 ]; then
+        # unauthorized
+        padd_data="401"
+    else
+        # Iterate over all the leaf paths in the JSON object and creates key-value
+        # pairs in the format "key=value". Nested objects are flattened using the dot
+        # notation, e.g., { "a": { "b": 1 } } becomes "a.b=1".
+        # We cannot use leaf_paths here as it was deprecated in jq 1.6 and removed in
+        # current master
+        # Using "paths(scalars | true)" will return null and false values.
+        # We also check if the value is exactly `null` and, in this case, return the
+        # string "null", as jq would return an empty string for nulls.
+        padd_data=$(echo "$response" | jq -r 'paths(scalars | true) as $p | [$p | join(".")] + [if getpath($p)!=null then getpath($p) else "null" end] | join("=")' 2>/dev/null)
+    fi
 }
 
 GetPADDValue() {
-  echo "$padd_data" | sed -n "s/^$1=//p" 2>/dev/null
+    echo "$padd_data" | sed -n "s/^$1=//p" 2>/dev/null
 }
 
 GetSummaryInformation() {
@@ -358,33 +358,33 @@ GetSummaryInformation() {
     fi
 
 
-  clients=$(GetPADDValue active_clients)
+    clients=$(GetPADDValue active_clients)
 
-  blocking_enabled=$(GetPADDValue blocking)
+    blocking_enabled=$(GetPADDValue blocking)
 
-  domains_being_blocked_raw=$(GetPADDValue gravity_size)
-  domains_being_blocked=$(printf "%.f" "${domains_being_blocked_raw}")
+    domains_being_blocked_raw=$(GetPADDValue gravity_size)
+    domains_being_blocked=$(printf "%.f" "${domains_being_blocked_raw}")
 
-  dns_queries_today_raw=$(GetPADDValue queries.total)
-  dns_queries_today=$(printf "%.f" "${dns_queries_today_raw}")
+    dns_queries_today_raw=$(GetPADDValue queries.total)
+    dns_queries_today=$(printf "%.f" "${dns_queries_today_raw}")
 
-  ads_blocked_today_raw=$(GetPADDValue queries.blocked)
-  ads_blocked_today=$(printf "%.f" "${ads_blocked_today_raw}")
+    ads_blocked_today_raw=$(GetPADDValue queries.blocked)
+    ads_blocked_today=$(printf "%.f" "${ads_blocked_today_raw}")
 
-  ads_percentage_today_raw=$(GetPADDValue queries.percent_blocked)
-  ads_percentage_today=$(printf "%.1f" "${ads_percentage_today_raw}")
+    ads_percentage_today_raw=$(GetPADDValue queries.percent_blocked)
+    ads_percentage_today=$(printf "%.1f" "${ads_percentage_today_raw}")
 
-  cache_size=$(GetPADDValue cache.size)
-  cache_evictions=$(GetPADDValue cache.evicted)
-  cache_inserts=$(echo "${padd_data}"| GetPADDValue cache.inserted)
+    cache_size=$(GetPADDValue cache.size)
+    cache_evictions=$(GetPADDValue cache.evicted)
+    cache_inserts=$(echo "${padd_data}"| GetPADDValue cache.inserted)
 
-  latest_blocked_raw=$(GetPADDValue recent_blocked)
+    latest_blocked_raw=$(GetPADDValue recent_blocked)
 
-  top_blocked_raw=$(GetPADDValue top_blocked)
+    top_blocked_raw=$(GetPADDValue top_blocked)
 
-  top_domain_raw=$(GetPADDValue top_domain)
+    top_domain_raw=$(GetPADDValue top_domain)
 
-  top_client_raw=$(GetPADDValue top_client)
+    top_client_raw=$(GetPADDValue top_client)
 }
 
 GetSystemInformation() {
@@ -685,19 +685,19 @@ GetPiholeInformation() {
 
 
 
-  # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled
-  dns_down_flag=false
-  if [ "${ftl_dns_port}" = 0 ]; then
-    dns_status="DNS offline"
-    dns_heatmap=${red_text}
-    dns_check_box=${check_box_bad}
-    # set flag to change the status message in SetStatusMessage()
-    dns_down_flag=true
-  else
-    dns_check_box=${check_box_good}
-    dns_status="Active"
-    dns_heatmap=${green_text}
-fi
+    # ${ftl_dns_port} == 0 DNS server part of dnsmasq disabled
+    dns_down_flag=false
+    if [ "${ftl_dns_port}" = 0 ]; then
+        dns_status="DNS offline"
+        dns_heatmap=${red_text}
+        dns_check_box=${check_box_bad}
+        # set flag to change the status message in SetStatusMessage()
+        dns_down_flag=true
+    else
+        dns_check_box=${check_box_good}
+        dns_status="Active"
+        dns_heatmap=${green_text}
+    fi
 }
 
 GetVersionInformation() {
@@ -863,89 +863,89 @@ GetVersionInformation() {
 }
 
 GetPADDInformation() {
-  # If PADD is running inside docker, immediately return without checking for an update
-  if [ ! "${DOCKER_VERSION}" = "null" ]; then
-    return
-  fi
-
-  # PADD version information...
-  padd_version_latest="$(curl --connect-timeout 5 --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
-  # is PADD up-to-date?
-  padd_out_of_date_flag=false
-  if [ -z "${padd_version_latest}" ]; then
-    padd_version_heatmap=${yellow_text}
-  else
-    padd_version_latest_converted="$(VersionConverter "${padd_version_latest}")"
-    padd_version_converted=$(VersionConverter "${padd_version}")
-
-    if [ "${padd_version_converted}" -lt "${padd_version_latest_converted}" ]; then
-      padd_out_of_date_flag="true"
-      padd_version_heatmap=${red_text}
-    else
-      # local and remote PADD version match or local is newer
-      padd_version_heatmap=${green_text}
+    # If PADD is running inside docker, immediately return without checking for an update
+    if [ ! "${DOCKER_VERSION}" = "null" ]; then
+        return
     fi
-  fi
+
+    # PADD version information...
+    padd_version_latest="$(curl --connect-timeout 5 --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
+    # is PADD up-to-date?
+    padd_out_of_date_flag=false
+    if [ -z "${padd_version_latest}" ]; then
+        padd_version_heatmap=${yellow_text}
+    else
+        padd_version_latest_converted="$(VersionConverter "${padd_version_latest}")"
+        padd_version_converted=$(VersionConverter "${padd_version}")
+
+        if [ "${padd_version_converted}" -lt "${padd_version_latest_converted}" ]; then
+        padd_out_of_date_flag="true"
+        padd_version_heatmap=${red_text}
+        else
+        # local and remote PADD version match or local is newer
+        padd_version_heatmap=${green_text}
+        fi
+    fi
 }
 
 GenerateSizeDependendOutput() {
-  if [ "$1" = "pico" ] || [ "$1" = "nano" ]; then
-    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 9 "color")
+    if [ "$1" = "pico" ] || [ "$1" = "nano" ]; then
+        ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 9 "color")
 
-  elif  [ "$1" = "micro" ]; then
-    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 10 "color")
+    elif  [ "$1" = "micro" ]; then
+        ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 10 "color")
 
-  elif [ "$1" = "mini" ]; then
-    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 20 "color")
+    elif [ "$1" = "mini" ]; then
+        ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 20 "color")
 
-    latest_blocked=$(truncateString "$latest_blocked_raw" 29)
-    top_blocked=$(truncateString "$top_blocked_raw" 29)
+        latest_blocked=$(truncateString "$latest_blocked_raw" 29)
+        top_blocked=$(truncateString "$top_blocked_raw" 29)
 
-  elif [ "$1" = "tiny" ]; then
-    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
+    elif [ "$1" = "tiny" ]; then
+        ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
 
-    latest_blocked=$(truncateString "$latest_blocked_raw" 41)
-    top_blocked=$(truncateString "$top_blocked_raw" 41)
-    top_domain=$(truncateString "$top_domain_raw" 41)
-    top_client=$(truncateString "$top_client_raw" 41)
+        latest_blocked=$(truncateString "$latest_blocked_raw" 41)
+        top_blocked=$(truncateString "$top_blocked_raw" 41)
+        top_domain=$(truncateString "$top_domain_raw" 41)
+        top_client=$(truncateString "$top_client_raw" 41)
 
-  elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
-    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 40 "color")
+    elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
+        ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 40 "color")
 
-    latest_blocked=$(truncateString "$latest_blocked_raw" 48)
-    top_blocked=$(truncateString "$top_blocked_raw" 48)
-    top_domain=$(truncateString "$top_domain_raw" 48)
-    top_client=$(truncateString "$top_client_raw" 48)
+        latest_blocked=$(truncateString "$latest_blocked_raw" 48)
+        top_blocked=$(truncateString "$top_blocked_raw" 48)
+        top_domain=$(truncateString "$top_domain_raw" 48)
+        top_client=$(truncateString "$top_client_raw" 48)
 
 
-  elif [ "$1" = "mega" ]; then
-    ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
+    elif [ "$1" = "mega" ]; then
+        ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
 
-    latest_blocked=$(truncateString "$latest_blocked_raw" 68)
-    top_blocked=$(truncateString "$top_blocked_raw" 68)
-    top_domain=$(truncateString "$top_domain_raw" 68)
-    top_client=$(truncateString "$top_client_raw" 68)
+        latest_blocked=$(truncateString "$latest_blocked_raw" 68)
+        top_blocked=$(truncateString "$top_blocked_raw" 68)
+        top_domain=$(truncateString "$top_domain_raw" 68)
+        top_client=$(truncateString "$top_client_raw" 68)
 
-  fi
+    fi
 
-  # System uptime
-  if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-    system_uptime="$(convertUptime "${system_uptime_raw}" | awk -F ',' '{print $1 "," $2}')"
-  else
-    system_uptime="$(convertUptime "${system_uptime_raw}")"
-  fi
+    # System uptime
+    if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
+        system_uptime="$(convertUptime "${system_uptime_raw}" | awk -F ',' '{print $1 "," $2}')"
+    else
+        system_uptime="$(convertUptime "${system_uptime_raw}")"
+    fi
 
-  #  Bar generations
-  if [ "$1" = "mini" ]; then
-    cpu_bar=$(BarGenerator "${cpu_percent}" 20)
-    memory_bar=$(BarGenerator "${memory_percent}" 20)
-  elif [ "$1" = "tiny" ]; then
-    cpu_bar=$(BarGenerator "${cpu_percent}" 7)
-    memory_bar=$(BarGenerator "${memory_percent}" 7)
-  else
-    cpu_bar=$(BarGenerator "${cpu_percent}" 10)
-    memory_bar=$(BarGenerator "${memory_percent}" 10)
-  fi
+    #  Bar generations
+    if [ "$1" = "mini" ]; then
+        cpu_bar=$(BarGenerator "${cpu_percent}" 20)
+        memory_bar=$(BarGenerator "${memory_percent}" 20)
+    elif [ "$1" = "tiny" ]; then
+        cpu_bar=$(BarGenerator "${cpu_percent}" 7)
+        memory_bar=$(BarGenerator "${memory_percent}" 7)
+    else
+        cpu_bar=$(BarGenerator "${cpu_percent}" 10)
+        memory_bar=$(BarGenerator "${memory_percent}" 10)
+    fi
 }
 
 SetStatusMessage() {
@@ -1014,43 +1014,43 @@ SetStatusMessage() {
 ############################################# PRINTERS #############################################
 
 PrintLogo() {
-  if [ ! "${DOCKER_VERSION}" = "null" ]; then
-      version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
-    else
-      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
-  fi
+    if [ ! "${DOCKER_VERSION}" = "null" ]; then
+        version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
+        else
+        version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
+    fi
 
-  # Screen size checks
-  if [ "$1" = "pico" ]; then
-    printf "%s${clear_line}\n" "p${padd_text} ${pico_status}"
-  elif [ "$1" = "nano" ]; then
-    printf "%s${clear_line}\n" "n${padd_text} ${mini_status}"
-  elif [ "$1" = "micro" ]; then
-    printf "%s${clear_line}\n${clear_line}\n" "µ${padd_text}     ${mini_status}"
-  elif [ "$1" = "mini" ]; then
-    printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
-  elif [ "$1" = "tiny" ]; then
-    printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   ${version_info}${reset_text}"
-    printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
-  elif [ "$1" = "slim" ]; then
-    printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
-  elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
-    printf "%s${clear_line}\n" "${padd_logo_1}"
-    printf "%s${clear_line}\n" "${padd_logo_2}${version_info}${reset_text}"
-    printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
-  # normal or not defined
-  else
-    printf "%s${clear_line}\n" "${padd_logo_retro_1}"
-    printf "%s${clear_line}\n" "${padd_logo_retro_2}   ${version_info}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
-    printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_retro_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
-  fi
+    # Screen size checks
+    if [ "$1" = "pico" ]; then
+        printf "%s${clear_line}\n" "p${padd_text} ${pico_status}"
+    elif [ "$1" = "nano" ]; then
+        printf "%s${clear_line}\n" "n${padd_text} ${mini_status}"
+    elif [ "$1" = "micro" ]; then
+        printf "%s${clear_line}\n${clear_line}\n" "µ${padd_text}     ${mini_status}"
+    elif [ "$1" = "mini" ]; then
+        printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
+    elif [ "$1" = "tiny" ]; then
+        printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   ${version_info}${reset_text}"
+        printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
+    elif [ "$1" = "slim" ]; then
+        printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
+    elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
+        printf "%s${clear_line}\n" "${padd_logo_1}"
+        printf "%s${clear_line}\n" "${padd_logo_2}${version_info}${reset_text}"
+        printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
+    # normal or not defined
+    else
+        printf "%s${clear_line}\n" "${padd_logo_retro_1}"
+        printf "%s${clear_line}\n" "${padd_logo_retro_2}   ${version_info}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
+        printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_retro_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
+    fi
 }
 
 PrintDashboard() {
     if [ ! "${DOCKER_VERSION}" = "null" ]; then
-      version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
+        version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
     else
-      version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
+        version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
     fi
     # Move cursor to (0,0).
     printf '\e[H'
@@ -1216,26 +1216,26 @@ PrintDashboard() {
 # Provides a color based on a provided percentage
 # takes in one or two parameters
 HeatmapGenerator () {
-  # if one number is provided, just use that percentage to figure out the colors
-  if [ -z "$2" ]; then
-    load=$(printf "%.0f" "$1")
-  # if two numbers are provided, do some math to make a percentage to figure out the colors
-  else
-    load=$(printf "%.0f" "$(echo "$1 $2" | awk '{print ($1 / $2) * 100}')")
-  fi
+    # if one number is provided, just use that percentage to figure out the colors
+    if [ -z "$2" ]; then
+        load=$(printf "%.0f" "$1")
+    # if two numbers are provided, do some math to make a percentage to figure out the colors
+    else
+        load=$(printf "%.0f" "$(echo "$1 $2" | awk '{print ($1 / $2) * 100}')")
+    fi
 
-  # Color logic
-  #  |<-                 green                  ->| yellow |  red ->
-  #  0  5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100
-  if [ "${load}" -lt 75 ]; then
-    out=${green_text}
-  elif [ "${load}" -lt 90 ]; then
-    out=${yellow_text}
-  else
-    out=${red_text}
-  fi
+    # Color logic
+    #  |<-                 green                  ->| yellow |  red ->
+    #  0  5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100
+    if [ "${load}" -lt 75 ]; then
+        out=${green_text}
+    elif [ "${load}" -lt 90 ]; then
+        out=${yellow_text}
+    else
+        out=${red_text}
+    fi
 
-  echo "$out"
+    echo "$out"
 }
 
 # Provides a "bar graph"
@@ -1244,32 +1244,32 @@ HeatmapGenerator () {
 # $2: max length of the bar
 # $3: colored flag, if "color" backfill with color
 BarGenerator() {
-  # number of filled in cells in the bar
-  barNumber=$(printf %.f "$(echo "$1 $2" | awk '{print ($1 / 100) * $2}')")
-  frontFill=$(for i in $(seq "$barNumber"); do printf "%b" "■"; done)
+    # number of filled in cells in the bar
+    barNumber=$(printf %.f "$(echo "$1 $2" | awk '{print ($1 / 100) * $2}')")
+    frontFill=$(for i in $(seq "$barNumber"); do printf "%b" "■"; done)
 
-  # remaining "unfilled" cells in the bar
-  backfillNumber=$(($2-barNumber))
+    # remaining "unfilled" cells in the bar
+    backfillNumber=$(($2-barNumber))
 
-  # if the filled in cells is less than the max length of the bar, fill it
-  if [ "$barNumber" -lt "$2" ]; then
-    # if the bar should be colored
-    if [ "$3" = "color" ]; then
-      # fill the rest in color
-      backFill=$(for i in $(seq $backfillNumber); do printf "%b" "■"; done)
-      out="${red_text}${frontFill}${green_text}${backFill}${reset_text}"
-    # else, it shouldn't be colored in
+    # if the filled in cells is less than the max length of the bar, fill it
+    if [ "$barNumber" -lt "$2" ]; then
+        # if the bar should be colored
+        if [ "$3" = "color" ]; then
+        # fill the rest in color
+        backFill=$(for i in $(seq $backfillNumber); do printf "%b" "■"; done)
+        out="${red_text}${frontFill}${green_text}${backFill}${reset_text}"
+        # else, it shouldn't be colored in
+        else
+        # fill the rest with "space"
+        backFill=$(for i in $(seq $backfillNumber); do printf "%b" "·"; done)
+        out="${frontFill}${reset_text}${backFill}"
+        fi
+    # else, fill it all the way
     else
-      # fill the rest with "space"
-      backFill=$(for i in $(seq $backfillNumber); do printf "%b" "·"; done)
-      out="${frontFill}${reset_text}${backFill}"
+        out=$(for i in $(seq "$2"); do printf "%b" "■"; done)
     fi
-  # else, fill it all the way
-  else
-    out=$(for i in $(seq "$2"); do printf "%b" "■"; done)
-  fi
 
-  echo "$out"
+    echo "$out"
 }
 
 # Checks the size of the screen and sets the value of ${padd_data}_size
@@ -1355,7 +1355,7 @@ SizeChecker(){
 # converts a given version string e.g. v3.7.1 to 3007001000 to allow for easier comparison of multi digit version numbers
 # credits https://apple.stackexchange.com/a/123408
 VersionConverter() {
-  echo "$@" | tr -d '[:alpha:]' | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
+    echo "$@" | tr -d '[:alpha:]' | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
 }
 
 moveYOffset(){
@@ -1414,11 +1414,11 @@ truncateString() {
 # https://unix.stackexchange.com/a/338844
 convertUptime() {
 
-  local D=$(($1/60/60/24))
-  local H=$(($1/60/60%24))
-  local M=$(($1/60%60))
+    local D=$(($1/60/60/24))
+    local H=$(($1/60/60%24))
+    local M=$(($1/60%60))
 
-  printf "%d days, %02d hours, %02d minutes" $D $H $M
+    printf "%d days, %02d hours, %02d minutes" $D $H $M
 }
 
 secretRead() {
@@ -1535,144 +1535,144 @@ ShowVersion() {
         version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
     else
         printf "%s${clear_line}\n" "PADD version is ${padd_version_heatmap}${padd_version}${reset_text} (Latest: ${padd_version_latest})"
-  fi
+    fi
 }
 
 StartupRoutine(){
 
-  if [ "$1" = "ants" ]; then
-    # If the screen is too small from the beginning, exit
-    printf "%b" "${check_box_bad} Error!\n    PADD isn't\n    for ants!\n"
-    exit 1
-  fi
-
-  # Clear the screen and move cursor to (0,0).
-  # This mimics the 'clear' command.
-  # https://vt100.net/docs/vt510-rm/ED.html
-  # https://vt100.net/docs/vt510-rm/CUP.html
-  # E3 extension `\e[3J` to clear the scrollback buffer see 'man clear'
-  printf '\e[H\e[2J\e[3J'
-
-  # adds the y-offset
-  moveYOffset
-
-  if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-    moveXOffset; PrintLogo "$1"
-    moveXOffset; printf "%b" "START-UP ===========\n"
-
-    # Test if the authentication endpoint is available
-    TestAPIAvailability
-
-    # Authenticate with the FTL server
-    moveXOffset; printf "%b" "Establishing connection with FTL...\n"
-    LoginAPI
-
-    moveXOffset; printf "%b" "Starting PADD...\n"
-
-    moveXOffset; printf "%b" " [■·········]  10%\r"
-
-    # Request PADD data
-    GetPADDData
-
-    # Check for updates
-    moveXOffset; printf "%b" " [■■········]  20%\r"
-    moveXOffset; printf "%b" " [■■■·······]  30%\r"
-
-    # Get our information for the first time
-    moveXOffset; printf "%b" " [■■■■······]  40%\r"
-    GetVersionInformation
-    moveXOffset; printf "%b" " [■■■■■·····]  50%\r"
-    GetSummaryInformation
-    moveXOffset; printf "%b" " [■■■■■■····]  60%\r"
-    GetPiholeInformation
-    moveXOffset; printf "%b" " [■■■■■■■···]  70%\r"
-    GetNetworkInformation
-    moveXOffset; printf "%b" " [■■■■■■■■··]  80%\r"
-    GetSystemInformation
-    moveXOffset; printf "%b" " [■■■■■■■■■·]  90%\r"
-    GetPADDInformation
-    moveXOffset; printf "%b" " [■■■■■■■■■■] 100%\n"
-
-  elif [ "$1" = "mini" ]; then
-    moveXOffset; PrintLogo "$1"
-    moveXOffset; echo "START UP ====================="
-    # Test if the authentication endpoint is available
-    TestAPIAvailability
-    # Authenticate with the FTL server
-    moveXOffset; printf "%b" "Establishing connection with FTL...\n"
-    LoginAPI
-
-    # Request PADD data
-    moveXOffset; echo "- Requesting PADD information..."
-    GetPADDData
-
-    # Get our information for the first time
-    moveXOffset; echo "- Gathering version info."
-    GetVersionInformation
-    moveXOffset; echo "- Gathering system info."
-    GetSystemInformation
-    moveXOffset; echo "- Gathering CPU/DNS info."
-    GetPiholeInformation
-    GetSummaryInformation
-    moveXOffset; echo "- Gathering network info."
-    GetNetworkInformation
-    GetPADDInformation
-    if [ ! "${DOCKER_VERSION}" = "null" ]; then
-      moveXOffset; echo "  - Docker Tag ${DOCKER_VERSION}"
-    else
-      moveXOffset; echo "  - Core $CORE_VERSION, Web $WEB_VERSION"
-      moveXOffset; echo "  - FTL $FTL_VERSION, PADD ${padd_version}"
+    if [ "$1" = "ants" ]; then
+        # If the screen is too small from the beginning, exit
+        printf "%b" "${check_box_bad} Error!\n    PADD isn't\n    for ants!\n"
+        exit 1
     fi
 
-  else
-    moveXOffset; printf "%b" "${padd_logo_retro_1}\n"
-    moveXOffset; printf "%b" "${padd_logo_retro_2}Pi-hole® Ad Detection Display\n"
-    moveXOffset; printf "%b" "${padd_logo_retro_3}A client for Pi-hole\n\n"
-    if [ "$1" = "tiny" ]; then
-      moveXOffset; echo "START UP ============================================"
+    # Clear the screen and move cursor to (0,0).
+    # This mimics the 'clear' command.
+    # https://vt100.net/docs/vt510-rm/ED.html
+    # https://vt100.net/docs/vt510-rm/CUP.html
+    # E3 extension `\e[3J` to clear the scrollback buffer see 'man clear'
+    printf '\e[H\e[2J\e[3J'
+
+    # adds the y-offset
+    moveYOffset
+
+    if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
+        moveXOffset; PrintLogo "$1"
+        moveXOffset; printf "%b" "START-UP ===========\n"
+
+        # Test if the authentication endpoint is available
+        TestAPIAvailability
+
+        # Authenticate with the FTL server
+        moveXOffset; printf "%b" "Establishing connection with FTL...\n"
+        LoginAPI
+
+        moveXOffset; printf "%b" "Starting PADD...\n"
+
+        moveXOffset; printf "%b" " [■·········]  10%\r"
+
+        # Request PADD data
+        GetPADDData
+
+        # Check for updates
+        moveXOffset; printf "%b" " [■■········]  20%\r"
+        moveXOffset; printf "%b" " [■■■·······]  30%\r"
+
+        # Get our information for the first time
+        moveXOffset; printf "%b" " [■■■■······]  40%\r"
+        GetVersionInformation
+        moveXOffset; printf "%b" " [■■■■■·····]  50%\r"
+        GetSummaryInformation
+        moveXOffset; printf "%b" " [■■■■■■····]  60%\r"
+        GetPiholeInformation
+        moveXOffset; printf "%b" " [■■■■■■■···]  70%\r"
+        GetNetworkInformation
+        moveXOffset; printf "%b" " [■■■■■■■■··]  80%\r"
+        GetSystemInformation
+        moveXOffset; printf "%b" " [■■■■■■■■■·]  90%\r"
+        GetPADDInformation
+        moveXOffset; printf "%b" " [■■■■■■■■■■] 100%\n"
+
+    elif [ "$1" = "mini" ]; then
+        moveXOffset; PrintLogo "$1"
+        moveXOffset; echo "START UP ====================="
+        # Test if the authentication endpoint is available
+        TestAPIAvailability
+        # Authenticate with the FTL server
+        moveXOffset; printf "%b" "Establishing connection with FTL...\n"
+        LoginAPI
+
+        # Request PADD data
+        moveXOffset; echo "- Requesting PADD information..."
+        GetPADDData
+
+        # Get our information for the first time
+        moveXOffset; echo "- Gathering version info."
+        GetVersionInformation
+        moveXOffset; echo "- Gathering system info."
+        GetSystemInformation
+        moveXOffset; echo "- Gathering CPU/DNS info."
+        GetPiholeInformation
+        GetSummaryInformation
+        moveXOffset; echo "- Gathering network info."
+        GetNetworkInformation
+        GetPADDInformation
+        if [ ! "${DOCKER_VERSION}" = "null" ]; then
+        moveXOffset; echo "  - Docker Tag ${DOCKER_VERSION}"
+        else
+        moveXOffset; echo "  - Core $CORE_VERSION, Web $WEB_VERSION"
+        moveXOffset; echo "  - FTL $FTL_VERSION, PADD ${padd_version}"
+        fi
+
     else
-      moveXOffset; echo "START UP ==================================================="
+        moveXOffset; printf "%b" "${padd_logo_retro_1}\n"
+        moveXOffset; printf "%b" "${padd_logo_retro_2}Pi-hole® Ad Detection Display\n"
+        moveXOffset; printf "%b" "${padd_logo_retro_3}A client for Pi-hole\n\n"
+        if [ "$1" = "tiny" ]; then
+        moveXOffset; echo "START UP ============================================"
+        else
+        moveXOffset; echo "START UP ==================================================="
+        fi
+
+        # Test if the authentication endpoint is available
+        TestAPIAvailability
+
+        # Authenticate with the FTL server
+        moveXOffset; printf "%b" "Establishing connection with FTL...\n"
+        LoginAPI
+
+        # Request PADD data
+        moveXOffset; echo "- Requesting PADD information..."
+        GetPADDData
+
+        # Get our information for the first time
+        moveXOffset; echo "- Gathering version information..."
+        GetVersionInformation
+        moveXOffset; echo "- Gathering system information..."
+        GetSystemInformation
+        moveXOffset; echo "- Gathering CPU/DNS information..."
+        GetSummaryInformation
+        GetPiholeInformation
+        moveXOffset; echo "- Gathering network information..."
+        GetNetworkInformation
+
+        GetPADDInformation
+        if [ ! "${DOCKER_VERSION}" = "null" ]; then
+        moveXOffset; echo "  - Docker Tag ${DOCKER_VERSION}"
+        else
+        moveXOffset; echo "  - Pi-hole Core $CORE_VERSION"
+        moveXOffset; echo "  - Web Admin $WEB_VERSION"
+        moveXOffset; echo "  - FTL $FTL_VERSION"
+        moveXOffset; echo "  - PADD ${padd_version}"
+        fi
     fi
 
-    # Test if the authentication endpoint is available
-    TestAPIAvailability
-
-    # Authenticate with the FTL server
-    moveXOffset; printf "%b" "Establishing connection with FTL...\n"
-    LoginAPI
-
-    # Request PADD data
-    moveXOffset; echo "- Requesting PADD information..."
-    GetPADDData
-
-    # Get our information for the first time
-    moveXOffset; echo "- Gathering version information..."
-    GetVersionInformation
-    moveXOffset; echo "- Gathering system information..."
-    GetSystemInformation
-    moveXOffset; echo "- Gathering CPU/DNS information..."
-    GetSummaryInformation
-    GetPiholeInformation
-    moveXOffset; echo "- Gathering network information..."
-    GetNetworkInformation
-
-    GetPADDInformation
-    if [ ! "${DOCKER_VERSION}" = "null" ]; then
-      moveXOffset; echo "  - Docker Tag ${DOCKER_VERSION}"
-    else
-      moveXOffset; echo "  - Pi-hole Core $CORE_VERSION"
-      moveXOffset; echo "  - Web Admin $WEB_VERSION"
-      moveXOffset; echo "  - FTL $FTL_VERSION"
-      moveXOffset; echo "  - PADD ${padd_version}"
-    fi
-  fi
-
-  moveXOffset; printf "%s" "- Starting in "
-  for i in 3 2 1
-  do
-    printf "%s..." "$i"
-    sleep 1
-  done
+    moveXOffset; printf "%s" "- Starting in "
+    for i in 3 2 1
+    do
+        printf "%s..." "$i"
+        sleep 1
+    done
 }
 
 NormalPADD() {
@@ -1897,19 +1897,19 @@ main(){
 
 # Process all options (if present)
 while [ "$#" -gt 0 ]; do
-  case "$1" in
-    "-j" | "--json"     ) xOffset=0; OutputJSON; exit 0;;
-    "-u" | "--update"   ) Update;;
-    "-h" | "--help"     ) DisplayHelp; exit 0;;
-    "-v" | "--version"  ) xOffset=0; ShowVersion; exit 0;;
-    "--xoff"            ) xOffset="$2"; xOffOrig="$2"; shift;;
-    "--yoff"            ) yOffset="$2"; yOffOrig="$2"; shift;;
-    "--server"          ) SERVER="$2"; shift;;
-    "--secret"          ) password="$2"; shift;;
-    "--2fa"             ) totp="$2"; shift;;
-    *                   ) DisplayHelp; exit 1;;
-  esac
-  shift
+    case "$1" in
+        "-j" | "--json"     ) xOffset=0; OutputJSON; exit 0;;
+        "-u" | "--update"   ) Update;;
+        "-h" | "--help"     ) DisplayHelp; exit 0;;
+        "-v" | "--version"  ) xOffset=0; ShowVersion; exit 0;;
+        "--xoff"            ) xOffset="$2"; xOffOrig="$2"; shift;;
+        "--yoff"            ) yOffset="$2"; yOffOrig="$2"; shift;;
+        "--server"          ) SERVER="$2"; shift;;
+        "--secret"          ) password="$2"; shift;;
+        "--2fa"             ) totp="$2"; shift;;
+        *                   ) DisplayHelp; exit 1;;
+    esac
+    shift
 done
 
 main
