@@ -1887,6 +1887,9 @@ main(){
 
     StartupRoutine ${padd_size}
 
+    # Run SizeChecker again to account for resizing during startup
+    SizeChecker
+
     # Run PADD
     NormalPADD
 }
