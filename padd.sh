@@ -1413,8 +1413,12 @@ truncateString() {
 # Converts seconds to days, hours, minutes
 # https://unix.stackexchange.com/a/338844
 convertUptime() {
-    # shellcheck disable=SC2016
-    eval "echo $(date -ud "@$1" +'$((%s/3600/24)) days, %H hours, %M minutes')"
+
+  local D=$(($1/60/60/24))
+  local H=$(($1/60/60%24))
+  local M=$(($1/60%60))
+
+  printf "%d days, %02d hours, %02d minutes" $D $H $M
 }
 
 secretRead() {
