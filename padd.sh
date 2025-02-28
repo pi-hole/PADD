@@ -739,7 +739,7 @@ GetVersionInformation() {
     # Gather core version information...
     CORE_BRANCH="$(GetPADDValue version.core.local.branch)"
     CORE_VERSION="$(GetPADDValue version.core.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    GITHUB_CORE_VERSION="$(GetPADDValue version.core.remmote.version  | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    GITHUB_CORE_VERSION="$(GetPADDValue version.core.remote.version  | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
     CORE_HASH="$(GetPADDValue version.core.local.hash)"
     GITHUB_CORE_HASH="$(GetPADDValue version.core.remote.hash)"
 
@@ -780,7 +780,7 @@ GetVersionInformation() {
     if [ ! "$WEB_VERSION" = "null" ]; then
         WEB_BRANCH="$(GetPADDValue version.web.local.branch)"
         WEB_VERSION="$(GetPADDValue version.web.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-        GITHUB_WEB_VERSION="$(GetPADDValue version.web.remmote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+        GITHUB_WEB_VERSION="$(GetPADDValue version.web.remote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
         WEB_HASH="$(GetPADDValue version.web.local.hash)"
         GITHUB_WEB_HASH="$(GetPADDValue version.web.remote.hash)"
 
@@ -824,7 +824,7 @@ GetVersionInformation() {
     # Gather FTL version information...
     FTL_BRANCH="$(GetPADDValue version.ftl.local.branch)"
     FTL_VERSION="$(GetPADDValue version.ftl.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    GITHUB_FTL_VERSION="$(GetPADDValue version.ftl.remmote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    GITHUB_FTL_VERSION="$(GetPADDValue version.ftl.remote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
     FTL_HASH="$(GetPADDValue version.ftl.local.hash)"
     GITHUB_FTL_HASH="$(GetPADDValue version.ftl.remote.hash)"
 
