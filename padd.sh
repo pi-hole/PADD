@@ -25,6 +25,9 @@ LastCheckNetworkInformation=$(date +%s)
 # padd_data holds the data returned by FTL's /padd endpoint globally
 padd_data=""
 
+# should PADD run only once?
+runOnce=false
+
 # COLORS
 CSI="$(printf '\033')["  # Control Sequence Introducer
 red_text="${CSI}91m"     # Red
@@ -1709,6 +1712,11 @@ NormalPADD() {
     # Output everything to the screen
     PrintDashboard ${padd_size}
 
+    # Should we only run once?
+    if [ "${runOnce}" = "true" ]; then
+        break
+    fi
+
     # Sleep for 5 seconds
     # sending sleep in the background and wait for it
     # this way the TerminalResize trap can kill the sleep
@@ -1812,6 +1820,7 @@ DisplayHelp() {
 :::  --server <DOMAIN|IP>    domain or IP of your Pi-hole (default: localhost)
 :::  --secret <password>     your Pi-hole's password, required to access the API
 :::  --2fa <2fa>             your Pi-hole's 2FA code, if 2FA is enabled
+:::  --runonce               display output once and exit
 :::  -u, --update            update to the latest version
 :::  -v, --version           show PADD version info
 :::  -h, --help              display this help text
@@ -1909,6 +1918,7 @@ while [ "$#" -gt 0 ]; do
         "-u" | "--update"   ) xOffset=0; doUpdate=true;;
         "-h" | "--help"     ) DisplayHelp; exit 0;;
         "-v" | "--version"  ) xOffset=0; versionOnly=true ;;
+        "--runonce"         ) runOnce=true;;
         "--xoff"            ) xOffset="$2"; xOffOrig="$2"; shift;;
         "--yoff"            ) yOffset="$2"; yOffOrig="$2"; shift;;
         "--server"          ) SERVER="$2"; shift;;
