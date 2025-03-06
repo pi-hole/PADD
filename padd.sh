@@ -871,10 +871,6 @@ GetVersionInformation() {
 }
 
 GetPADDInformation() {
-    # If PADD is running inside docker, immediately return without checking for an update
-    if [ ! "${DOCKER_VERSION}" = "null" ]; then
-        return
-    fi
 
     # PADD version information...
     padd_version_latest="$(curl --connect-timeout 5 --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
@@ -1761,31 +1757,8 @@ NormalPADD() {
 }
 
 Update() {
-    # Hiding the cursor.
-    # https://vt100.net/docs/vt510-rm/DECTCEM.html
-    printf '\e[?25l'
-    # Traps for graceful shutdown
-    # https://unix.stackexchange.com/a/681201
-    trap CleanExit EXIT
-    trap sig_cleanup INT QUIT TERM
 
-    # Save current terminal settings (needed for later restore after password prompt)
-    stty_orig=$(stty -g)
-
-    # Test if the authentication endpoint is available
-    TestAPIAvailability
-    # Authenticate with the FTL server
-    printf "%b" "Establishing connection with FTL...\n"
-    LoginAPI
-
-    GetPADDData
-    GetVersionInformation
     GetPADDInformation
-
-    if [ ! "${DOCKER_VERSION}" = "null" ]; then
-        echo "${check_box_info} Update is not supported for Docker"
-        exit 1
-    fi
 
     if [ "${padd_out_of_date_flag}" = "true" ]; then
         echo "${check_box_info} Updating PADD from ${padd_version} to ${padd_version_latest}"
