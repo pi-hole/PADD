@@ -1683,12 +1683,15 @@ StartupRoutine(){
         fi
     fi
 
-    moveXOffset; printf "%s" "- Starting in "
-    for i in 3 2 1
-    do
-        printf "%s..." "$i"
-        sleep 1
-    done
+    if [ "${runOnce}" = "false" ]; then
+        moveXOffset; printf "%s" "- Starting in "
+        for i in 3 2 1
+        do
+            printf "%s..." "$i"
+            sleep 1
+        done
+    fi
+
 }
 
 NormalPADD() {
