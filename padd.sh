@@ -137,6 +137,21 @@ TestAPIAvailability() {
         API_URL="${API_URL%\"}"
         API_URL="${API_URL#\"}"
 
+        # If $SERVER is user-specified by IP, the returned API_URL might contain a domain which can't be resolved by the host
+        # Therefore, we substitute the domain with the IP
+        if [ -n "$SERVER" ]; then
+            # Check if SERVER is an IPv6
+            case "$SERVER" in
+                *:*)
+                    # Replace the domain with the IP
+                    # Add square brackets for IPv6 (as recommended by RFC2732)
+                    API_URL=$(echo "$API_URL" | sed -E "s#(https?://)[^/:]+(:[0-9]+)#\1[${SERVER}]\2#");;
+                *)
+                    # Replace the domain with the IP
+                    API_URL=$(echo "$API_URL" | sed -E "s#(https?://)[^/:]+(:[0-9]+)#\1$SERVER\2#");;
+            esac
+        fi
+
         # Test if the API is available at this URL
         authResponse=$(curl --connect-timeout 2 -skS -w "%{http_code}" "${API_URL}auth")
 
@@ -191,11 +206,14 @@ LoginAPI() {
         return
     fi
 
-    # Try to read the CLI password (if enabled and readable by the current user)
-    if [ -r /etc/pihole/cli_pw ]; then
-        password=$(cat /etc/pihole/cli_pw)
-        # If we can read the CLI password, we can skip 2FA even when it's required otherwise
-        needTOTP=false
+    # Check if we are running locally before checking for the CLI password
+    if [ -z "${SERVER}" ] || [ "${SERVER}" = "localhost" ] || [ "${SERVER}" = "127.0.0.1" ]; then
+        # Try to read the CLI password (if enabled and readable by the current user)
+        if [ -r /etc/pihole/cli_pw ]; then
+            password=$(cat /etc/pihole/cli_pw)
+            # If we can read the CLI password, we can skip 2FA even when it's required otherwise
+            needTOTP=false
+        fi
     fi
 
     if [ -z "${password}" ]; then
