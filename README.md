@@ -27,6 +27,11 @@ PADD (formerly Chronometer2) is a more expansive version of the original chronom
   ```bash
   sudo chmod +x padd.sh
   ```
+### Dependencies
+  - curl
+  - jq
+  - dig
+  - tput
 
 ## Using PADD
 
