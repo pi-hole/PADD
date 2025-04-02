@@ -1465,16 +1465,27 @@ secretRead() {
 }
 
 check_dependencies() {
+    local hasDeps=true
     # Check for required dependencies
     if ! command -v curl >/dev/null 2>&1; then
         printf "%b" "${check_box_bad} Error!\n    'curl' is missing but required.\n"
-        exit 1
+        hasDeps=false
     fi
 
     if ! command -v jq >/dev/null 2>&1; then
-          printf "%b" "${check_box_bad} Error!\n    'jq' is missing but required.\n"
-          exit 1
+        printf "%b" "${check_box_bad} Error!\n    'jq' is missing but required.\n"
+        hasDeps=false
     fi
+
+    if ! command -v dig >/dev/null 2>&1; then
+        printf "%b" "${check_box_bad} Error!\n    'dig' is missing but required.\n"
+        hasDeps=false
+     fi
+
+     if [ "${hasDeps}" = false ]; then
+        printf "%b" "\n Please install the dependencies noted above.\n"
+        exit 1
+     fi
 }
 
 ########################################## MAIN FUNCTIONS ##########################################
