@@ -403,6 +403,19 @@ GetSummaryInformation() {
     top_domain_raw=$(GetPADDValue top_domain)
 
     top_client_raw=$(GetPADDValue top_client)
+
+    privacy_level=$(GetPADDValue config.privacy_level)
+
+    # Substitute 'null' values returned by FTL for privacy level >1
+    if [ "${privacy_level}" -ge "1" ]; then
+        top_domain_raw="hidden by privacy level"
+        top_blocked_raw="hidden by privacy level"
+        latest_blocked_raw="hidden by privacy level"
+    fi
+    if [ "${privacy_level}" -ge "2" ]; then
+        top_client_raw="hidden by privacy level"
+    fi
+
 }
 
 GetSystemInformation() {
