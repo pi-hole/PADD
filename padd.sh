@@ -445,7 +445,7 @@ GetSystemInformation() {
 
     # CPU temperature and unit
     cpu_temp_raw=$(GetPADDValue sensors.cpu_temp)
-    if [ $cpu_temp_raw != null ]; then
+    if [ "${cpu_temp_raw}" != null ]; then
         cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
         temp_unit=$(echo "${padd_data}"  | GetPADDValue sensors.unit)
     fi
@@ -488,7 +488,7 @@ GetSystemInformation() {
     elif [ "${cpu_temp_celsius}" -gt -274 ]; then
         temp_heatmap=${cyan_text}
     else
-        temp_heatmap=${clear_text}
+        temp_heatmap=${reset_text}
     fi
 
     # CPU, load, heatmap
@@ -539,6 +539,7 @@ GetNetworkInformation() {
         dhcp_range_heatmap=${reset_text}
         dhcp_ipv6_status="N/A"
         dhcp_ipv6_heatmap=${reset_text}
+        dhcp_check_box=${check_box_question}
 
         pi_hostname="N/A"
         full_hostname="N/A"
