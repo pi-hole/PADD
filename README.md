@@ -1,6 +1,6 @@
 # PADD
 
-PADD (formerly Chronometer2) is a more expansive version of the original chronometer.sh that is included with [Pi-Hole](https://pi-hole.net). PADD provides in-depth information about your Pi-hole.
+PADD (formerly Chronometer2) is a more expansive version of the original chronometer.sh that was included with [Pi-Hole](https://pi-hole.net). PADD provides in-depth information about your Pi-hole.
 
 ![PADD Screenshot](https://pi-hole.github.io/graphics/Screenshots/padd.png)
 
