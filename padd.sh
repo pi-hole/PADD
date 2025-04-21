@@ -1533,36 +1533,15 @@ check_dependencies() {
 ########################################## MAIN FUNCTIONS ##########################################
 
 ShowVersion() {
-    # Hiding the cursor.
-    # https://vt100.net/docs/vt510-rm/DECTCEM.html
-    printf '\e[?25l'
-    # Traps for graceful shutdown
-    # https://unix.stackexchange.com/a/681201
-    trap CleanExit EXIT
-    trap sig_cleanup INT QUIT TERM
 
-    # Save current terminal settings (needed for later restore after password prompt)
-    stty_orig=$(stty -g)
-
-    # Test if the authentication endpoint is available
-    TestAPIAvailability
-    # Authenticate with the FTL server
-    printf "%b" "Establishing connection with FTL...\n"
-    LoginAPI
-
-    GetPADDData
-    GetVersionInformation
     GetPADDInformation
+
     if [ -z "${padd_version_latest}" ]; then
         padd_version_latest="N/A"
     fi
-    if [ ! "${DOCKER_VERSION}" = "null" ]; then
-        # Check for latest Docker version
-        printf "\n%s${clear_line}\n" "PADD version is ${padd_version} as part of Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text} (Latest Docker: ${GITHUB_DOCKER_VERSION})"
-        version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
-    else
-        printf "\n%s${clear_line}\n" "PADD version is ${padd_version_heatmap}${padd_version}${reset_text} (Latest: ${padd_version_latest})"
-    fi
+
+    printf "\n%s${clear_line}\n" "PADD version is ${padd_version_heatmap}${padd_version}${reset_text} (Latest: ${padd_version_latest})"
+
     exit 0
 }
 
