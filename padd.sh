@@ -1073,9 +1073,9 @@ PrintLogo() {
         moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}mini${reset_text} Pi-hole® Ad Detection Display"
         moveXOffset; printf "%s${clear_line}\n" "         A client for Pi-hole®"
     else
-        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_1}"
-        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_2}Pi-hole® Ad Detection Display"
-        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_3}A client for Pi-hole®"
+        moveXOffset; printf "%b" "${padd_logo_1}\n"
+        moveXOffset; printf "%b" "${padd_logo_2}Pi-hole® Ad Detection Display\n"
+        moveXOffset; printf "%b" "${padd_logo_3}A client for Pi-hole\n\n"
     fi
 }
 
