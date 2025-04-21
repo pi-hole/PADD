@@ -95,12 +95,9 @@ tiny_status_dns_down="${check_box_bad} DNS is off!"
 padd_text="${green_text}${bold_text}PADD${reset_text}"
 
 # PADD logos - regular and retro
-padd_logo_1="${bold_text}${green_text} __      __  __   ${reset_text}"
-padd_logo_2="${bold_text}${green_text}|__) /\\ |  \\|  \\  ${reset_text}"
-padd_logo_3="${bold_text}${green_text}|   /--\\|__/|__/  ${reset_text}"
-padd_logo_retro_1="${bold_text} ${yellow_text}_${green_text}_      ${blue_text}_${magenta_text}_  ${yellow_text}_${green_text}_   ${reset_text}"
-padd_logo_retro_2="${bold_text}${yellow_text}|${green_text}_${blue_text}_${cyan_text}) ${red_text}/${yellow_text}\\ ${blue_text}|  ${red_text}\\${yellow_text}|  ${cyan_text}\\  ${reset_text}"
-padd_logo_retro_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${green_text}-${blue_text}\\${cyan_text}|${magenta_text}_${red_text}_${yellow_text}/${green_text}|${blue_text}_${cyan_text}_${magenta_text}/  ${reset_text}"
+padd_logo_1="${bold_text} ${yellow_text}_${green_text}_      ${blue_text}_${magenta_text}_  ${yellow_text}_${green_text}_   ${reset_text}"
+padd_logo_2="${bold_text}${yellow_text}|${green_text}_${blue_text}_${cyan_text}) ${red_text}/${yellow_text}\\ ${blue_text}|  ${red_text}\\${yellow_text}|  ${cyan_text}\\  ${reset_text}"
+padd_logo_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${green_text}-${blue_text}\\${cyan_text}|${magenta_text}_${red_text}_${yellow_text}/${green_text}|${blue_text}_${cyan_text}_${magenta_text}/  ${reset_text}"
 
 ############################################# FTL ##################################################
 
@@ -1065,35 +1062,20 @@ SetStatusMessage() {
 ############################################# PRINTERS #############################################
 
 PrintLogo() {
-    if [ ! "${DOCKER_VERSION}" = "null" ]; then
-        version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
-        else
-        version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
-    fi
-
     # Screen size checks
     if [ "$1" = "pico" ]; then
-        printf "%s${clear_line}\n" "p${padd_text} ${pico_status}"
+        moveXOffset; printf "%s${clear_line}\n" "p${padd_text}"
     elif [ "$1" = "nano" ]; then
-        printf "%s${clear_line}\n" "n${padd_text} ${mini_status}"
+        moveXOffset; printf "%s${clear_line}\n" "n${padd_text}"
     elif [ "$1" = "micro" ]; then
-        printf "%s${clear_line}\n${clear_line}\n" "µ${padd_text}     ${mini_status}"
+        moveXOffset; printf "%s${clear_line}\n\n" "µ${padd_text}"
     elif [ "$1" = "mini" ]; then
-        printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}mini${reset_text}  ${mini_status}"
-    elif [ "$1" = "tiny" ]; then
-        printf "%s${clear_line}\n" "${padd_text}${dim_text}tiny${reset_text}   ${version_info}${reset_text}"
-        printf "%s${clear_line}\n" "           PADD ${padd_version_heatmap}${padd_version}${reset_text} ${tiny_status}${reset_text}"
-    elif [ "$1" = "slim" ]; then
-        printf "%s${clear_line}\n${clear_line}\n" "${padd_text}${dim_text}slim${reset_text}   ${full_status}"
-    elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
-        printf "%s${clear_line}\n" "${padd_logo_1}"
-        printf "%s${clear_line}\n" "${padd_logo_2}${version_info}${reset_text}"
-        printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_3}PADD ${padd_version_heatmap}${padd_version}${reset_text}   ${full_status}${reset_text}"
-    # normal or not defined
+        moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}mini${reset_text} Pi-hole® Ad Detection Display"
+        moveXOffset; printf "%s${clear_line}\n" "         A client for Pi-hole®"
     else
-        printf "%s${clear_line}\n" "${padd_logo_retro_1}"
-        printf "%s${clear_line}\n" "${padd_logo_retro_2}   ${version_info}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
-        printf "%s${clear_line}\n${clear_line}\n" "${padd_logo_retro_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
+        moveXOffset; printf "%b" "${padd_logo_1}\n"
+        moveXOffset; printf "%b" "${padd_logo_2}Pi-hole® Ad Detection Display\n"
+        moveXOffset; printf "%b" "${padd_logo_3}A client for Pi-hole\n\n"
     fi
 }
 
@@ -1229,9 +1211,9 @@ PrintDashboard() {
         moveXOffset; printf " %-10s[${memory_heatmap}%-10s${reset_text}] %-6s %-10s[${cpu_load_1_heatmap}%-10s${reset_text}] %-5s${clear_line}" "Memory:" "${memory_bar}" "${memory_percent}%" "CPU Load:" "${cpu_bar}" "${cpu_percent}%"
     else # ${padd_size} = mega
          # mega is a screen with at least 80 columns and 26 lines
-        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_1}"
-        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_2}   ${version_info}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
-        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_retro_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_1}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_2}   ${version_info}, PADD ${padd_version_heatmap}${padd_version}${reset_text}"
+        moveXOffset; printf "%s${clear_line}\n" "${padd_logo_3}   ${dns_check_box} DNS   ${ftl_check_box} FTL   ${mega_status}${reset_text}"
         moveXOffset; printf "%s${clear_line}\n" ""
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}STATS ==========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-19s %-10s[%-40s] %-5s${clear_line}\n" "Blocking:" "${domains_being_blocked} domains" "Piholed:" "${ads_blocked_bar}" "${ads_percentage_today}%"
@@ -1603,8 +1585,14 @@ StartupRoutine(){
     moveYOffset
 
     if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-        moveXOffset; PrintLogo "$1"
-        moveXOffset; printf "%b" "START-UP ===========\n"
+        PrintLogo "$1"
+        if [ "$1" = "pico" ]; then
+            moveXOffset; printf "%b" "START-UP ===========\n"
+        elif [ "$1" = "nano" ]; then
+            moveXOffset; printf "%b" "START-UP ===============\n"
+        else
+            moveXOffset; printf "%b" "START-UP =====================\n"
+        fi
 
         # Test if the authentication endpoint is available
         TestAPIAvailability
@@ -1640,8 +1628,8 @@ StartupRoutine(){
         moveXOffset; printf "%b" " [■■■■■■■■■■] 100%\n"
 
     elif [ "$1" = "mini" ]; then
-        moveXOffset; PrintLogo "$1"
-        moveXOffset; echo "START UP ====================="
+        PrintLogo "$1"
+        moveXOffset; echo "START UP ==============================="
         # Test if the authentication endpoint is available
         TestAPIAvailability
         # Authenticate with the FTL server
@@ -1671,9 +1659,7 @@ StartupRoutine(){
         fi
 
     else
-        moveXOffset; printf "%b" "${padd_logo_retro_1}\n"
-        moveXOffset; printf "%b" "${padd_logo_retro_2}Pi-hole® Ad Detection Display\n"
-        moveXOffset; printf "%b" "${padd_logo_retro_3}A client for Pi-hole\n\n"
+        PrintLogo "$1"
         if [ "$1" = "tiny" ]; then
         moveXOffset; echo "START UP ============================================"
         else
