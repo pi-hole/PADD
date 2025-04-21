@@ -1068,7 +1068,7 @@ PrintLogo() {
     elif [ "$1" = "nano" ]; then
         moveXOffset; printf "%s${clear_line}\n" "n${padd_text}"
     elif [ "$1" = "micro" ]; then
-        moveXOffset; printf "%s${clear_line}\n" "µ${padd_text}"
+        moveXOffset; printf "%s${clear_line}\n\n" "µ${padd_text}"
     elif [ "$1" = "mini" ]; then
         moveXOffset; printf "%s${clear_line}\n" "${padd_text}${dim_text}mini${reset_text} Pi-hole® Ad Detection Display"
         moveXOffset; printf "%s${clear_line}\n" "         A client for Pi-hole®"
@@ -1586,7 +1586,13 @@ StartupRoutine(){
 
     if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
         PrintLogo "$1"
-        moveXOffset; printf "%b" "START-UP ===========\n"
+        if [ "$1" = "pico" ]; then
+            moveXOffset; printf "%b" "START-UP ===========\n"
+        elif [ "$1" = "nano" ]; then
+            moveXOffset; printf "%b" "START-UP ===============\n"
+        else
+            moveXOffset; printf "%b" "START-UP =====================\n"
+        fi
 
         # Test if the authentication endpoint is available
         TestAPIAvailability
@@ -1623,7 +1629,7 @@ StartupRoutine(){
 
     elif [ "$1" = "mini" ]; then
         PrintLogo "$1"
-        moveXOffset; echo "START UP ====================="
+        moveXOffset; echo "START UP ==============================="
         # Test if the authentication endpoint is available
         TestAPIAvailability
         # Authenticate with the FTL server
