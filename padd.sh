@@ -1558,7 +1558,7 @@ ShowVersion() {
         padd_version_latest="N/A"
     fi
 
-    printf "%s${clear_line}" "PADD version is ${padd_version_heatmap}${padd_version}${reset_text} (Latest: ${padd_version_latest})"
+    printf "\n%s${clear_line}\n" "PADD version is ${padd_version_heatmap}${padd_version}${reset_text} (Latest: ${padd_version_latest})"
 
     exit 0
 }
