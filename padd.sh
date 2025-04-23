@@ -105,16 +105,6 @@ TestAPIAvailability() {
 
     local chaos_api_list authResponse cmdResult digReturnCode authStatus authData apiAvailable
 
-    # Query the API URLs from FTL using CHAOS TXT
-    # The result is a space-separated enumeration of full URLs
-    # e.g., "http://localhost:80/api" or "https://domain.com:443/api"
-    if [ -z "${SERVER}" ] || [ "${SERVER}" = "localhost" ] || [ "${SERVER}" = "127.0.0.1" ]; then
-        # --server was not set or set to local, assuming we're running locally
-        cmdResult="$(dig +short chaos txt local.api.ftl @localhost 2>&1; echo $?)"
-    else
-        # --server was set, try to get response from there
-        cmdResult="$(dig +short chaos txt domain.api.ftl @"${SERVER}" 2>&1; echo $?)"
-    fi
     # Check if SERVER is a full URL
     # If it is, skip the DNS lookup
     case "$SERVER" in
@@ -123,19 +113,29 @@ TestAPIAvailability() {
         chaos_api_list="${SERVER}"
         ;;
     *)
+        # Query the API URLs from FTL using CHAOS TXT
+        # The result is a space-separated enumeration of full URLs
+        # e.g., "http://localhost:80/api" or "https://domain.com:443/api"
+        if [ -z "${SERVER}" ] || [ "${SERVER}" = "localhost" ] || [ "${SERVER}" = "127.0.0.1" ]; then
+            # --server was not set or set to local, assuming we're running locally
+            cmdResult="$(dig +short chaos txt local.api.ftl @localhost 2>&1; echo $?)"
+        else
+            # --server was set, try to get response from there
+            cmdResult="$(dig +short chaos txt domain.api.ftl @"${SERVER}" 2>&1; echo $?)"
+        fi
 
-    # Gets the return code of the dig command (last line)
-    # We can't use${cmdResult##*$'\n'*} here as $'..' is not POSIX
-    digReturnCode="$(echo "${cmdResult}" | tail -n 1)"
+        # Gets the return code of the dig command (last line)
+        # We can't use${cmdResult##*$'\n'*} here as $'..' is not POSIX
+        digReturnCode="$(echo "${cmdResult}" | tail -n 1)"
 
-    if [ ! "${digReturnCode}" = "0" ]; then
-        # If the query was not successful
-        moveXOffset;  echo "API not available. Please check server address and connectivity"
-        exit 1
-    else
-      # Dig returned 0 (success), so get the actual response (first line)
-      chaos_api_list="$(echo "${cmdResult}" | head -n 1)"
-    fi
+        if [ ! "${digReturnCode}" = "0" ]; then
+            # If the query was not successful
+            moveXOffset; echo "API not available. Please check server address and connectivity"
+            exit 1
+        else
+            # Dig returned 0 (success), so get the actual response (first line)
+            chaos_api_list="$(echo "${cmdResult}" | head -n 1)"
+        fi
         ;;
     esac
 
