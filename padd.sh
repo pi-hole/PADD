@@ -109,7 +109,7 @@ TestAPIAvailability() {
     # If it is, skip the DNS lookup
     case "$SERVER" in
     http://* | https://*)
-        # The list of avalible API URLs is just the provided URL
+        # The list of available API URLs is just the provided URL
         chaos_api_list="${SERVER}"
         ;;
     *)
