@@ -115,6 +115,14 @@ TestAPIAvailability() {
         # --server was set, try to get response from there
         cmdResult="$(dig +short chaos txt domain.api.ftl @"${SERVER}" 2>&1; echo $?)"
     fi
+    # Check if SERVER is a full URL
+    # If it is, skip the DNS lookup
+    case "$SERVER" in
+    http://* | https://*)
+        # The list of avalible API URLs is just the provided URL
+        chaos_api_list="${SERVER}"
+        ;;
+    *)
 
     # Gets the return code of the dig command (last line)
     # We can't use${cmdResult##*$'\n'*} here as $'..' is not POSIX
@@ -128,6 +136,8 @@ TestAPIAvailability() {
       # Dig returned 0 (success), so get the actual response (first line)
       chaos_api_list="$(echo "${cmdResult}" | head -n 1)"
     fi
+        ;;
+    esac
 
     # Iterate over space-separated list of URLs
     while [ -n "${chaos_api_list}" ]; do
