@@ -103,7 +103,7 @@ padd_logo_3="${bold_text}${green_text}|   ${red_text}/${yellow_text}-${green_tex
 
 TestAPIAvailability() {
 
-    local chaos_api_list authResponse cmdResult digReturnCode authStatus authData
+    local chaos_api_list authResponse cmdResult digReturnCode authStatus authData apiAvailable
 
     # Query the API URLs from FTL using CHAOS TXT
     # The result is a space-separated enumeration of full URLs
@@ -164,7 +164,7 @@ TestAPIAvailability() {
         # Test if http status code was 200 (OK) or 401 (authentication required)
         if [ ! "${authStatus}" = 200 ] && [ ! "${authStatus}" = 401 ]; then
             # API is not available at this port/protocol combination
-            API_PORT=""
+            apiAvailable=false
         else
             # API is available at this URL combination
 
@@ -176,6 +176,7 @@ TestAPIAvailability() {
             # Check if 2FA is required
             needTOTP=$(echo "${authData}"| jq --raw-output .session.totp 2>/dev/null)
 
+            apiAvailable=true
             break
         fi
 
@@ -191,9 +192,9 @@ TestAPIAvailability() {
         fi
     done
 
-    # if API_PORT is empty, no working API port was found
-    if [ -n "${API_PORT}" ]; then
-        moveXOffset; echo "API not available at: ${API_URL}"
+    # if apiAvailable is false, no working API was found
+    if [ "${apiAvailable}" = false ]; then
+        moveXOffset; echo "API not available. Please check FTL.log"
         moveXOffset; echo "Exiting."
         exit 1
     fi
