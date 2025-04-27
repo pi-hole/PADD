@@ -105,14 +105,17 @@ TestAPIAvailability() {
 
     local chaos_api_list authResponse cmdResult digReturnCode authStatus authData apiAvailable
 
-    # Check if SERVER is a full URL
-    # If it is, skip the DNS lookup
-    case "$SERVER" in
-    http://* | https://*)
+    if [ -n "$API_LOCATION" ] && [ -n "$SERVER" ]; then
+        moveXOffset; echo "Do not set --server and --api simultaneously."
+        moveXOffset; echo "Exiting."
+        exit 1
+    fi
+
+    # Check if an API location was specified with --api
+    if [ -n "${API_LOCATION}" ]; then
         # The list of available API URLs is just the provided URL
-        chaos_api_list="${SERVER}"
-        ;;
-    *)
+        chaos_api_list="${API_LOCATION}"
+    else
         # Query the API URLs from FTL using CHAOS TXT
         # The result is a space-separated enumeration of full URLs
         # e.g., "http://localhost:80/api" or "https://domain.com:443/api"
@@ -136,8 +139,7 @@ TestAPIAvailability() {
             # Dig returned 0 (success), so get the actual response (first line)
             chaos_api_list="$(echo "${cmdResult}" | head -n 1)"
         fi
-        ;;
-    esac
+    fi
 
     # Iterate over space-separated list of URLs
     while [ -n "${chaos_api_list}" ]; do
@@ -301,7 +303,7 @@ Authenticate() {
 
     if [ -z "${sessionResponse}" ]; then
         moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
-        moveXOffset; echo "Usage: $0 [--server <domain|IP>]"
+        moveXOffset; echo "Usage: $0 [--server <domain|IP>] or [--api <API URL>]"
         exit 1
     fi
     # obtain validity, session ID and sessionMessage from session response
@@ -1827,6 +1829,7 @@ DisplayHelp() {
 :::  --yoff [num]    set the y-offset, reference is the upper left corner, disables auto-centering
 :::
 :::  --server <DOMAIN|IP>    domain or IP of your Pi-hole (default: localhost)
+:::  --api <API URL>         API URL location of your Pi-hole (example: https://pi.hole/api/)
 :::  --secret <password>     your Pi-hole's password, required to access the API
 :::  --2fa <2fa>             your Pi-hole's 2FA code, if 2FA is enabled
 :::  --runonce               display output once and exit
@@ -1931,6 +1934,7 @@ while [ "$#" -gt 0 ]; do
         "--xoff"            ) xOffset="$2"; xOffOrig="$2"; shift;;
         "--yoff"            ) yOffset="$2"; yOffOrig="$2"; shift;;
         "--server"          ) SERVER="$2"; shift;;
+        "--api"             ) API_LOCATION="$2"; shift;;
         "--secret"          ) password="$2"; shift;;
         "--2fa"             ) totp="$2"; shift;;
         *                   ) DisplayHelp; exit 1;;
