@@ -105,12 +105,6 @@ TestAPIAvailability() {
 
     local chaos_api_list authResponse cmdResult digReturnCode authStatus authData apiAvailable
 
-    if [ -n "$API_LOCATION" ] && [ -n "$SERVER" ]; then
-        moveXOffset; echo "Do not set --server and --api simultaneously."
-        moveXOffset; echo "Exiting."
-        exit 1
-    fi
-
     # Check if an API location was specified with --api
     if [ -n "${API_LOCATION}" ]; then
         # The list of available API URLs is just the provided URL
@@ -1941,6 +1935,12 @@ while [ "$#" -gt 0 ]; do
     esac
     shift
 done
+
+if [ -n "$API_LOCATION" ] && [ -n "$SERVER" ]; then
+    moveXOffset; echo "Do not set --server and --api simultaneously."
+    moveXOffset; echo "Exiting."
+    exit 1
+fi
 
 if [ "${versionOnly}" ]; then
     ShowVersion
