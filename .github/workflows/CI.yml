@@ -1,4 +1,4 @@
-name: ShellCheck
+name: CI Tests
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -19,3 +19,14 @@ jobs:
       with:
         severity: warning
         display-engine: sarif-fmt
+
+    - name: Spell-Checking
+      uses: codespell-project/actions-codespell@master
+      with:
+        ignore_words_file: .codespellignore
+
+    - name: Get editorconfig-checker
+      uses: editorconfig-checker/action-editorconfig-checker@main # tag v1.0.0 is really out of date
+
+    - name: Run editorconfig-checker
+      run: editorconfig-checker
