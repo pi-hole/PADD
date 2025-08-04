@@ -1,0 +1,21 @@
+name: ShellCheck
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  shellcheck:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+    -
+      name: Checkout repository
+      uses: actions/checkout@v4.2.2
+      with:
+        fetch-depth: 0 # Differential ShellCheck requires full git history
+
+    - name: Differential ShellCheck
+      uses: redhat-plumbers-in-action/differential-shellcheck@v5
+      with:
+        severity: warning
+        display-engine: sarif-fmt

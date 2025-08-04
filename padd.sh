@@ -1,9 +1,4 @@
 #!/usr/bin/env sh
-# shellcheck disable=SC1091
-
-# Ignore warning about `local` being undefinded in POSIX
-# shellcheck disable=SC3043
-# https://github.com/koalaman/shellcheck/wiki/SC3043#exceptions
 
 # PADD
 # A more advanced version of the chronometer provided with Pihole
