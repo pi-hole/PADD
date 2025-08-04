@@ -120,7 +120,7 @@ TestAPIAvailability() {
         # We can't use${cmdResult##*$'\n'*} here as $'..' is not POSIX
         digReturnCode="$(echo "${cmdResult}" | tail -n 1)"
 
-        if [ ! "${digReturnCode}" = "0" ]; then
+        if [ "${digReturnCode}" != "0" ]; then
             # If the query was not successful
             moveXOffset; echo "API not available. Please check server address and connectivity"
             exit 1
@@ -140,16 +140,16 @@ TestAPIAvailability() {
 
         # If $SERVER is user-specified by IP, the returned API_URL might contain a domain which can't be resolved by the host
         # Therefore, we substitute the domain with the IP
-        if [ -n "$SERVER" ]; then
+        if [ -n "${SERVER}" ]; then
             # Check if SERVER is an IPv6
-            case "$SERVER" in
+            case "${SERVER}" in
                 *:*)
                     # Replace the domain with the IP
                     # Add square brackets for IPv6 (as recommended by RFC2732)
-                    API_URL=$(echo "$API_URL" | sed -E "s#(https?://)[^/:]+(:[0-9]+)#\1[${SERVER}]\2#");;
+                    API_URL=$(echo "${API_URL}" | sed -E "s#(https?://)[^/:]+(:[0-9]+)#\1[${SERVER}]\2#");;
                 *)
                     # Replace the domain with the IP
-                    API_URL=$(echo "$API_URL" | sed -E "s#(https?://)[^/:]+(:[0-9]+)#\1$SERVER\2#");;
+                    API_URL=$(echo "${API_URL}" | sed -E "s#(https?://)[^/:]+(:[0-9]+)#\1${SERVER}\2#");;
             esac
         fi
 
@@ -237,15 +237,15 @@ LoginAPI() {
     Authenticate
 
     # Try to login again until the session is valid
-    while [ ! "${validSession}" = true ]  ; do
+    while [ "${validSession}" != true ]  ; do
         moveXOffset; echo "Authentication failed."
 
         # Print the error message if there is one
-        if  [ ! "${sessionError}" = "null"  ]; then
+        if  [ "${sessionError}" != "null"  ]; then
             moveXOffset; echo "Error: ${sessionError}"
         fi
         # Print the session message if there is one
-        if  [ ! "${sessionMessage}" = "null"  ]; then
+        if  [ "${sessionMessage}" != "null"  ]; then
             moveXOffset; echo "Error: ${sessionMessage}"
         fi
 
@@ -272,7 +272,7 @@ LoginAPI() {
 DeleteSession() {
     # if a valid Session exists (no password required or successful authenthication) and
     # SID is not null (successful authenthication only), delete the session
-    if [ "${validSession}" = true ] && [ ! "${SID}" = null ]; then
+    if [ "${validSession}" = true ] && [ "${SID}" != null ]; then
         # Try to delete the session. Omit the output, but get the http status code
         deleteResponse=$(curl --connect-timeout 2 -skS -o /dev/null -w "%{http_code}" -X DELETE "${API_URL}auth"  -H "Accept: application/json" -H "sid: ${SID}")
 
@@ -353,12 +353,12 @@ GetPADDData() {
         # Using "paths(scalars | true)" will return null and false values.
         # We also check if the value is exactly `null` and, in this case, return the
         # string "null", as jq would return an empty string for nulls.
-        padd_data=$(echo "$response" | jq -r 'paths(scalars | true) as $p | [$p | join(".")] + [if getpath($p)!=null then getpath($p) else "null" end] | join("=")' 2>/dev/null)
+        padd_data=$(echo "${response}" | jq -r 'paths(scalars | true) as $p | [$p | join(".")] + [if getpath($p)!=null then getpath($p) else "null" end] | join("=")' 2>/dev/null)
     fi
 }
 
 GetPADDValue() {
-    echo "$padd_data" | sed -n "s/^$1=//p" 2>/dev/null
+    echo "${padd_data}" | sed -n "s/^$1=//p" 2>/dev/null
 }
 
 GetSummaryInformation() {
@@ -514,7 +514,7 @@ GetSystemInformation() {
     sys_model="$(GetPADDValue host_model)"
 
     # DOCKER_VERSION is set during GetVersionInformation, so this needs to run first during startup
-    if [ ! "${DOCKER_VERSION}" = "null" ]; then
+    if [ "${DOCKER_VERSION}" != "null" ]; then
         # Docker image
         sys_model="Container"
     fi
@@ -523,7 +523,7 @@ GetSystemInformation() {
     sys_model=$(filterModel "${sys_model}")
 
     # FTL returns null if device information is not available
-    if [  -z "$sys_model" ] || [  "$sys_model" = "null" ]; then
+    if [  -z "${sys_model}" ] || [  "${sys_model}" = "null" ]; then
         sys_model="N/A"
     fi
 }
@@ -693,7 +693,7 @@ GetNetworkInformation() {
     # name to highlight that there are two different interfaces and the
     # displayed statistics are only for the IPv4 interface, while the IPv6
     # address correctly corresponds to the default IPv6 interface
-    if [ ! "${gateway_v4_iface}" = "${gateway_v6_iface}" ]; then
+    if [ "${gateway_v4_iface}" != "${gateway_v6_iface}" ]; then
         iface_name="${iface_name}*"
     fi
 }
@@ -763,7 +763,7 @@ GetVersionInformation() {
     DOCKER_VERSION="$(GetPADDValue version.docker.local)"
 
     # If PADD is running inside docker, immediately return without checking for updated component versions
-    if [ ! "${DOCKER_VERSION}" = "null" ] ; then
+    if [ "${DOCKER_VERSION}" != "null" ] ; then
         GITHUB_DOCKER_VERSION="$(GetPADDValue version.docker.remote)"
         docker_version_converted="$(VersionConverter "${DOCKER_VERSION}")"
         docker_version_latest_converted="$(VersionConverter "${GITHUB_DOCKER_VERSION}")"
@@ -814,14 +814,14 @@ GetVersionInformation() {
             fi
             # shorten common branch names (fix/, tweak/, new/)
             # use the first 7 characters of the branch name as version
-            CORE_VERSION="$(printf '%s' "$CORE_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
+            CORE_VERSION="$(printf '%s' "${CORE_BRANCH}" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
         fi
     fi
 
   # Gather web version information...
     WEB_VERSION="$(GetPADDValue version.web.local.version)"
 
-    if [ ! "$WEB_VERSION" = "null" ]; then
+    if [ "${WEB_VERSION}" != "null" ]; then
         WEB_BRANCH="$(GetPADDValue version.web.local.branch)"
         WEB_VERSION="$(GetPADDValue version.web.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
         GITHUB_WEB_VERSION="$(GetPADDValue version.web.remote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
@@ -856,7 +856,7 @@ GetVersionInformation() {
                 fi
                 # shorten common branch names (fix/, tweak/, new/)
                 # use the first 7 characters of the branch name as version
-                WEB_VERSION="$(printf '%s' "$WEB_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
+                WEB_VERSION="$(printf '%s' "${WEB_BRANCH}" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
             fi
         fi
     else
@@ -900,7 +900,7 @@ GetVersionInformation() {
             fi
             # shorten common branch names (fix/, tweak/, new/)
             # use the first 7 characters of the branch name as version
-            FTL_VERSION="$(printf '%s' "$FTL_BRANCH" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
+            FTL_VERSION="$(printf '%s' "${FTL_BRANCH}" | sed 's/fix\//f\//;s/new\//n\//;s/tweak\//t\//' | cut -c 1-7)"
         fi
     fi
 
@@ -931,48 +931,48 @@ GetPADDInformation() {
 GenerateSizeDependendOutput() {
 
     if [ "$1" = "pico" ] || [ "$1" = "nano" ]; then
-        ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 9 "color")
+        ads_blocked_bar=$(BarGenerator "${ads_percentage_today}" 9 "color")
 
     elif  [ "$1" = "micro" ]; then
-        ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 10 "color")
+        ads_blocked_bar=$(BarGenerator "${ads_percentage_today}" 10 "color")
 
     elif [ "$1" = "mini" ]; then
-        ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 20 "color")
+        ads_blocked_bar=$(BarGenerator "${ads_percentage_today}" 20 "color")
 
-        latest_blocked=$(truncateString "$latest_blocked_raw" 29)
-        top_blocked=$(truncateString "$top_blocked_raw" 29)
+        latest_blocked=$(truncateString "${latest_blocked_raw}" 29)
+        top_blocked=$(truncateString "${top_blocked_raw}" 29)
 
     elif [ "$1" = "tiny" ]; then
-        ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
+        ads_blocked_bar=$(BarGenerator "${ads_percentage_today}" 30 "color")
 
-        latest_blocked=$(truncateString "$latest_blocked_raw" 41)
-        top_blocked=$(truncateString "$top_blocked_raw" 41)
-        top_domain=$(truncateString "$top_domain_raw" 41)
-        top_client=$(truncateString "$top_client_raw" 41)
+        latest_blocked=$(truncateString "${latest_blocked_raw}" 41)
+        top_blocked=$(truncateString "${top_blocked_raw}" 41)
+        top_domain=$(truncateString "${top_domain_raw}" 41)
+        top_client=$(truncateString "${top_client_raw}" 41)
 
     elif [ "$1" = "regular" ] || [ "$1" = "slim" ]; then
-        ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 40 "color")
+        ads_blocked_bar=$(BarGenerator "${ads_percentage_today}" 40 "color")
 
-        latest_blocked=$(truncateString "$latest_blocked_raw" 48)
-        top_blocked=$(truncateString "$top_blocked_raw" 48)
-        top_domain=$(truncateString "$top_domain_raw" 48)
-        top_client=$(truncateString "$top_client_raw" 48)
+        latest_blocked=$(truncateString "${latest_blocked_raw}" 48)
+        top_blocked=$(truncateString "${top_blocked_raw}" 48)
+        top_domain=$(truncateString "${top_domain_raw}" 48)
+        top_client=$(truncateString "${top_client_raw}" 48)
 
-        if [ "$temp_unicode" = true ]; then
+        if [ "${temp_unicode}" = true ]; then
             temp_padding=21
         else
             temp_padding=20
         fi
 
     elif [ "$1" = "mega" ]; then
-        ads_blocked_bar=$(BarGenerator "$ads_percentage_today" 30 "color")
+        ads_blocked_bar=$(BarGenerator "${ads_percentage_today}" 30 "color")
 
-        latest_blocked=$(truncateString "$latest_blocked_raw" 68)
-        top_blocked=$(truncateString "$top_blocked_raw" 68)
-        top_domain=$(truncateString "$top_domain_raw" 68)
-        top_client=$(truncateString "$top_client_raw" 68)
+        latest_blocked=$(truncateString "${latest_blocked_raw}" 68)
+        top_blocked=$(truncateString "${top_blocked_raw}" 68)
+        top_domain=$(truncateString "${top_domain_raw}" 68)
+        top_client=$(truncateString "${top_client_raw}" 68)
 
-        if [ "$temp_unicode" = true ]; then
+        if [ "${temp_unicode}" = true ]; then
             temp_padding=10
         else
             temp_padding=9
@@ -1084,7 +1084,7 @@ PrintLogo() {
 }
 
 PrintDashboard() {
-    if [ ! "${DOCKER_VERSION}" = "null" ]; then
+    if [ "${DOCKER_VERSION}" != "null" ]; then
         version_info="Docker ${docker_version_heatmap}${DOCKER_VERSION}${reset_text}"
     else
         version_info="Pi-hole® ${core_version_heatmap}${CORE_VERSION}${reset_text}, Web ${web_version_heatmap}${WEB_VERSION}${reset_text}, FTL ${ftl_version_heatmap}${FTL_VERSION}${reset_text}"
@@ -1272,7 +1272,7 @@ HeatmapGenerator () {
         out=${red_text}
     fi
 
-    echo "$out"
+    echo "${out}"
 }
 
 # Provides a "bar graph"
@@ -1283,22 +1283,22 @@ HeatmapGenerator () {
 BarGenerator() {
     # number of filled in cells in the bar
     barNumber=$(printf %.f "$(echo "$1 $2" | awk '{print ($1 / 100) * $2}')")
-    frontFill=$(for i in $(seq "$barNumber"); do printf "%b" "■"; done)
+    frontFill=$(for i in $(seq "${barNumber}"); do printf "%b" "■"; done)
 
     # remaining "unfilled" cells in the bar
     backfillNumber=$(($2-barNumber))
 
     # if the filled in cells is less than the max length of the bar, fill it
-    if [ "$barNumber" -lt "$2" ]; then
+    if [ "${barNumber}" -lt "$2" ]; then
         # if the bar should be colored
         if [ "$3" = "color" ]; then
         # fill the rest in color
-        backFill=$(for i in $(seq $backfillNumber); do printf "%b" "■"; done)
+        backFill=$(for i in $(seq ${backfillNumber}); do printf "%b" "■"; done)
         out="${red_text}${frontFill}${green_text}${backFill}${reset_text}"
         # else, it shouldn't be colored in
         else
         # fill the rest with "space"
-        backFill=$(for i in $(seq $backfillNumber); do printf "%b" "·"; done)
+        backFill=$(for i in $(seq ${backfillNumber}); do printf "%b" "·"; done)
         out="${frontFill}${reset_text}${backFill}"
         fi
     # else, fill it all the way
@@ -1306,7 +1306,7 @@ BarGenerator() {
         out=$(for i in $(seq "$2"); do printf "%b" "■"; done)
     fi
 
-    echo "$out"
+    echo "${out}"
 }
 
 # Checks the size of the screen and sets the value of ${padd_data}_size
@@ -1320,42 +1320,42 @@ SizeChecker(){
     console_height=$(tput lines)
 
     # Mega
-    if [ "$console_width" -ge "80" ] && [ "$console_height" -ge "26" ]; then
+    if [ "${console_width}" -ge "80" ] && [ "${console_height}" -ge "26" ]; then
         padd_size="mega"
         width=80
         height=26
     # Below Mega. Gives you Regular.
-    elif [ "$console_width" -ge "60" ] && [ "$console_height" -ge "22" ]; then
+    elif [ "${console_width}" -ge "60" ] && [ "${console_height}" -ge "22" ]; then
         padd_size="regular"
         width=60
         height=22
     # Below Regular. Gives you Slim.
-    elif [ "$console_width" -ge "60" ] && [ "$console_height" -ge "21" ]; then
+    elif [ "${console_width}" -ge "60" ] && [ "${console_height}" -ge "21" ]; then
         padd_size="slim"
         width=60
         height=21
     # Below Slim. Gives you Tiny.
-    elif [ "$console_width" -ge "53" ] && [ "$console_height" -ge "20" ]; then
+    elif [ "${console_width}" -ge "53" ] && [ "${console_height}" -ge "20" ]; then
         padd_size="tiny"
         width=53
         height=20
     # Below Tiny. Gives you Mini.
-    elif [ "$console_width" -ge "40" ] && [ "$console_height" -ge "18" ]; then
+    elif [ "${console_width}" -ge "40" ] && [ "${console_height}" -ge "18" ]; then
         padd_size="mini"
         width=40
         height=18
     # Below Mini. Gives you Micro.
-    elif [ "$console_width" -ge "30" ] && [ "$console_height" -ge "16" ]; then
+    elif [ "${console_width}" -ge "30" ] && [ "${console_height}" -ge "16" ]; then
         padd_size="micro"
         width=30
         height=16
     # Below Micro, Gives you Nano.
-    elif [ "$console_width" -ge "24" ] && [ "$console_height" -ge "12" ]; then
+    elif [ "${console_width}" -ge "24" ] && [ "${console_height}" -ge "12" ]; then
         padd_size="nano"
         width=24
         height=12
     # Below Nano. Gives you Pico.
-    elif [ "$console_width" -ge "20" ] && [ "$console_height" -ge "10" ]; then
+    elif [ "${console_width}" -ge "20" ] && [ "${console_height}" -ge "10" ]; then
         padd_size="pico"
         width=20
         height=10
@@ -1369,22 +1369,22 @@ SizeChecker(){
     yOffset="$(( (console_height - height) / 2 ))"
 
     # If the user sets an offset option, use it.
-    if [ -n "$xOffOrig" ]; then
-        xOffset=$xOffOrig
+    if [ -n "${xOffOrig}" ]; then
+        xOffset=${xOffOrig}
 
         # Limit the offset to avoid breaks
         xMaxOffset=$((console_width - width))
-        if [ "$xOffset" -gt "$xMaxOffset" ]; then
-            xOffset="$xMaxOffset"
+        if [ "${xOffset}" -gt "${xMaxOffset}" ]; then
+            xOffset="${xMaxOffset}"
         fi
     fi
-    if [ -n "$yOffOrig" ]; then
-        yOffset=$yOffOrig
+    if [ -n "${yOffOrig}" ]; then
+        yOffset=${yOffOrig}
 
         # Limit the offset to avoid breaks
         yMaxOffset=$((console_height - height))
-        if [ "$yOffset" -gt "$yMaxOffset" ]; then
-            yOffset="$yMaxOffset"
+        if [ "${yOffset}" -gt "${yMaxOffset}" ]; then
+            yOffset="${yMaxOffset}"
         fi
     fi
 }
@@ -1425,7 +1425,7 @@ filterModel() {
     #    `-v`      : set $FILTERLIST into a variable called `list`
     #    `gsub()`  : replace all list items (ignoring case) with an empty string, deleting them
     #    `{$1=$1}1`: remove all extra spaces. The last "1" evaluates as true, printing the result
-    echo "$1" | awk -v list="$FILTERLIST" '{IGNORECASE=1; gsub(list,"")}; {$1=$1}1'
+    echo "$1" | awk -v list="${FILTERLIST}" '{IGNORECASE=1; gsub(list,"")}; {$1=$1}1'
 }
 
 # Truncates a given string and appends three '...'
@@ -1440,7 +1440,7 @@ truncateString() {
     if [ "${length}" -gt "$2" ]; then
         # if length of the string is larger then the specified max length
         # cut every char from the string exceeding length $shorted and add three dots
-        truncatedString=$(echo "$1" | cut -c1-$shorted)"..."
+        truncatedString=$(echo "$1" | cut -c1-${shorted})"..."
         echo "${truncatedString}"
     else
         echo "$1"
@@ -1455,7 +1455,7 @@ convertUptime() {
     local H=$(($1/60/60%24))
     local M=$(($1/60%60))
 
-    printf "%d days, %02d hours, %02d minutes" $D $H $M
+    printf "%d days, %02d hours, %02d minutes" ${D} ${H} ${M}
 }
 
 secretRead() {
@@ -1488,7 +1488,7 @@ secretRead() {
         fi
         if [ "${key}" = "$(printf '\177')" ] ; then
             # Backspace
-            if [ $charcount -gt 0 ] ; then
+            if [ ${charcount} -gt 0 ] ; then
                 charcount=$((charcount-1))
                 printf '\b \b'
                 password="${password%?}"
@@ -1497,7 +1497,7 @@ secretRead() {
             # any other character
             charcount=$((charcount+1))
             printf '*'
-            password="$password$key"
+            password="${password}${key}"
         fi
     done
 
@@ -1528,7 +1528,7 @@ check_dependencies() {
         hasDeps=false
      fi
 
-    if ! [ "${hasDeps}" = true ]; then
+    if [ "${hasDeps}" != true ]; then
         printf "%b" "\n Please install the missing dependencies noted above.\n"
         exit 1
     fi
@@ -1634,11 +1634,11 @@ StartupRoutine(){
         moveXOffset; echo "- Gathering network info."
         GetNetworkInformation
         GetPADDInformation
-        if [ ! "${DOCKER_VERSION}" = "null" ]; then
+        if [ "${DOCKER_VERSION}" != "null" ]; then
         moveXOffset; echo "  - Docker Tag ${DOCKER_VERSION}"
         else
-        moveXOffset; echo "  - Core $CORE_VERSION, Web $WEB_VERSION"
-        moveXOffset; echo "  - FTL $FTL_VERSION, PADD ${padd_version}"
+        moveXOffset; echo "  - Core ${CORE_VERSION}, Web ${WEB_VERSION}"
+        moveXOffset; echo "  - FTL ${FTL_VERSION}, PADD ${padd_version}"
         fi
 
     else
@@ -1672,12 +1672,12 @@ StartupRoutine(){
         GetNetworkInformation
 
         GetPADDInformation
-        if [ ! "${DOCKER_VERSION}" = "null" ]; then
+        if [ "${DOCKER_VERSION}" != "null" ]; then
         moveXOffset; echo "  - Docker Tag ${DOCKER_VERSION}"
         else
-        moveXOffset; echo "  - Pi-hole Core $CORE_VERSION"
-        moveXOffset; echo "  - Web Admin $WEB_VERSION"
-        moveXOffset; echo "  - FTL $FTL_VERSION"
+        moveXOffset; echo "  - Pi-hole Core ${CORE_VERSION}"
+        moveXOffset; echo "  - Web Admin ${WEB_VERSION}"
+        moveXOffset; echo "  - FTL ${FTL_VERSION}"
         moveXOffset; echo "  - PADD ${padd_version}"
         fi
     fi
@@ -1686,7 +1686,7 @@ StartupRoutine(){
         moveXOffset; printf "%s" "- Starting in "
         for i in 3 2 1
         do
-            printf "%s..." "$i"
+            printf "%s..." "${i}"
             sleep 1
         done
     fi
@@ -1840,7 +1840,7 @@ sig_cleanup() {
     # causing EXIT trap to be executed, so we trap EXIT after INT
     trap '' EXIT
 
-    (exit $err) # execute in a subshell just to pass $? to CleanExit()
+    (exit ${err}) # execute in a subshell just to pass $? to CleanExit()
     CleanExit
 }
 
@@ -1863,11 +1863,11 @@ CleanExit() {
 
     # if background sleep is running, kill it
     # http://mywiki.wooledge.org/SignalTrap#When_is_the_signal_handled.3F
-    kill "{$sleepPID}" > /dev/null 2>&1
+    kill "${sleepPID}" > /dev/null 2>&1
 
     #  Delete session from FTL server
     DeleteSession
-    exit $err # exit the script with saved $?
+    exit ${err} # exit the script with saved $?
 }
 
 TerminalResize(){
@@ -1884,7 +1884,7 @@ TerminalResize(){
 
     printf '\e[H\e[2J\e[3J'
 
-    kill "{$sleepPID}" > /dev/null 2>&1
+    kill "${sleepPID}" > /dev/null 2>&1
 }
 
 main(){
@@ -1933,7 +1933,7 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 
-if [ -n "$API_LOCATION" ] && [ -n "$SERVER" ]; then
+if [ -n "${API_LOCATION}" ] && [ -n "${SERVER}" ]; then
     moveXOffset; echo "Do not set --server and --api simultaneously."
     moveXOffset; echo "Exiting."
     exit 1
