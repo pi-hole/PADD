@@ -451,7 +451,7 @@ GetSystemInformation() {
     cpu_temp_raw=$(GetPADDValue sensors.cpu_temp)
     if [ "${cpu_temp_raw}" != null ]; then
         cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
-        temp_unit=$(echo "${padd_data}"  | GetPADDValue sensors.unit)
+        temp_unit=$(echo "${padd_data}" | GetPADDValue sensors.unit)
     fi
 
     # Temp + Unit
@@ -783,7 +783,7 @@ GetVersionInformation() {
     # Gather core version information...
     CORE_BRANCH="$(GetPADDValue version.core.local.branch)"
     CORE_VERSION="$(GetPADDValue version.core.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    GITHUB_CORE_VERSION="$(GetPADDValue version.core.remote.version  | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+    GITHUB_CORE_VERSION="$(GetPADDValue version.core.remote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
     CORE_HASH="$(GetPADDValue version.core.local.hash)"
     GITHUB_CORE_HASH="$(GetPADDValue version.core.remote.hash)"
 
@@ -1254,8 +1254,8 @@ PrintDashboard() {
 # takes in one or two parameters
 HeatmapGenerator () {
     # if one number is provided, just use that percentage to figure out the colors
-    if [ -z "$2" ]; then
-        load=$(printf "%.0f" "$1")
+    if [ -z "${2}" ]; then
+        load=$(printf "%.0f" "${1}")
     # if two numbers are provided, do some math to make a percentage to figure out the colors
     else
         load=$(printf "%.0f" "$(echo "$1 $2" | awk '{print ($1 / $2) * 100}')")
@@ -1289,7 +1289,7 @@ BarGenerator() {
     backfillNumber=$(($2-barNumber))
 
     # if the filled in cells is less than the max length of the bar, fill it
-    if [ "${barNumber}" -lt "$2" ]; then
+    if [ "${barNumber}" -lt "${2}" ]; then
         # if the bar should be colored
         if [ "$3" = "color" ]; then
         # fill the rest in color
@@ -1303,7 +1303,7 @@ BarGenerator() {
         fi
     # else, fill it all the way
     else
-        out=$(for i in $(seq "$2"); do printf "%b" "■"; done)
+        out=$(for i in $(seq "${2}"); do printf "%b" "■"; done)
     fi
 
     echo "${out}"
@@ -1437,7 +1437,7 @@ truncateString() {
 
     length=${#1}
     shorted=$(($2-3)) # shorten max allowed length by 3 to make room for the dots
-    if [ "${length}" -gt "$2" ]; then
+    if [ "${length}" -gt "${2}" ]; then
         # if length of the string is larger then the specified max length
         # cut every char from the string exceeding length $shorted and add three dots
         truncatedString=$(echo "$1" | cut -c1-${shorted})"..."
@@ -1455,7 +1455,7 @@ convertUptime() {
     local H=$(($1/60/60%24))
     local M=$(($1/60%60))
 
-    printf "%d days, %02d hours, %02d minutes" ${D} ${H} ${M}
+    printf "%d days, %02d hours, %02d minutes" "${D}" "${H}" "${M}"
 }
 
 secretRead() {
@@ -1922,12 +1922,12 @@ while [ "$#" -gt 0 ]; do
         "-h" | "--help"     ) DisplayHelp; exit 0;;
         "-v" | "--version"  ) xOffset=0; versionOnly=true ;;
         "--runonce"         ) runOnce=true;;
-        "--xoff"            ) xOffset="$2"; xOffOrig="$2"; shift;;
-        "--yoff"            ) yOffset="$2"; yOffOrig="$2"; shift;;
-        "--server"          ) SERVER="$2"; shift;;
-        "--api"             ) API_LOCATION="$2"; shift;;
-        "--secret"          ) password="$2"; shift;;
-        "--2fa"             ) totp="$2"; shift;;
+        "--xoff"            ) xOffset="${2}"; xOffOrig="${2}"; shift;;
+        "--yoff"            ) yOffset="${2}"; yOffOrig="${2}"; shift;;
+        "--server"          ) SERVER="${2}"; shift;;
+        "--api"             ) API_LOCATION="${2}"; shift;;
+        "--secret"          ) password="${2}"; shift;;
+        "--2fa"             ) totp="${2}"; shift;;
         *                   ) DisplayHelp; exit 1;;
     esac
     shift
