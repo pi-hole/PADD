@@ -158,14 +158,15 @@ TestAPIAvailability() {
             esac
         fi
 
-        # Test if the API is available at this URL
-        authResponse=$(curl --connect-timeout 2 -skS -w "%{http_code}" "${API_URL}auth")
+        # Test if the API is available at this URL, include delimiter for ease in splitting payload
+        authResponse=$(curl --connect-timeout 2 -skS -w ">>%{http_code}" "${API_URL}auth")
 
-        # authStatus are the last 3 characters
-        # not using ${authResponse#"${authResponse%???}"}" here because it's extremely slow on big responses
-        authStatus=$(printf "%s" "${authResponse}" | tail -c 3)
-        # data is everything from response without the last 3 characters
-        authData=$(printf %s "${authResponse%???}")
+        # authStatus is the response http_code, eg. 200, 401.
+        # Shell parameter expansion, remove everything up to and including the >> delim
+        authStatus=${authResponse#*>>}
+        # data is everything from response
+        # Shell parameter expansion, remove the >> delim and everything after
+        authData=${authResponse%>>*}
 
         # Test if http status code was 200 (OK) or 401 (authentication required)
         if [ "${authStatus}" = 200 ]; then
@@ -314,14 +315,15 @@ GetFTLData() {
     local data
     local status
 
-    # get the data from querying the API as well as the http status code
-    response=$(curl --connect-timeout 2 -sk -w "%{http_code}" -X GET "${API_URL}$1$2" -H "Accept: application/json" -H "sid: ${SID}" )
+    # get the data from querying the API as well as the http status code, include delimiter for ease in splitting payload
+    response=$(curl --connect-timeout 2 -sk -w ">>%{http_code}" -X GET "${API_URL}$1$2" -H "Accept: application/json" -H "sid: ${SID}" )
 
-    # status are the last 3 characters
-    # not using ${response#"${response%???}"}" here because it's extremely slow on big responses
-    status=$(printf "%s" "${response}" | tail -c 3)
-    # data is everything from response without the last 3 characters
-    data=$(printf %s "${response%???}")
+    # status is the response http_code, eg. 200, 401.
+    # Shell parameter expansion, remove everything up to and including the >> delim
+    status=${response#*>>}
+    # data is everything from response
+    # Shell parameter expansion, remove the >> delim and everything after
+    data=${response%>>*}
 
     if [ "${status}" = 200 ]; then
         echo "${data}"
