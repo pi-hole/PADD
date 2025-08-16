@@ -22,7 +22,7 @@ jobs:
         shell: bash
 
       - name: Checkout code
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.0
         with:
           ref: 'development'
 
