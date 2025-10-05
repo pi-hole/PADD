@@ -1,0 +1,32 @@
+name: CI Tests
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  shellcheck:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+    -
+      name: Checkout repository
+      uses: actions/checkout@v4.2.2
+      with:
+        fetch-depth: 0 # Differential ShellCheck requires full git history
+
+    - name: Differential ShellCheck
+      uses: redhat-plumbers-in-action/differential-shellcheck@v5
+      with:
+        severity: warning
+        display-engine: sarif-fmt
+
+    - name: Spell-Checking
+      uses: codespell-project/actions-codespell@master
+      with:
+        ignore_words_file: .codespellignore
+
+    - name: Get editorconfig-checker
+      uses: editorconfig-checker/action-editorconfig-checker@main # tag v1.0.0 is really out of date
+
+    - name: Run editorconfig-checker
+      run: editorconfig-checker
