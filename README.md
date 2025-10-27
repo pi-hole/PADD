@@ -1,6 +1,6 @@
 # PADD
 
-PADD (formerly Chronometer2) is a more expansive version of the original chronometer.sh that is included with [Pi-Hole](https://pi-hole.net). PADD provides in-depth information about your Pi-hole.
+PADD (formerly Chronometer2) is a more expansive version of the original chronometer.sh that was included with [Pi-Hole](https://pi-hole.net). PADD provides in-depth information about your Pi-hole.
 
 ![PADD Screenshot](https://pi-hole.github.io/graphics/Screenshots/padd.png)
 
@@ -27,6 +27,11 @@ PADD (formerly Chronometer2) is a more expansive version of the original chronom
   ```bash
   sudo chmod +x padd.sh
   ```
+### Dependencies
+  - curl
+  - jq
+  - dig
+  - tput
 
 ## Using PADD
 
@@ -40,7 +45,7 @@ PADD (formerly Chronometer2) is a more expansive version of the original chronom
 
 ### PADD from other machine
 
-With PADD v4.0.0 and Pi-hole v6 it is also possible to run PADD from a machine that is not running Pi-hole
+- With PADD v4.0.0 and Pi-hole v6 it is also possible to run PADD from a machine that is not running Pi-hole
 
   ```bash
   ./padd.sh --server <DOMAIN|IP>
@@ -50,7 +55,7 @@ With PADD v4.0.0 and Pi-hole v6 it is also possible to run PADD from a machine t
 
 Pi-hole v6 uses a completely new API with a new authentication mechanism
 
-If you run PADD on the same machine as Pi-hole, it's possible to bypass authentication when your local user is member of the `pihole` group (specifically, if you can access `/etc/pihole/cli_pw).
+If you run PADD on the same machine as Pi-hole, it's possible to bypass authentication when your local user is member of the `pihole` group (specifically, if you can access `/etc/pihole/cli_pw`).
 For details see [https://github.com/pi-hole/FTL/pull/1999](https://github.com/pi-hole/FTL/pull/1999)
 
 If this is not the case, PADD will ask you for your password and (if configured) your two factor authentication token. You can also pass those as arguments
