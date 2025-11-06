@@ -237,7 +237,7 @@ LoginAPI() {
     Authenticate
 
     # Try to login again until the session is valid
-    while [ "${validSession}" != true ]  ; do
+    while [ "${validSession}" = false ]  ; do
         moveXOffset; echo "Authentication failed."
 
         # Print the error message if there is one
@@ -1528,7 +1528,7 @@ check_dependencies() {
         hasDeps=false
      fi
 
-    if [ "${hasDeps}" != true ]; then
+    if [ "${hasDeps}" = false ]; then
         printf "%b" "\n Please install the missing dependencies noted above.\n"
         exit 1
     fi
