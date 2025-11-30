@@ -353,7 +353,7 @@ GetPADDData() {
         # Using "paths(scalars | true)" will return null and false values.
         # We also check if the value is exactly `null` and, in this case, return the
         # string "null", as jq would return an empty string for nulls.
-        padd_data=$(echo "${response}" | jq -r 'paths(scalars | true) as $p | [$p | join(".")] + [if getpath($p)!=null then getpath($p) else "null" end] | join("=")' 2>/dev/null)
+        padd_data=$(echo "${response}" | jq -r 'paths(scalars | true) as $p | [[$p | .[] | tostring] | join(".")] + [if getpath($p)!=null then (getpath($p) | tostring) else "null" end] | join("=")' 2>/dev/null)
     fi
 }
 
