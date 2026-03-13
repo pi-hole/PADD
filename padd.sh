@@ -274,7 +274,13 @@ DeleteSession() {
     # SID is not null (successful authenthication only), delete the session
     if [ "${validSession}" = true ] && [ "${SID}" != null ]; then
         # Try to delete the session. Omit the output, but get the http status code
-        deleteResponse=$(curl --connect-timeout 2 -skS -o /dev/null -w "%{http_code}" -X DELETE "${API_URL}auth"  -H "Accept: application/json" -H "sid: ${SID}")
+        # SID is passed via stdin config (-K -) to prevent leakage via process information
+        deleteResponse=$(curl --connect-timeout 2 -skS -o /dev/null -w "%{http_code}" -X DELETE "${API_URL}auth" \
+            -H "Accept: application/json" \
+            -K - <<EOF
+header = "sid: ${SID}"
+EOF
+)
 
         printf "\n\n"
         case "${deleteResponse}" in
@@ -289,7 +295,13 @@ DeleteSession() {
 }
 
 Authenticate() {
-    sessionResponse="$(curl --connect-timeout 2 -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\", \"totp\":${totp:-null}}" )"
+    sessionResponse="$(curl --connect-timeout 2 -skS -X POST "${API_URL}auth" \
+        --user-agent "PADD ${padd_version}" \
+        -H "Content-Type: application/json" \
+        --data-binary @- <<EOF
+{"password":"${password}", "totp":${totp:-null}}
+EOF
+)"
 
     if [ -z "${sessionResponse}" ]; then
         moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
@@ -311,7 +323,13 @@ GetFTLData() {
     local status
 
     # get the data from querying the API as well as the http status code, include delimiter for ease in splitting payload
-    response=$(curl --connect-timeout 2 -sk -w ">>%{http_code}" -X GET "${API_URL}$1$2" -H "Accept: application/json" -H "sid: ${SID}" )
+    # SID is passed via stdin config (-K -) to prevent leakage via process information
+    response=$(curl --connect-timeout 2 -sk -w ">>%{http_code}" -X GET "${API_URL}$1$2" \
+        -H "Accept: application/json" \
+        -K - <<EOF
+header = "sid: ${SID}"
+EOF
+)
 
     # status is the response http_code, eg. 200, 401.
     # Shell parameter expansion, remove everything up to and including the >> delim
