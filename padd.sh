@@ -295,6 +295,7 @@ EOF
 }
 
 Authenticate() {
+    # password and totp are passed via stdin as binary-data to prevent leakage via process information
     sessionResponse="$(curl --connect-timeout 2 -skS -X POST "${API_URL}auth" \
         --user-agent "PADD ${padd_version}" \
         -H "Content-Type: application/json" \
