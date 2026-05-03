@@ -1,7 +1,14 @@
 #!/usr/bin/env sh
 
+# Pi-hole: A black hole for Internet advertisements
+# (c) Pi-hole (https://pi-hole.net)
+# Network-wide ad blocking via your own hardware.
+#
 # PADD
 # A more advanced version of the chronometer provided with Pihole
+#
+# This file is copyright under the latest version of the EUPL.
+# Please see LICENSE file for your rights under this license.
 
 # SETS LOCALE
 export LC_ALL=C
