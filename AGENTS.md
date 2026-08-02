@@ -8,7 +8,7 @@ PADD (Pi-hole Ad Detection Display) is a terminal dashboard that displays Pi-hol
 
 - **POSIX sh only.** The shebang is `#!/usr/bin/env sh` and the script must run under dash, ash/busybox and other minimal shells. No bashisms: no arrays, no `[[ ]]`, no `${var//}` substitutions.
 - Minimal dependencies. PADD runs on very constrained devices; do not add required external tools without good reason.
-- All data comes from FTL's API (the `/padd` endpoint). Do not scrape files or invoke `pihole` commands for data; if a statistic is missing, it needs adding to the API in the FTL repository first.
+- All data comes from FTL's API (the `/padd` endpoint). Do not scrape files or invoke `pihole` commands for data; if a statistic is missing, it needs adding to the API in the FTL repository first. That way, PADD can run remotely.
 - The layout adapts to terminal size (from mini displays upwards).
 
 ## Testing instructions
