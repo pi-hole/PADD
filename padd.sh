@@ -1,7 +1,14 @@
 #!/usr/bin/env sh
 
+# Pi-hole: A black hole for Internet advertisements
+# (c) Pi-hole (https://pi-hole.net)
+# Network-wide ad blocking via your own hardware.
+#
 # PADD
 # A more advanced version of the chronometer provided with Pihole
+#
+# This file is copyright under the latest version of the EUPL.
+# Please see LICENSE file for your rights under this license.
 
 # SETS LOCALE
 export LC_ALL=C
@@ -274,7 +281,13 @@ DeleteSession() {
     # SID is not null (successful authenthication only), delete the session
     if [ "${validSession}" = true ] && [ "${SID}" != null ]; then
         # Try to delete the session. Omit the output, but get the http status code
-        deleteResponse=$(curl --connect-timeout 2 -skS -o /dev/null -w "%{http_code}" -X DELETE "${API_URL}auth"  -H "Accept: application/json" -H "sid: ${SID}")
+        # SID is passed via stdin config (-K -) to prevent leakage via process information
+        deleteResponse=$(curl --connect-timeout 2 -skS -o /dev/null -w "%{http_code}" -X DELETE "${API_URL}auth" \
+            -H "Accept: application/json" \
+            -K - <<EOF
+header = "sid: ${SID}"
+EOF
+)
 
         printf "\n\n"
         case "${deleteResponse}" in
@@ -289,7 +302,14 @@ DeleteSession() {
 }
 
 Authenticate() {
-    sessionResponse="$(curl --connect-timeout 2 -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\", \"totp\":${totp:-null}}" )"
+    # password and totp are passed via stdin as binary-data to prevent leakage via process information
+    sessionResponse="$(curl --connect-timeout 2 -skS -X POST "${API_URL}auth" \
+        --user-agent "PADD ${padd_version}" \
+        -H "Content-Type: application/json" \
+        --data-binary @- <<EOF
+{"password":"${password}", "totp":${totp:-null}}
+EOF
+)"
 
     if [ -z "${sessionResponse}" ]; then
         moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
@@ -311,7 +331,13 @@ GetFTLData() {
     local status
 
     # get the data from querying the API as well as the http status code, include delimiter for ease in splitting payload
-    response=$(curl --connect-timeout 2 -sk -w ">>%{http_code}" -X GET "${API_URL}$1$2" -H "Accept: application/json" -H "sid: ${SID}" )
+    # SID is passed via stdin config (-K -) to prevent leakage via process information
+    response=$(curl --connect-timeout 2 -sk -w ">>%{http_code}" -X GET "${API_URL}$1$2" \
+        -H "Accept: application/json" \
+        -K - <<EOF
+header = "sid: ${SID}"
+EOF
+)
 
     # status is the response http_code, eg. 200, 401.
     # Shell parameter expansion, remove everything up to and including the >> delim
@@ -353,7 +379,8 @@ GetPADDData() {
         # Using "paths(scalars | true)" will return null and false values.
         # We also check if the value is exactly `null` and, in this case, return the
         # string "null", as jq would return an empty string for nulls.
-        padd_data=$(echo "${response}" | jq -r 'paths(scalars | true) as $p | [$p | join(".")] + [if getpath($p)!=null then getpath($p) else "null" end] | join("=")' 2>/dev/null)
+        # 'tostring' is necessary because jq < 1.6 does not convert numbers and bools automatically
+        padd_data=$(echo "${response}" | jq -r 'paths(scalars | true) as $p | [[$p | .[] | tostring] | join(".")] + [if getpath($p)!=null then (getpath($p) | tostring) else "null" end] | join("=")' 2>/dev/null)
     fi
 }
 

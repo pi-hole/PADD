@@ -10,23 +10,23 @@ jobs:
     steps:
     -
       name: Checkout repository
-      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
       with:
         fetch-depth: 0 # Differential ShellCheck requires full git history
 
     - name: Differential ShellCheck
-      uses: redhat-plumbers-in-action/differential-shellcheck@0d9e5b29625f871e6a4215380486d6f1a7cb6cdd #v5.5.5
+      uses: redhat-plumbers-in-action/differential-shellcheck@d965e66ec0b3b2f821f75c8eff9b12442d9a7d1e #v5.5.6
       with:
         severity: warning
         display-engine: sarif-fmt
 
     - name: Spell-Checking
-      uses: codespell-project/actions-codespell@406322ec52dd7b488e48c1c4b82e2a8b3a1bf630 #v2.1
+      uses: codespell-project/actions-codespell@8f01853be192eb0f849a5c7d721450e7a467c579 #v2.2
       with:
         ignore_words_file: .codespellignore
 
     - name: Get editorconfig-checker
-      uses: editorconfig-checker/action-editorconfig-checker@4b6cd6190d435e7e084fb35e36a096e98506f7b9 #v2.1.0
+      uses: editorconfig-checker/action-editorconfig-checker@51f63319f592f97930c73d9c46184d20bd206393 #v3.0.0
 
     - name: Run editorconfig-checker
       run: editorconfig-checker
