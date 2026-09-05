@@ -403,6 +403,7 @@ GetSummaryInformation() {
         top_blocked_raw="N/A"
         top_domain_raw="N/A"
         top_client_raw="N/A"
+        dns_queries_frequency="N/A"
         return
     fi
 
@@ -425,7 +426,7 @@ GetSummaryInformation() {
 
     cache_size=$(GetPADDValue cache.size)
     cache_evictions=$(GetPADDValue cache.evicted)
-    cache_inserts=$(echo "${padd_data}"| GetPADDValue cache.inserted)
+    cache_inserts=$(GetPADDValue cache.inserted)
 
     latest_blocked_raw=$(GetPADDValue recent_blocked)
 
@@ -434,6 +435,9 @@ GetSummaryInformation() {
     top_domain_raw=$(GetPADDValue top_domain)
 
     top_client_raw=$(GetPADDValue top_client)
+
+    dns_queries_frequency_raw=$(GetPADDValue queries.query_frequency)
+    dns_queries_frequency=$(echo "${dns_queries_frequency_raw}" | awk '{printf "%.f", $1 * 60}')
 
     privacy_level=$(GetPADDValue config.privacy_level)
 
@@ -478,7 +482,7 @@ GetSystemInformation() {
     cpu_temp_raw=$(GetPADDValue sensors.cpu_temp)
     if [ "${cpu_temp_raw}" != null ]; then
         cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
-        temp_unit=$(echo "${padd_data}" | GetPADDValue sensors.unit)
+        temp_unit=$(GetPADDValue sensors.unit)
     fi
 
     # Temp + Unit
@@ -1254,7 +1258,7 @@ PrintDashboard() {
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}FTL ============================================================================${reset_text}"
-        moveXOffset; printf " %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}" "Mem. Use:" "${ftl_mem_percentage}"
+        moveXOffset; printf " %-10s%-9s %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}" "Mem. Use:" "${ftl_mem_percentage}" "Qrs/min:" "${dns_queries_frequency}"
         moveXOffset; printf " %-10s%-69s${clear_line}\n" "DNSCache:" "${cache_inserts} insertions, ${cache_evictions} deletions, ${cache_size} total entries"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-19s${clear_line}\n" "Hostname:" "${full_hostname}"
