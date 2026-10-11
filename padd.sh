@@ -1,7 +1,14 @@
 #!/usr/bin/env sh
 
+# Pi-hole: A black hole for Internet advertisements
+# (c) Pi-hole (https://pi-hole.net)
+# Network-wide ad blocking via your own hardware.
+#
 # PADD
 # A more advanced version of the chronometer provided with Pihole
+#
+# This file is copyright under the latest version of the EUPL.
+# Please see LICENSE file for your rights under this license.
 
 # SETS LOCALE
 export LC_ALL=C
@@ -274,7 +281,13 @@ DeleteSession() {
     # SID is not null (successful authenthication only), delete the session
     if [ "${validSession}" = true ] && [ "${SID}" != null ]; then
         # Try to delete the session. Omit the output, but get the http status code
-        deleteResponse=$(curl --connect-timeout 2 -skS -o /dev/null -w "%{http_code}" -X DELETE "${API_URL}auth"  -H "Accept: application/json" -H "sid: ${SID}")
+        # SID is passed via stdin config (-K -) to prevent leakage via process information
+        deleteResponse=$(curl --connect-timeout 2 -skS -o /dev/null -w "%{http_code}" -X DELETE "${API_URL}auth" \
+            -H "Accept: application/json" \
+            -K - <<EOF
+header = "sid: ${SID}"
+EOF
+)
 
         printf "\n\n"
         case "${deleteResponse}" in
@@ -289,7 +302,14 @@ DeleteSession() {
 }
 
 Authenticate() {
-    sessionResponse="$(curl --connect-timeout 2 -skS -X POST "${API_URL}auth" --user-agent "PADD ${padd_version}" --data "{\"password\":\"${password}\", \"totp\":${totp:-null}}" )"
+    # password and totp are passed via stdin as binary-data to prevent leakage via process information
+    sessionResponse="$(curl --connect-timeout 2 -skS -X POST "${API_URL}auth" \
+        --user-agent "PADD ${padd_version}" \
+        -H "Content-Type: application/json" \
+        --data-binary @- <<EOF
+{"password":"${password}", "totp":${totp:-null}}
+EOF
+)"
 
     if [ -z "${sessionResponse}" ]; then
         moveXOffset; echo "No response from FTL server. Please check connectivity and use the options to set the API URL"
@@ -311,7 +331,13 @@ GetFTLData() {
     local status
 
     # get the data from querying the API as well as the http status code, include delimiter for ease in splitting payload
-    response=$(curl --connect-timeout 2 -sk -w ">>%{http_code}" -X GET "${API_URL}$1$2" -H "Accept: application/json" -H "sid: ${SID}" )
+    # SID is passed via stdin config (-K -) to prevent leakage via process information
+    response=$(curl --connect-timeout 2 -sk -w ">>%{http_code}" -X GET "${API_URL}$1$2" \
+        -H "Accept: application/json" \
+        -K - <<EOF
+header = "sid: ${SID}"
+EOF
+)
 
     # status is the response http_code, eg. 200, 401.
     # Shell parameter expansion, remove everything up to and including the >> delim
@@ -353,7 +379,8 @@ GetPADDData() {
         # Using "paths(scalars | true)" will return null and false values.
         # We also check if the value is exactly `null` and, in this case, return the
         # string "null", as jq would return an empty string for nulls.
-        padd_data=$(echo "${response}" | jq -r 'paths(scalars | true) as $p | [$p | join(".")] + [if getpath($p)!=null then getpath($p) else "null" end] | join("=")' 2>/dev/null)
+        # 'tostring' is necessary because jq < 1.6 does not convert numbers and bools automatically
+        padd_data=$(echo "${response}" | jq -r 'paths(scalars | true) as $p | [[$p | .[] | tostring] | join(".")] + [if getpath($p)!=null then (getpath($p) | tostring) else "null" end] | join("=")' 2>/dev/null)
     fi
 }
 
@@ -376,6 +403,7 @@ GetSummaryInformation() {
         top_blocked_raw="N/A"
         top_domain_raw="N/A"
         top_client_raw="N/A"
+        dns_queries_frequency="N/A"
         return
     fi
 
@@ -398,7 +426,7 @@ GetSummaryInformation() {
 
     cache_size=$(GetPADDValue cache.size)
     cache_evictions=$(GetPADDValue cache.evicted)
-    cache_inserts=$(echo "${padd_data}"| GetPADDValue cache.inserted)
+    cache_inserts=$(GetPADDValue cache.inserted)
 
     latest_blocked_raw=$(GetPADDValue recent_blocked)
 
@@ -407,6 +435,9 @@ GetSummaryInformation() {
     top_domain_raw=$(GetPADDValue top_domain)
 
     top_client_raw=$(GetPADDValue top_client)
+
+    dns_queries_frequency_raw=$(GetPADDValue queries.query_frequency)
+    dns_queries_frequency=$(echo "${dns_queries_frequency_raw}" | awk '{printf "%.f", $1 * 60}')
 
     privacy_level=$(GetPADDValue config.privacy_level)
 
@@ -451,7 +482,7 @@ GetSystemInformation() {
     cpu_temp_raw=$(GetPADDValue sensors.cpu_temp)
     if [ "${cpu_temp_raw}" != null ]; then
         cpu_temp=$(printf "%.1f" "${cpu_temp_raw}")
-        temp_unit=$(echo "${padd_data}" | GetPADDValue sensors.unit)
+        temp_unit=$(GetPADDValue sensors.unit)
     fi
 
     # Temp + Unit
@@ -1227,7 +1258,7 @@ PrintDashboard() {
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Dmn:" "${top_domain}"
         moveXOffset; printf " %-10s%-39s${clear_line}\n" "Top Clnt:" "${top_client}"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}FTL ============================================================================${reset_text}"
-        moveXOffset; printf " %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}" "Mem. Use:" "${ftl_mem_percentage}"
+        moveXOffset; printf " %-10s%-9s %-10s%-9s %-10s%-9s %-10s%-9s${clear_line}\n" "PID:" "${ftlPID}" "CPU Use:" "${ftl_cpu}" "Mem. Use:" "${ftl_mem_percentage}" "Qrs/min:" "${dns_queries_frequency}"
         moveXOffset; printf " %-10s%-69s${clear_line}\n" "DNSCache:" "${cache_inserts} insertions, ${cache_evictions} deletions, ${cache_size} total entries"
         moveXOffset; printf "%s${clear_line}\n" "${bold_text}NETWORK ========================================================================${reset_text}"
         moveXOffset; printf " %-10s%-19s${clear_line}\n" "Hostname:" "${full_hostname}"
