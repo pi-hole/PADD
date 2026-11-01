@@ -1,0 +1,57 @@
+name: Version check
+
+# Guard for release PRs: if padd.sh changes, padd_version must be newer than the latest published release.
+on:
+  pull_request:
+    branches:
+      - master
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  version-check:
+    # Only release PRs from development
+    if: github.head_ref == 'development'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check padd_version
+        shell: bash
+        run: |
+          # Only a change to padd.sh requires a version bump, meta changes to the repo are fine
+          if git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- padd.sh; then
+            echo "padd.sh is unchanged, no version bump needed"
+            exit 0
+          fi
+
+          PADD_VERSION=$(grep '^padd_version=' padd.sh | cut -d'"' -f 2)
+          if [[ ! "$PADD_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error file=padd.sh::padd_version '$PADD_VERSION' does not match vX.Y.Z"
+            exit 1
+          fi
+
+          # Only considers published releases, drafts are ignored
+          RELEASED_VERSION=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName) || RELEASED_VERSION=""
+          if [[ -z "$RELEASED_VERSION" ]]; then
+            echo "::error::Could not determine the latest published release"
+            exit 1
+          fi
+
+          HIGHEST_VERSION=$(printf '%s\n' "$PADD_VERSION" "$RELEASED_VERSION" | sort -V | tail -n 1)
+          if [[ "$PADD_VERSION" == "$RELEASED_VERSION" || "$HIGHEST_VERSION" != "$PADD_VERSION" ]]; then
+            echo "::error file=padd.sh::padd_version is $PADD_VERSION but the latest release is $RELEASED_VERSION. Merge the version bump into development first (run the 'Version bump' workflow)."
+            exit 1
+          fi
+
+          echo "padd_version $PADD_VERSION is newer than the latest release $RELEASED_VERSION"
