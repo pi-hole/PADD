@@ -8,10 +8,15 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
-  contents: read
+  contents: read # to read the repository contents
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   version-check:
+    name: version-check
     # Only release PRs from development
     if: github.head_ref == 'development'
     runs-on: ubuntu-slim
@@ -25,6 +30,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Check padd_version
         shell: bash
