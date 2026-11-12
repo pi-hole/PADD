@@ -6,7 +6,7 @@ on:
 jobs:
   shellcheck:
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # Codespell-project/actions-codespell does not run on ubuntu-slim as it needs docker
     steps:
     -
       name: Checkout repository

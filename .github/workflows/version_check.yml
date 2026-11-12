@@ -14,7 +14,7 @@ jobs:
   version-check:
     # Only release PRs from development
     if: github.head_ref == 'development'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       BASE_SHA: ${{ github.event.pull_request.base.sha }}
