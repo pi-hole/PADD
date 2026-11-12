@@ -2,6 +2,7 @@ name: Version bump
 
 on:
   workflow_dispatch:
+permissions: {}
 
 jobs:
   bump:
@@ -9,6 +10,9 @@ jobs:
     env:
       REPO: ${{ github.repository }}
       GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Get latest release tag # can also be a draft release
         run: |
