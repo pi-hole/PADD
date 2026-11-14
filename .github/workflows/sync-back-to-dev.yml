@@ -5,6 +5,10 @@ on:
     branches:
       - master
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions: {}
 
 jobs:
@@ -12,8 +16,8 @@ jobs:
     runs-on: ubuntu-slim
     name: Syncing branches
     permissions:
-      contents: write
-      pull-requests: write
+      contents: write # kept as merged in #521
+      pull-requests: write # to open the sync pull request
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
