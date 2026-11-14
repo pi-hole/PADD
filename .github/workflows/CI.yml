@@ -3,16 +3,26 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
 jobs:
   shellcheck:
+    name: shellcheck
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # Codespell-project/actions-codespell does not run on ubuntu-slim as it needs docker
+    permissions:
+      contents: read # to read the repository contents
     steps:
     -
       name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
       with:
         fetch-depth: 0 # Differential ShellCheck requires full git history
+        persist-credentials: false
 
     - name: Differential ShellCheck
       uses: redhat-plumbers-in-action/differential-shellcheck@f51c7c0d32777d00de777131d25918617a246415 #v5.5.7
