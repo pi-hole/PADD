@@ -817,8 +817,12 @@ GetVersionInformation() {
     CORE_BRANCH="$(GetPADDValue version.core.local.branch)"
 
     if [ "${CORE_BRANCH}" = "master" ]; then
-        CORE_VERSION="$(GetPADDValue version.core.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-        GITHUB_CORE_VERSION="$(GetPADDValue version.core.remote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+        CORE_VERSION="$(GetPADDValue version.core.local.version)"
+        CORE_VERSION="${CORE_VERSION%%-*}"
+        CORE_VERSION="${CORE_VERSION#v}"
+        GITHUB_CORE_VERSION="$(GetPADDValue version.core.remote.version)"
+        GITHUB_CORE_VERSION="${GITHUB_CORE_VERSION%%-*}"
+        GITHUB_CORE_VERSION="${GITHUB_CORE_VERSION#v}"
 
         core_version_converted="$(VersionConverter "${CORE_VERSION}")"
         core_version_latest_converted=$(VersionConverter "${GITHUB_CORE_VERSION}")
@@ -860,8 +864,11 @@ GetVersionInformation() {
         WEB_BRANCH="$(GetPADDValue version.web.local.branch)"
 
         if [ "${WEB_BRANCH}" = "master" ]; then
-            WEB_VERSION="$(GetPADDValue version.web.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-            GITHUB_WEB_VERSION="$(GetPADDValue version.web.remote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+            WEB_VERSION="${WEB_VERSION%%-*}"
+            WEB_VERSION="${WEB_VERSION#v}"
+            GITHUB_WEB_VERSION="$(GetPADDValue version.web.remote.version)"
+            GITHUB_WEB_VERSION="${GITHUB_WEB_VERSION%%-*}"
+            GITHUB_WEB_VERSION="${GITHUB_WEB_VERSION#v}"
 
             web_version_converted="$(VersionConverter "${WEB_VERSION}")"
             web_version_latest_converted=$(VersionConverter "${GITHUB_WEB_VERSION}")
@@ -906,8 +913,12 @@ GetVersionInformation() {
     FTL_BRANCH="$(GetPADDValue version.ftl.local.branch)"
 
     if [ "${FTL_BRANCH}" = "master" ]; then
-        FTL_VERSION="$(GetPADDValue version.ftl.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-        GITHUB_FTL_VERSION="$(GetPADDValue version.ftl.remote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
+        FTL_VERSION="$(GetPADDValue version.ftl.local.version)"
+        FTL_VERSION="${FTL_VERSION%%-*}"
+        FTL_VERSION="${FTL_VERSION#v}"
+        GITHUB_FTL_VERSION="$(GetPADDValue version.ftl.remote.version)"
+        GITHUB_FTL_VERSION="${GITHUB_FTL_VERSION%%-*}"
+        GITHUB_FTL_VERSION="${GITHUB_FTL_VERSION#v}"
 
         ftl_version_converted="$(VersionConverter "${FTL_VERSION}")"
         ftl_version_latest_converted=$(VersionConverter "${GITHUB_FTL_VERSION}")
@@ -1019,10 +1030,9 @@ GenerateSizeDependendOutput() {
     fi
 
     # System uptime
+    system_uptime="$(convertUptime "${system_uptime_raw}")"
     if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-        system_uptime="$(convertUptime "${system_uptime_raw}" | awk -F ',' '{print $1 "," $2}')"
-    else
-        system_uptime="$(convertUptime "${system_uptime_raw}")"
+        system_uptime="${system_uptime%,*}"
     fi
 
     #  Bar generations
