@@ -815,12 +815,15 @@ GetVersionInformation() {
 
     # Gather core version information...
     CORE_BRANCH="$(GetPADDValue version.core.local.branch)"
-    CORE_VERSION="$(GetPADDValue version.core.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    GITHUB_CORE_VERSION="$(GetPADDValue version.core.remote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    CORE_HASH="$(GetPADDValue version.core.local.hash)"
-    GITHUB_CORE_HASH="$(GetPADDValue version.core.remote.hash)"
 
     if [ "${CORE_BRANCH}" = "master" ]; then
+        CORE_VERSION="$(GetPADDValue version.core.local.version)"
+        CORE_VERSION="${CORE_VERSION%%-*}"
+        CORE_VERSION="${CORE_VERSION#v}"
+        GITHUB_CORE_VERSION="$(GetPADDValue version.core.remote.version)"
+        GITHUB_CORE_VERSION="${GITHUB_CORE_VERSION%%-*}"
+        GITHUB_CORE_VERSION="${GITHUB_CORE_VERSION#v}"
+
         core_version_converted="$(VersionConverter "${CORE_VERSION}")"
         core_version_latest_converted=$(VersionConverter "${GITHUB_CORE_VERSION}")
 
@@ -837,6 +840,9 @@ GetVersionInformation() {
             core_version_heatmap=${red_text}
             CORE_VERSION="?"
         else
+            CORE_HASH="$(GetPADDValue version.core.local.hash)"
+            GITHUB_CORE_HASH="$(GetPADDValue version.core.remote.hash)"
+
             if [ "${CORE_HASH}" = "${GITHUB_CORE_HASH}" ]; then
                 # up-to-date
                 core_version_heatmap=${green_text}
@@ -856,12 +862,14 @@ GetVersionInformation() {
 
     if [ "${WEB_VERSION}" != "null" ]; then
         WEB_BRANCH="$(GetPADDValue version.web.local.branch)"
-        WEB_VERSION="$(GetPADDValue version.web.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-        GITHUB_WEB_VERSION="$(GetPADDValue version.web.remote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-        WEB_HASH="$(GetPADDValue version.web.local.hash)"
-        GITHUB_WEB_HASH="$(GetPADDValue version.web.remote.hash)"
 
         if [ "${WEB_BRANCH}" = "master" ]; then
+            WEB_VERSION="${WEB_VERSION%%-*}"
+            WEB_VERSION="${WEB_VERSION#v}"
+            GITHUB_WEB_VERSION="$(GetPADDValue version.web.remote.version)"
+            GITHUB_WEB_VERSION="${GITHUB_WEB_VERSION%%-*}"
+            GITHUB_WEB_VERSION="${GITHUB_WEB_VERSION#v}"
+
             web_version_converted="$(VersionConverter "${WEB_VERSION}")"
             web_version_latest_converted=$(VersionConverter "${GITHUB_WEB_VERSION}")
 
@@ -879,6 +887,9 @@ GetVersionInformation() {
                 web_version_heatmap=${red_text}
                 WEB_VERSION="?"
             else
+                WEB_HASH="$(GetPADDValue version.web.local.hash)"
+                GITHUB_WEB_HASH="$(GetPADDValue version.web.remote.hash)"
+
                 if [ "${WEB_HASH}" = "${GITHUB_WEB_HASH}" ]; then
                     # up-to-date
                     web_version_heatmap=${green_text}
@@ -900,13 +911,15 @@ GetVersionInformation() {
 
     # Gather FTL version information...
     FTL_BRANCH="$(GetPADDValue version.ftl.local.branch)"
-    FTL_VERSION="$(GetPADDValue version.ftl.local.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    GITHUB_FTL_VERSION="$(GetPADDValue version.ftl.remote.version | tr -d '[:alpha:]' | awk -F '-' '{printf $1}')"
-    FTL_HASH="$(GetPADDValue version.ftl.local.hash)"
-    GITHUB_FTL_HASH="$(GetPADDValue version.ftl.remote.hash)"
-
 
     if [ "${FTL_BRANCH}" = "master" ]; then
+        FTL_VERSION="$(GetPADDValue version.ftl.local.version)"
+        FTL_VERSION="${FTL_VERSION%%-*}"
+        FTL_VERSION="${FTL_VERSION#v}"
+        GITHUB_FTL_VERSION="$(GetPADDValue version.ftl.remote.version)"
+        GITHUB_FTL_VERSION="${GITHUB_FTL_VERSION%%-*}"
+        GITHUB_FTL_VERSION="${GITHUB_FTL_VERSION#v}"
+
         ftl_version_converted="$(VersionConverter "${FTL_VERSION}")"
         ftl_version_latest_converted=$(VersionConverter "${GITHUB_FTL_VERSION}")
 
@@ -923,6 +936,9 @@ GetVersionInformation() {
             ftl_version_heatmap=${red_text}
             FTL_VERSION="?"
         else
+            FTL_HASH="$(GetPADDValue version.ftl.local.hash)"
+            GITHUB_FTL_HASH="$(GetPADDValue version.ftl.remote.hash)"
+
             if [ "${FTL_HASH}" = "${GITHUB_FTL_HASH}" ]; then
                 # up-to-date
                 ftl_version_heatmap=${green_text}
@@ -1014,10 +1030,9 @@ GenerateSizeDependendOutput() {
     fi
 
     # System uptime
+    system_uptime="$(convertUptime "${system_uptime_raw}")"
     if [ "$1" = "pico" ] || [ "$1" = "nano" ] || [ "$1" = "micro" ]; then
-        system_uptime="$(convertUptime "${system_uptime_raw}" | awk -F ',' '{print $1 "," $2}')"
-    else
-        system_uptime="$(convertUptime "${system_uptime_raw}")"
+        system_uptime="${system_uptime%,*}"
     fi
 
     #  Bar generations
