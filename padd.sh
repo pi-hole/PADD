@@ -942,7 +942,7 @@ GetVersionInformation() {
 GetPADDInformation() {
 
     # PADD version information...
-    padd_version_latest="$(curl --connect-timeout 5 --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
+    padd_version_latest="$(curl --connect-timeout 5 --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | jq -r '.tag_name // empty')"
     # is PADD up-to-date?
     padd_out_of_date_flag=false
     if [ -z "${padd_version_latest}" ]; then
