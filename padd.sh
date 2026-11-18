@@ -1316,7 +1316,14 @@ HeatmapGenerator () {
 BarGenerator() {
     # number of filled in cells in the bar
     barNumber=$(printf %.f "$(echo "$1 $2" | awk '{print ($1 / 100) * $2}')")
-    frontFill=$(for i in $(seq "${barNumber}"); do printf "%b" "■"; done)
+
+    # Build frontFill without seq
+    frontFill=""
+    i=0
+    while [ "$i" -lt "${barNumber}" ]; do
+        frontFill="${frontFill}■"
+        i=$((i + 1))
+    done
 
     # remaining "unfilled" cells in the bar
     backfillNumber=$(($2-barNumber))
@@ -1325,18 +1332,33 @@ BarGenerator() {
     if [ "${barNumber}" -lt "${2}" ]; then
         # if the bar should be colored
         if [ "$3" = "color" ]; then
-        # fill the rest in color
-        backFill=$(for i in $(seq ${backfillNumber}); do printf "%b" "■"; done)
-        out="${red_text}${frontFill}${green_text}${backFill}${reset_text}"
-        # else, it shouldn't be colored in
+            # fill the rest in color
+            backFill=""
+            i=0
+            while [ "$i" -lt "${backfillNumber}" ]; do
+                backFill="${backFill}■"
+                i=$((i + 1))
+            done
+            out="${red_text}${frontFill}${green_text}${backFill}${reset_text}"
         else
-        # fill the rest with "space"
-        backFill=$(for i in $(seq ${backfillNumber}); do printf "%b" "·"; done)
-        out="${frontFill}${reset_text}${backFill}"
+            # fill the rest with "space" ("·")
+            backFill=""
+            i=0
+            while [ "$i" -lt "${backfillNumber}" ]; do
+                backFill="${backFill}·"
+                i=$((i + 1))
+            done
+            out="${frontFill}${reset_text}${backFill}"
         fi
-    # else, fill it all the way
     else
-        out=$(for i in $(seq "${2}"); do printf "%b" "■"; done)
+        # fill it all the way
+        out=""
+        i=0
+        while [ "$i" -lt "$2" ]; do
+            out="${out}■"
+            i=$((i + 1))
+        done
+        out="${out}${reset_text}"
     fi
 
     echo "${out}"
