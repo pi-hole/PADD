@@ -2,12 +2,20 @@ name: Version bump
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 * * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
 
 jobs:
   bump:
-    runs-on: ubuntu-latest
+    name: bump
+    runs-on: ubuntu-slim
+    permissions:
+      contents: write # to push the version bump branch
+      pull-requests: write # to open the version bump pull request
     env:
       REPO: ${{ github.repository }}
       GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
@@ -25,10 +33,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
         with:
           ref: 'development'
+          persist-credentials: true # zizmor: ignore[artipacked] the git push in the last step needs the credentials
 
       - name: Check if branch already exists
         run: |
-          LATEST_TAG=${{ env.latest_tag }}
+          LATEST_TAG=${latest_tag}
           REMOTE_BRANCH=$(git ls-remote --heads origin "bump_$LATEST_TAG")
           [[ -z "${REMOTE_BRANCH}" ]] && echo "branch_exists=false" >> $GITHUB_ENV || echo "branch_exists=true" >> $GITHUB_ENV
           [[ -z "${REMOTE_BRANCH}" ]] && echo "Remote branch bump_$LATEST_TAG does not exist" || echo "Remote branch bump_$LATEST_TAG already exists"
@@ -44,7 +53,7 @@ jobs:
       - name: Create PR if versions don't match and branch does not exist
         if: (env.current_version != env.latest_tag) && (env.branch_exists == 'false')
         run: |
-          LATEST_TAG=${{ env.latest_tag }}
+          LATEST_TAG=${latest_tag}
           git config --global user.email "pralor-bot@users.noreply.github.com"
           git config --global user.name "pralor-bot"
           git checkout -b "bump_$LATEST_TAG" development
