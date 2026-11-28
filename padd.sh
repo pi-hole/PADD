@@ -17,7 +17,7 @@ export LC_NUMERIC=C
 ############################################ VARIABLES #############################################
 
 # VERSION
-padd_version="v4.1.0"
+padd_version="v4.2.1"
 
 # LastChecks
 LastCheckPADDInformation=$(date +%s)
@@ -489,18 +489,20 @@ GetSystemInformation() {
     if [ "${temp_unit}" = "C" ]; then
         temperature="${cpu_temp}°${temp_unit}"
         # no conversion needed
-        cpu_temp_celsius="$(echo "${cpu_temp}" | awk -F '.' '{print $1}')"
+        cpu_temp_celsius="${cpu_temp%%.*}"
         temp_unicode=true
     elif [ "${temp_unit}" = "F" ]; then
         temperature="${cpu_temp}°${temp_unit}"
         # convert to Celsius for limit checking
-        cpu_temp_celsius="$(echo "${cpu_temp}" | awk '{print ($1-32) * 5 / 9}' | awk -F '.' '{print $1}')"
+        temp_conv="$(echo "${cpu_temp}" | awk '{print ($1 - 32) * 5 / 9}')"
+        cpu_temp_celsius="${temp_conv%%.*}"
         temp_unicode=true
     elif [ "${temp_unit}" = "K" ]; then
         # no ° for Kelvin
         temperature="${cpu_temp}${temp_unit}"
         # convert to Celsius for limit checking
-        cpu_temp_celsius="$(echo "${cpu_temp}" | awk '{print $1 - 273.15}' | awk -F '.' '{print $1}')"
+        temp_conv="$(echo "${cpu_temp}" | awk '{print $1 - 273.15}')"
+        cpu_temp_celsius="${temp_conv%%.*}"
         temp_unicode=false
     else # unknown unit
         temperature="N/A"
@@ -940,7 +942,7 @@ GetVersionInformation() {
 GetPADDInformation() {
 
     # PADD version information...
-    padd_version_latest="$(curl --connect-timeout 5 --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | grep '"tag_name":' | awk -F \" '{print $4}')"
+    padd_version_latest="$(curl --connect-timeout 5 --silent https://api.github.com/repos/pi-hole/PADD/releases/latest | jq --raw-output '.tag_name // empty')"
     # is PADD up-to-date?
     padd_out_of_date_flag=false
     if [ -z "${padd_version_latest}" ]; then
